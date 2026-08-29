@@ -134,3 +134,113 @@ DECISIONS.md D-002/D-003 and in `packages/core/src/fixtures/PROVENANCE.md`.
 
 **Cost.** ~15 min of doc reading. Would have been far more expensive discovered
 at P2.0, with the drafter already built on three phases.
+
+---
+
+## Session 2 -- 2026-08-30 (P1 synthetic layer)
+
+### F-006 -- the API would not start the way pnpm starts it
+
+**What broke.** `pnpm --filter @praman/api dev` crashed immediately:
+`ENOENT ... open 'C:\...\Razorpay\apps\api\.env'`. Starting the same server from
+the repo root worked fine.
+
+**How diagnosed.** `process.loadEnvFile('.env')` resolves against
+`process.cwd()`. pnpm sets the cwd to the *package* directory, so the API looked
+for `apps/api/.env`, which does not and should not exist.
+
+**Fix.** `apps/api/src/env.ts` walks up from `import.meta.url` until it finds a
+`.env`, and returns `null` rather than throwing when there is none -- because in
+a deployed environment the variables come from the platform and there is no file
+at all. Resolving from the module rather than the cwd means the answer no longer
+depends on how the process was launched.
+
+**Cost.** ~5 min.
+
+**What it taught.** "Works on my machine" and "works the way the tooling starts
+it" are different claims. The second one is the one that matters for P4.3.
+
+---
+
+### F-007 -- the OOD language run died on a free-tier rate limit, halfway through
+
+**What broke.** The first live holdout generation aborted on
+`429 ... Limit 8000, Used 7132, Requested 2285` -- Groq's free tier allows 8000
+tokens per minute, and the run needed ~15 sequential calls. Everything recorded
+up to that point was lost, because the cache was only written at the end.
+
+**How diagnosed.** The error body says exactly what the limit is and how long to
+wait: *"Please try again in 10.6275s."*
+
+**Fix.** Three changes, in order of importance:
+1. **Persist the cache after every successful call**, not at the end. Losing
+   recorded language to an unhandled 429 is self-inflicted.
+2. Retry on 429 and 5xx with the delay the provider *itself names*, parsed out
+   of its message, falling back to exponential backoff. Six attempts.
+3. Reduced `max_tokens` from 2000 to 1200 -- eight short turns never needed 2000,
+   and the excess was inflating the per-minute token spend that triggered the
+   limit in the first place.
+
+The rerun completed: 9 retries, 15 recordings, no data lost.
+
+**Cost.** ~12 min.
+
+**Why this one matters beyond itself.** It is the second live rehearsal of a
+provider failing in a way that is *not* an exception -- first a 200 with empty
+content (F-002), now a documented, expected, recoverable 429. Both argue the
+same thing: the LLM boundary needs a policy, not a try/catch. On the money path
+that policy is abstention; here, where no money is involved, it is backoff. The
+distinction is deliberate and is exactly what P2.3's four failure-path tests
+encode.
+
+---
+
+### F-008 -- Zod's `coerce` lied to TypeScript, and 14 typecheck errors followed
+
+**What broke.** The capture schema used `z.coerce.date()` for every timestamp.
+At runtime it happily accepts an ISO string; in the type system,
+`z.input<typeof schema>` reports the field as `Date`. Every caller building a
+JSON payload -- which is every caller, since this is an HTTP API -- failed to
+typecheck with `Type 'string' is not assignable to type 'Date'`.
+
+**How diagnosed.** The error pointed at the generator, but the generator was
+right: it was building JSON, which is what the endpoint accepts. The schema was
+misdescribing its own input type.
+
+**Fix.** Replaced `z.coerce.date()` with an explicit
+`z.union([z.string().datetime({ offset: true }), z.date()]).transform(...)`.
+The static input type now matches what the API really accepts, and requiring an
+offset additionally rejects ambiguous local-time strings.
+
+**Cost.** ~6 min.
+
+**What it taught.** A convenience helper that is wrong in the type system is
+worse than no helper: it pushes the error to every call site. Worth the four
+extra characters to say what is meant.
+
+---
+
+### F-009 -- the holdout guard failed on its own documentation
+
+**What broke.** The static guard asserting "no file outside the allowlist
+imports `OOD_CONFIG`" failed, naming `eval/holdout-guard.ts` and
+`scripts/seed.ts` as offenders. Both were innocent: each *mentions* `OOD_CONFIG`
+in a docblock explaining why it deliberately avoids it. The regex
+`/import\s[^;]*\bOOD_CONFIG\b/` matched the word "import" inside a comment,
+several lines above the mention.
+
+**How diagnosed.** Read the offending files. Neither had an import statement at
+all -- the match was entirely inside prose.
+
+**Fix.** Strip block and line comments before checking, so the guard tests
+executable code rather than prose. Added a test for the comment-stripper itself,
+since it is now load-bearing for two other tests. Allowlisted the guard's own
+test file, which necessarily names `OOD_CONFIG` in the pattern it searches for.
+
+**Cost.** ~8 min.
+
+**What it taught.** This failure was in the safe direction -- a false positive on
+a guard, not a false negative -- but the same naivety pointed the other way would
+have produced a guard that passes while checking nothing. That is why the suite
+now also asserts the glob finds more than ten files: a guard that silently
+matches nothing is worse than no guard, because it produces confidence.

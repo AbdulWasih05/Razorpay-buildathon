@@ -1,0 +1,318 @@
+import Fastify, { type FastifyInstance } from 'fastify';
+import { Prisma, PrismaClient } from '@prisma/client';
+import {
+  GROUND_TRUTH_LABELS,
+  RAILS,
+  SCENARIO_CLASSES,
+  disputeWebhookEventSchema,
+  evidencePackIngestSchema,
+  toPromptInput,
+} from '@praman/core';
+import { DEV_CONFIG, generateTransaction } from '@praman/simulator';
+import { z } from 'zod';
+
+import { captureEvidencePack, readEvidencePack } from './capture.js';
+
+const asJsonValue = (value: unknown): Prisma.InputJsonValue => value as Prisma.InputJsonValue;
+
+/**
+ * A generated dispute plus the corpus bookkeeping that only a seeded eval case
+ * carries. The `event` half is the verbatim Razorpay webhook envelope and is
+ * validated by the same contract schema the real ingest path uses; the `meta`
+ * half is ours and is clearly separated so the two never blur together.
+ */
+const disputeSeedSchema = z
+  .object({
+    event: disputeWebhookEventSchema,
+    meta: z
+      .object({
+        externalId: z.string().min(1),
+        rail: z.enum(RAILS),
+        scenarioClass: z.enum(SCENARIO_CLASSES),
+        corpus: z.enum(['dev', 'ood_holdout']),
+        seed: z.string().min(1),
+        groundTruth: z.enum(GROUND_TRUTH_LABELS),
+        groundTruthRationale: z.string().min(1),
+      })
+      .strict(),
+  })
+  .strict();
+
+/**
+ * The Praman API.
+ *
+ * The route that matters here is `POST /evidence-pack`. It is the capture
+ * layer: the surface that records agentic evidence at transaction time, months
+ * before any dispute exists. Seeding goes through it like everything else, so
+ * the architecture diagram's "capture layer" points at a real component rather
+ * than at a seed script that writes to the database behind its back.
+ */
+
+export interface BuildServerOptions {
+  prisma?: PrismaClient;
+  logger?: boolean;
+}
+
+export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
+  const prisma = options.prisma ?? new PrismaClient();
+  const app = Fastify({ logger: options.logger ?? false });
+
+  app.decorate('prisma', prisma);
+
+  app.get('/health', async () => ({ status: 'ok' }));
+
+  // -------------------------------------------------------------------------
+  // Capture
+  // -------------------------------------------------------------------------
+
+  app.post('/evidence-pack', async (request, reply) => {
+    const parsed = evidencePackIngestSchema.safeParse(request.body);
+
+    if (!parsed.success) {
+      // Reject at the door with the specific field problems. An evidence pack
+      // that is wrong here is worse than one that is missing: it would look like
+      // evidence at dispute time and fail to support the contest.
+      return reply.status(400).send({
+        error: 'invalid_evidence_pack',
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          message: issue.message,
+        })),
+      });
+    }
+
+    const result = await captureEvidencePack(prisma, parsed.data);
+
+    return reply.status(result.created ? 201 : 200).send({
+      externalId: parsed.data.externalId,
+      rail: parsed.data.rail,
+      created: result.created,
+      // Idempotent: re-posting the same pack updates in place rather than
+      // duplicating, so reseeding is safe.
+      idempotent: !result.created,
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Debug / inspection -- how a captured transaction reads back
+  // -------------------------------------------------------------------------
+
+  app.get('/evidence-packs', async (_request, reply) => {
+    const packs = await prisma.evidencePack.findMany({
+      orderBy: { occurredAt: 'asc' },
+      select: { externalId: true, rail: true, agentPlatform: true, capturedAt: true },
+      take: 200,
+    });
+    return reply.send({ count: packs.length, items: packs });
+  });
+
+  app.get('/evidence-packs/:externalId', async (request, reply) => {
+    const params = z.object({ externalId: z.string().min(1) }).safeParse(request.params);
+    if (!params.success) return reply.status(400).send({ error: 'invalid_external_id' });
+
+    const pack = await readEvidencePack(prisma, params.data.externalId);
+    if (!pack) return reply.status(404).send({ error: 'not_found' });
+
+    return reply.send({
+      externalId: pack.externalId,
+      rail: pack.rail,
+      capturedAt: pack.capturedAt,
+      merchant: { name: pack.merchant.name, category: pack.merchant.category },
+      customer: { name: pack.order.customer.name, email: pack.order.customer.email },
+      order: {
+        externalId: pack.order.externalId,
+        amount: pack.order.amount,
+        currency: pack.order.currency,
+        status: pack.order.status,
+        items: pack.order.itemsJson,
+      },
+      payment: pack.order.payment && {
+        razorpayPaymentId: pack.order.payment.razorpayPaymentId,
+        amount: pack.order.payment.amount,
+        method: pack.order.payment.method,
+        status: pack.order.payment.status,
+        vpa: pack.order.payment.vpa,
+      },
+      fulfillment: pack.order.fulfillment && {
+        status: pack.order.fulfillment.status,
+        carrier: pack.order.fulfillment.carrier,
+        deliveredAt: pack.order.fulfillment.deliveredAt,
+        proofRef: pack.order.fulfillment.proofRef,
+      },
+      mandate: pack.mandate && {
+        externalId: pack.mandate.externalId,
+        agentId: pack.mandate.agentId,
+        agentPlatform: pack.mandate.agentPlatform,
+        consentAt: pack.mandate.consentAt,
+        validFrom: pack.mandate.validFrom,
+        validUntil: pack.mandate.validUntil,
+        maxAmount: pack.mandate.maxAmount,
+        status: pack.mandate.status,
+      },
+      agentic: pack.agentId && {
+        agentId: pack.agentId,
+        agentPlatform: pack.agentPlatform,
+        protocol: pack.protocol,
+        protocolVersion: pack.protocolVersion,
+        protocolMetadata: pack.protocolMetadata,
+      },
+      conversationTurns: pack.conversationTrace?.turns.map((turn) => ({
+        seq: turn.seq,
+        role: turn.role,
+        content: turn.content,
+        occurredAt: turn.occurredAt,
+      })),
+      orchestrationLogs: pack.orchestrationLogs.map((entry) => ({
+        seq: entry.seq,
+        action: entry.action,
+        actor: entry.actor,
+        detail: entry.detail,
+        occurredAt: entry.occurredAt,
+      })),
+    });
+  });
+
+  /**
+   * Exactly what an LLM prompt would be built from for this pack.
+   *
+   * Worth exposing: it makes the "prompt inputs are seed-derived only" rule
+   * inspectable by a reviewer, instead of a claim in a document.
+   */
+  app.get('/evidence-packs/:externalId/prompt-input', async (request, reply) => {
+    const params = z.object({ externalId: z.string().min(1) }).safeParse(request.params);
+    if (!params.success) return reply.status(400).send({ error: 'invalid_external_id' });
+
+    const pack = await readEvidencePack(prisma, params.data.externalId);
+    if (!pack) return reply.status(404).send({ error: 'not_found' });
+
+    return reply.send(
+      toPromptInput({
+        externalId: pack.externalId,
+        rail: pack.rail,
+        capturedAt: pack.capturedAt,
+        occurredAt: pack.occurredAt,
+        agentId: pack.agentId,
+        agentPlatform: pack.agentPlatform,
+        protocol: pack.protocol,
+        protocolVersion: pack.protocolVersion,
+        order: pack.order,
+        mandate: pack.mandate,
+        conversationTrace: pack.conversationTrace,
+        orchestrationLogs: pack.orchestrationLogs,
+      }),
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Dispute seeding
+  // -------------------------------------------------------------------------
+
+  /**
+   * Records a generated dispute against an already-captured transaction.
+   *
+   * Deliberately named `/seed/`. The body is the exact Razorpay webhook
+   * envelope, but it arrives with a sidecar of corpus bookkeeping -- ground
+   * truth label, scenario class, which corpus it belongs to -- that a real
+   * webhook would never carry. Naming it a seeding route keeps that distinction
+   * visible rather than dressing evaluation scaffolding up as production ingest.
+   * The real `payment.dispute.created` consumer arrives with the pipeline in P3.
+   */
+  app.post('/seed/dispute', async (request, reply) => {
+    const parsed = disputeSeedSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: 'invalid_dispute_seed',
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          message: issue.message,
+        })),
+      });
+    }
+
+    const { event, meta } = parsed.data;
+    const entity = event.payload.dispute.entity;
+
+    const payment = await prisma.payment.findUnique({
+      where: { razorpayPaymentId: entity.payment_id },
+      select: { id: true },
+    });
+    if (!payment) {
+      // A dispute must reference a transaction we actually captured. If it does
+      // not, the capture step was skipped or ordered wrongly, and storing the
+      // dispute anyway would produce a case with no evidence behind it.
+      return reply.status(409).send({
+        error: 'unknown_payment',
+        message: `no captured payment for ${entity.payment_id}; capture the evidence pack first`,
+      });
+    }
+
+    const data = {
+      razorpayPaymentId: entity.payment_id,
+      paymentId: payment.id,
+      amount: entity.amount,
+      currency: entity.currency,
+      amountDeducted: entity.amount_deducted,
+      reasonCode: entity.reason_code,
+      reasonDescription: entity.reason_description ?? null,
+      respondBy: new Date(entity.respond_by * 1000),
+      status: entity.status,
+      phase: entity.phase,
+      raisedAt: new Date(entity.created_at * 1000),
+      evidenceJson: asJsonValue(entity.evidence),
+      rail: meta.rail,
+      scenarioClass: meta.scenarioClass,
+      corpus: meta.corpus,
+      seed: meta.seed,
+      groundTruth: meta.groundTruth,
+      groundTruthRationale: meta.groundTruthRationale,
+      occurredAt: new Date(entity.created_at * 1000),
+    };
+
+    const dispute = await prisma.dispute.upsert({
+      where: { externalId: meta.externalId },
+      create: { externalId: meta.externalId, razorpayDisputeId: entity.id, ...data },
+      update: data,
+      select: { id: true },
+    });
+
+    return reply.status(201).send({ disputeId: entity.id, stored: dispute.id });
+  });
+
+  // -------------------------------------------------------------------------
+  // Demo affordance: a mock agent checkout that captures live
+  // -------------------------------------------------------------------------
+
+  /**
+   * Emits one agentic evidence pack, live, before any dispute for it exists.
+   * This is the demo beat that makes the capture-at-transaction-time argument
+   * visible rather than narrated: the pack is written now; the dispute arrives
+   * later; nothing had to be reconstructed.
+   *
+   * Rate limiting and the reset mechanism land with the public deploy (P4.3);
+   * this endpoint is local-only until then.
+   */
+  app.post('/demo/agent-checkout', async (_request, reply) => {
+    const existing = await prisma.evidencePack.count({ where: { rail: 'agentic' } });
+    const transaction = generateTransaction(DEV_CONFIG, 'b1', 900 + existing);
+    const parsed = evidencePackIngestSchema.parse(transaction.pack);
+    const result = await captureEvidencePack(prisma, parsed);
+
+    return reply.status(201).send({
+      captured: true,
+      externalId: parsed.externalId,
+      agentId: transaction.pack.agentic?.agentId,
+      mandateRef: transaction.pack.mandate?.externalId,
+      amount: transaction.amount,
+      conversationTurns: transaction.pack.conversationTrace?.turns.length ?? 0,
+      orchestrationLogEntries: (transaction.pack.orchestrationLogs ?? []).length,
+      evidencePackId: result.evidencePackId,
+      inspect: `/evidence-packs/${parsed.externalId}`,
+    });
+  });
+
+  app.addHook('onClose', async () => {
+    if (!options.prisma) await prisma.$disconnect();
+  });
+
+  return app;
+}

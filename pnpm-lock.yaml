@@ -8,9 +8,18 @@ importers:
 
   .:
     dependencies:
+      '@praman/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@praman/simulator':
+        specifier: workspace:*
+        version: link:packages/simulator
       '@prisma/client':
         specifier: 6.19.3
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
     devDependencies:
       '@eslint/js':
         specifier: ^9.17.0
@@ -45,6 +54,9 @@ importers:
       '@praman/simulator':
         specifier: workspace:*
         version: link:../../packages/simulator
+      '@prisma/client':
+        specifier: ^6.19.3
+        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
       fastify:
         specifier: ^5.2.0
         version: 5.12.1
