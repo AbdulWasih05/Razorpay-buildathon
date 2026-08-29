@@ -1,0 +1,365 @@
+// Praman data model.
+//
+// The organising idea (CLAUDE.md section 1): the agentic evidence for a dispute
+// cannot be reconstructed at dispute time -- it lives with the agent platform /
+// TPAP, not the merchant. So this store IS the capture layer. Everything an
+// agentic dispute will later need is written at transaction time, through the
+// POST /evidence-pack endpoint (P1.0), never by a direct DB write.
+//
+// Determinism convention, load-bearing for the eval (TASKS.md P1.1):
+//   externalId  -- seed-derived, stable across regeneration, safe as LLM prompt input
+//   occurredAt  -- seed-derived domain time, stable across regeneration
+//   id          -- server-generated row id,  EXCLUDED from canonical comparison
+//   createdAt   -- server wall-clock,        EXCLUDED from canonical comparison
+// Prompt inputs must be built only from the first two. Touching id or createdAt
+// in a prompt changes the request hash on reseed and silently invalidates every
+// committed replay fixture.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Parties
+// ---------------------------------------------------------------------------
+
+model Merchant {
+  id         String   @id @default(cuid())
+  externalId String   @unique
+  name       String
+  category   String
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+
+  customers     Customer[]
+  orders        Order[]
+  mandates      Mandate[]
+  evidencePacks EvidencePack[]
+}
+
+model Customer {
+  id         String   @id @default(cuid())
+  externalId String   @unique
+  merchantId String
+  name       String
+  email      String
+  contact    String
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+
+  merchant Merchant  @relation(fields: [merchantId], references: [id])
+  orders   Order[]
+  mandates Mandate[]
+
+  @@index([merchantId])
+}
+
+// ---------------------------------------------------------------------------
+// The agentic layer: who was allowed to spend, how much, and until when
+// ---------------------------------------------------------------------------
+
+enum MandateStatus {
+  active
+  expired
+  revoked
+  exhausted
+}
+
+/// A UPI Reserve Pay mandate: the standing consent an agent transacts under.
+/// Its four load-bearing facts are what a mandate-breach dispute turns on:
+/// consent existed, a spending limit, a validity window, and a named agent.
+model Mandate {
+  id            String        @id @default(cuid())
+  externalId    String        @unique
+  merchantId    String
+  customerId    String
+  agentId       String
+  agentPlatform String
+  payerVpa      String
+  consentAt     DateTime
+  validFrom     DateTime
+  validUntil    DateTime
+  maxAmount     Int // currency subunits (paise)
+  currency      String        @default("INR")
+  status        MandateStatus
+  occurredAt    DateTime
+  createdAt     DateTime      @default(now())
+
+  merchant      Merchant       @relation(fields: [merchantId], references: [id])
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  evidencePacks EvidencePack[]
+
+  @@index([merchantId])
+  @@index([customerId])
+  @@index([agentId])
+}
+
+// ---------------------------------------------------------------------------
+// Commerce
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  placed
+  confirmed
+  cancelled
+  refunded
+}
+
+model Order {
+  id         String      @id @default(cuid())
+  externalId String      @unique
+  merchantId String
+  customerId String
+  amount     Int // currency subunits
+  currency   String      @default("INR")
+  status     OrderStatus
+  itemsJson  Json
+  placedAt   DateTime
+  occurredAt DateTime
+  createdAt  DateTime    @default(now())
+
+  merchant     Merchant      @relation(fields: [merchantId], references: [id])
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  payment      Payment?
+  fulfillment  Fulfillment?
+  evidencePack EvidencePack?
+
+  @@index([merchantId])
+  @@index([customerId])
+}
+
+/// Mirrors the Razorpay payment entity closely enough to reference it honestly.
+/// razorpayPaymentId holds a real test-mode pay_ id once P0.2 lands.
+model Payment {
+  id                String    @id @default(cuid())
+  externalId        String    @unique
+  razorpayPaymentId String    @unique
+  orderId           String    @unique
+  amount            Int
+  currency          String    @default("INR")
+  method            String // card | upi | netbanking | wallet ...
+  status            String // created | authorized | captured | refunded | failed
+  vpa               String?
+  capturedAt        DateTime?
+  occurredAt        DateTime
+  createdAt         DateTime  @default(now())
+
+  order    Order     @relation(fields: [orderId], references: [id])
+  disputes Dispute[]
+}
+
+enum FulfillmentStatus {
+  pending
+  shipped
+  delivered
+  returned
+  failed
+}
+
+model Fulfillment {
+  id          String            @id @default(cuid())
+  externalId  String            @unique
+  orderId     String            @unique
+  status      FulfillmentStatus
+  carrier     String?
+  trackingId  String?
+  shippedAt   DateTime?
+  deliveredAt DateTime?
+  /// Signature, OTP or delivery-confirmation reference, when one exists.
+  proofRef    String?
+  occurredAt  DateTime
+  createdAt   DateTime          @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// The capture layer
+// ---------------------------------------------------------------------------
+
+enum Rail {
+  /// Ordinary e-commerce -- a human checked out. The today-problem wedge.
+  ordinary
+  /// Agent-initiated under a mandate. The differentiated module.
+  agentic
+}
+
+/// Written at transaction time by POST /evidence-pack. This is the row that
+/// makes an agentic dispute defensible three months later.
+model EvidencePack {
+  id         String  @id @default(cuid())
+  externalId String  @unique
+  merchantId String
+  orderId    String  @unique
+  mandateId  String?
+  rail       Rail
+
+  /// Who transacted, and on whose stack.
+  agentId       String?
+  agentPlatform String?
+  /// Agentic protocol identifiers, e.g. UPI Reserve Pay / UAP, and its version.
+  protocol        String?
+  protocolVersion String?
+  /// Protocol fields with no first-class column yet. Kept rather than dropped:
+  /// an unmodelled field we retained beats one we needed and never captured.
+  protocolMetadata Json?
+
+  capturedAt DateTime
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+
+  merchant          Merchant           @relation(fields: [merchantId], references: [id])
+  order             Order              @relation(fields: [orderId], references: [id])
+  mandate           Mandate?           @relation(fields: [mandateId], references: [id])
+  conversationTrace ConversationTrace?
+  orchestrationLogs OrchestrationLog[]
+
+  @@index([merchantId])
+  @@index([mandateId])
+  @@index([rail])
+}
+
+/// The agent-to-customer exchange that produced the purchase: intent, selection,
+/// confirmation. Source for customer_communication after summarisation.
+model ConversationTrace {
+  id             String   @id @default(cuid())
+  externalId     String   @unique
+  evidencePackId String   @unique
+  startedAt      DateTime
+  occurredAt     DateTime
+  createdAt      DateTime @default(now())
+
+  evidencePack EvidencePack       @relation(fields: [evidencePackId], references: [id])
+  turns        ConversationTurn[]
+}
+
+enum TurnRole {
+  customer
+  agent
+  system
+}
+
+model ConversationTurn {
+  id         String   @id @default(cuid())
+  externalId String   @unique
+  traceId    String
+  seq        Int
+  role       TurnRole
+  content    String
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+
+  trace ConversationTrace @relation(fields: [traceId], references: [id])
+
+  @@unique([traceId, seq])
+  @@index([traceId])
+}
+
+/// Timestamped agent actions, including the payment call. Source for
+/// access_activity_log. Append-only by convention: never updated, never deleted.
+model OrchestrationLog {
+  id             String @id @default(cuid())
+  externalId     String @unique
+  evidencePackId String
+  seq            Int
+  /// e.g. intent_received | catalogue_searched | item_selected |
+  ///      mandate_checked | payment_initiated | payment_captured
+  action         String
+  actor          String
+  detail         Json
+  occurredAt     DateTime
+  createdAt      DateTime @default(now())
+
+  evidencePack EvidencePack @relation(fields: [evidencePackId], references: [id])
+
+  @@unique([evidencePackId, seq])
+  @@index([evidencePackId])
+}
+
+// ---------------------------------------------------------------------------
+// Disputes
+// ---------------------------------------------------------------------------
+
+/// Which corpus a generated dispute belongs to. The held-out set is
+/// out-of-distribution by construction (different model, different personas)
+/// and the dev pipeline is forbidden from reading it (guard test, P1.3).
+enum Corpus {
+  dev
+  ood_holdout
+}
+
+enum GroundTruth {
+  winnable
+  unwinnable
+  ambiguous
+}
+
+/// Field names and values mirror Razorpay's dispute entity exactly; Praman's own
+/// bookkeeping is kept in clearly separated fields below the line.
+model Dispute {
+  id String @id @default(cuid())
+
+  // --- Razorpay dispute entity (https://razorpay.com/docs/api/disputes/) ---
+  razorpayDisputeId String   @unique // disp_...
+  razorpayPaymentId String // pay_...
+  amount            Int
+  currency          String   @default("INR")
+  amountDeducted    Int      @default(0)
+  reasonCode        String
+  reasonDescription String?
+  respondBy         DateTime
+  status            String // open | under_review | won | lost | closed
+  phase             String // fraud | retrieval | chargeback | pre_arbitration | arbitration
+  /// Razorpay's created_at, i.e. when the dispute was raised. Seed-derived.
+  raisedAt          DateTime
+  evidenceJson      Json?
+
+  // --- Praman bookkeeping (not part of Razorpay's contract) ---
+  externalId String @unique
+  paymentId  String
+  rail       Rail
+  /// Generator scenario class: a1..a4 (ordinary) or b1..b5 (agentic).
+  scenarioClass        String
+  corpus               Corpus
+  /// Seed used to generate this dispute; makes any single case reproducible.
+  seed                 String
+  groundTruth          GroundTruth
+  groundTruthRationale String
+  occurredAt           DateTime
+  createdAt            DateTime    @default(now())
+
+  payment   Payment    @relation(fields: [paymentId], references: [id])
+  auditLogs AuditLog[]
+
+  @@index([corpus])
+  @@index([rail])
+  @@index([scenarioClass])
+  @@index([razorpayPaymentId])
+}
+
+/// Append-only trail of every state transition, with actor and timestamp.
+/// This is trust evidence, not decoration (rubric: "would you trust it").
+/// Nothing in this table is ever updated or deleted.
+model AuditLog {
+  id        String  @id @default(cuid())
+  disputeId String
+  seq       Int
+  fromState String?
+  toState   String
+  /// system | llm | gate | human:<name> | adapter
+  actor      String
+  reason     String?
+  detail     Json?
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+
+  dispute Dispute @relation(fields: [disputeId], references: [id])
+
+  @@unique([disputeId, seq])
+  @@index([disputeId])
+}

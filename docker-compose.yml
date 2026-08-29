@@ -1,0 +1,22 @@
+# Local Postgres for development. Port 5433 to avoid colliding with any
+# system Postgres already on 5432.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: praman-db
+    environment:
+      POSTGRES_USER: praman
+      POSTGRES_PASSWORD: praman
+      POSTGRES_DB: praman
+    ports:
+      - '5433:5432'
+    volumes:
+      - praman-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U praman -d praman']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  praman-pgdata:

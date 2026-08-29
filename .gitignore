@@ -1,0 +1,16 @@
+# Secrets — never commit. .env holds live API keys.
+.env
+.env.*
+!.env.example
+
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

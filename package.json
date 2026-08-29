@@ -1,0 +1,42 @@
+{
+  "name": "praman",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Defense-only dispute evidence responder for India's UPI agentic stack",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "check:ood-provider": "tsx scripts/check-ood-provider.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "prisma": "^6.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vitest": "^2.1.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "prisma",
+      "@prisma/engines",
+      "@prisma/client"
+    ]
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3"
+  }
+}

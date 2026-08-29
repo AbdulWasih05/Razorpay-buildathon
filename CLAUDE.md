@@ -1,0 +1,49 @@
+# CLAUDE.md — Praman (Razorpay AI Buildathon, Track 2)
+
+> **STACK NOTE:** Written against the default stack (TS end-to-end). If the Aug 29 architecture session amends the stack, update §4 only — everything else stands.
+
+## 1. What this project is
+
+Praman is a **defense-only dispute evidence responder**. It handles ordinary e-commerce disputes today; its differentiated module is agent-initiated payments on India's UPI agentic stack (Reserve Pay mandates, UPI Circle, UAP). Core product insight: agentic evidence (agent identifier, mandate reference, protocol metadata, conversation context) is **captured at transaction time** — by dispute time the trace is unrecoverable, since it lives with the agent platform/TPAP, not the merchant. The transaction store IS the capture layer. Praman ingests dispute events in Razorpay's exact Disputes API schema (verified: UPI disputes surface in this system — their submit-evidence docs have an explicit UPI reason-code section; per our own honesty taxonomy, the doc URL and captured wording live in DECISIONS.md, because "we verified this" is itself a checkable claim), assembles evidence from the capture store, decides contest-vs-abstain through an evidence-sufficiency gate, drafts contests mapped to Razorpay's typed evidence fields, and submits only through a human-approved, draft-first, deadline-aware flow.
+
+Built solo by Abdul Wasih for the Razorpay AI Buildathon (submission Sep 4, 2026). The judges are Razorpay AI/platform engineers. They will recognize their own API schema on sight. **Schema fidelity is a feature.**
+
+## 2. The rubric this is judged on — optimize every decision against it
+
+1. **Problem taste** — "did you pick something that actually matters"
+2. **Build quality** — "does it run, is it structured, **would you trust it**"
+3. **AI judgment** — "the right tool in the right place, **and where you chose not to use one**"
+4. **Failure recovery** — "what broke, and what you did about it"
+
+"Would you trust it" means: gates, audit logs, and determinism are the product, not decoration.
+
+## 3. Hard rules — never violate, never "improve"
+
+1. **Razorpay schema fidelity.** Dispute entities, evidence fields, contest payloads, and error states mirror the documented Disputes API exactly: `disp_` ids, `payment_id`, `reason_code`, `phase` (chargeback / pre_arbitration / arbitration), `respond_by`, `status`, evidence fields (`summary`, `shipping_proof`, `billing_proof`, `customer_communication`, `proof_of_service`, `explanation_letter`, `access_activity_log`, `refund_cancellation_policy`, `term_and_conditions`, `others`), `action: draft|submit`, explanation ≤1000 chars, Documents API with `purpose: dispute_evidence`. When unsure about a field, check https://razorpay.com/docs/api/disputes/ — never invent fields.
+2. **The submit path has exactly one door.** In the product, the approve action in the review UI is the sole path to submit — no other code path may call submit. Eval mode scores gate decisions and draft outputs only and NEVER touches the submission adapter (a test enforces this). This precise invariant replaces "never auto-submit, always" — it names what actually matters and makes the eval batch run legitimate rather than an undocumented exception.
+3. **Defense-only.** Nothing offense-capable, ever. No fraud-generation tooling, no dispute-abuse tooling, not even for testing — the synthetic generator creates *dispute scenarios*, not attack tools.
+4. **LLM boundary (the AI-judgment criterion).** LLM is used ONLY for: conversation-trace summarization, explanation-letter drafting, ambiguity flagging. LLM is NEVER used for: schema/field mapping, gate thresholds, metrics computation, submission decisions, anything on the money path. Reason (state it in DECISIONS.md): a money action must never depend on a stochastic step; evals must be reproducible. **Runtime failure policy:** any LLM step that (1) fails/errors, (2) times out, (3) refuses, or (4) returns output failing schema validation routes the dispute to abstain with reason "assembly failure, manual review required" — logged in the audit trail, never silently retried into the money path. Tests cover all FOUR failure paths: error, timeout, refusal, schema-validation failure. (This engineered fallback is the pre-built "what broke" story; a real instance will almost certainly occur during the batch run, and the fallback will already exist.)
+5. **Eval integrity.** Corpus generation is seeded and deterministic, with reason-code distribution grounded in cited published data where available (assumption stated explicitly where not). The held-out set is **out-of-distribution by construction**: generated with a different model and different prompt/persona set than the dev corpus, created at generation time, NEVER read during feature development (guard test enforces this). **Reproducibility via record/replay:** `packages/llm` records LLM responses keyed by request hash on the first eval run, committed as fixtures; eval runs replay by default (`--live` regenerates). Gate decisions, precision/recall, and FP cost are byte-reproducible; the README states the replay design plainly — never claim unqualified byte-reproducibility of live LLM output. Report ALL metrics including bad ones: precision, recall, false-positive cost in ₹, abstention rate, per-case exception reasons, and the **dev-vs-OOD distribution-shift delta**. No cherry-picking. If a metric is ugly, it ships ugly — the ugly OOD delta is the credibility proof.
+6. **Honesty taxonomy.** Every claim in README/docs is measured, structural, or scoped. Never claim "first ever" — the verified claim is "first for India's UPI agentic stack." Simulated won/lost outcomes are tagged `simulated: true` at the data level and labeled "simulated" wherever rendered; no outcome number appears in UI, README, or video without its provenance. Headline metrics are precision/recall vs labels and false-positive cost — never simulated wins. "₹ protected" is banned phrasing; use "₹ at stake in drafted contests" / "₹ in correctly abstained disputes."
+7. **Abstention over bluffing.** Insufficient evidence → abstain with a stated reason. A bluffed contest that loses costs fees + time; that IS the false-positive cost we measure.
+
+## 4. Stack & structure
+
+- **Runtime:** Node 20+, TypeScript strict, pnpm monorepo
+- **API:** Fastify · **DB:** PostgreSQL via Prisma · **UI:** React (Vite), plain functional table UI — clarity over polish
+- **LLM:** Anthropic API (structured outputs); model calls isolated in `packages/llm` behind one interface
+- **Deploy:** Railway (api+db), Vercel (ui)
+- Layout: `packages/core` (domain: dispute entities, gate, mapping — zero LLM imports), `packages/simulator` (seeded corpus generator + webhook emitter), `packages/llm`, `packages/adapter` (Disputes API contract; simulator client + real client behind one interface), `apps/api` (includes the `POST /evidence-pack` capture endpoint — ALL seeding flows through it, never direct DB writes for evidence packs), `apps/ui`, `eval/` (harness + EVAL.md), docs: `DECISIONS.md`, `FAILURES.md`, `README.md`
+
+## 5. Working discipline (every session)
+
+- **TDD on core:** the gate, mapping, and metrics are test-first. Contract tests pin the Razorpay schema.
+- **FAILURES.md:** when anything breaks — a test, a schema assumption, an LLM behaving badly — log it SAME SESSION: what broke, how diagnosed, what the fix/fallback was. This file is a first-class deliverable (rubric #4). Never backfill from memory.
+- **DECISIONS.md:** every non-obvious choice gets an entry: what, why, what was rejected. Include the "Where we deliberately did NOT use AI" section. This file pre-writes the panel defense.
+- **Wasih must understand every line.** He defends this alone at a live panel. If a generated solution is clever but opaque, simplify it until he can explain it from first principles. When completing a task, add a 2–3 line "what to understand here" note in the task file.
+- **Small commits, honest history.** No squash theater. Commit messages state what and why.
+- **Scope discipline:** work TASKS.md top-to-bottom. Do not add features not in TASKS.md. If blocked >30 min, log the blocker in TASKS.md and move to the next task.
+
+## 6. Definition of done (project level)
+
+Live deploy link in the FIRST LINE of README (never-cut — the first reader is likely an AI screener, and a responding link is the cheapest strong signal). Plain-text metrics table near the top of README with dev AND OOD held-out numbers including the shift delta. Explicit "Track 2 bar mapping" README section in their vocabulary (defense-only, held-out set, false-positive cost in ₹, abstention). "Where we deliberately did NOT use AI" as a visible README section. One-command local run. Seeded eval a stranger can reproduce. 100+ dispute batch across both rails processed with full metrics + exception list. One demoable abstention case. Fact-check pass on every checkable claim. All four docs (README, EVAL, DECISIONS, FAILURES) complete and honest.

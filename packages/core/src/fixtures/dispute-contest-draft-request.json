@@ -1,0 +1,18 @@
+{
+  "amount": 5000,
+  "summary": "goods delivered",
+  "shipping_proof": [
+    "doc_EFtmUsbwpXwBH9",
+    "doc_EFtmUsbwpXwBH8"
+  ],
+  "others": [
+    {
+      "type": "receipt_signed_by_customer",
+      "document_ids": [
+        "doc_EFtmUsbwpXwBH1",
+        "doc_EFtmUsbwpXwBH7"
+      ]
+    }
+  ],
+  "action": "draft"
+}
