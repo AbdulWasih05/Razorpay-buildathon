@@ -52,6 +52,13 @@ export const CONTEST_EVIDENCE_DOCUMENT_FIELDS = [
 
 export type ContestEvidenceDocumentField = (typeof CONTEST_EVIDENCE_DOCUMENT_FIELDS)[number];
 
+/**
+ * Every place evidence can land on the write path: the typed document-id fields
+ * plus `others`, the documented escape hatch for evidence Razorpay has no typed
+ * field for (it carries its own `type` label).
+ */
+export type ContestEvidenceField = ContestEvidenceDocumentField | 'others';
+
 const documentIdListFields = Object.fromEntries(
   CONTEST_EVIDENCE_DOCUMENT_FIELDS.map((field) => [field, z.array(documentId).optional()]),
 ) as Record<ContestEvidenceDocumentField, z.ZodOptional<z.ZodArray<z.ZodString>>>;

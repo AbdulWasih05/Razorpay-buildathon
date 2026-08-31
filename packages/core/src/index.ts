@@ -12,4 +12,6 @@ export * from './capture/prompt-input.js';
 
 // Domain
 export * from './domain/reason-codes.js';
+export * from './domain/rubric.js';
+export * from './domain/collector.js';
 export * from './domain/scenarios.js';

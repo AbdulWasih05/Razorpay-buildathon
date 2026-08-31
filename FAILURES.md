@@ -244,3 +244,53 @@ a guard, not a false negative -- but the same naivety pointed the other way woul
 have produced a guard that passes while checking nothing. That is why the suite
 now also asserts the glob finds more than ten files: a guard that silently
 matches nothing is worse than no guard, because it produces confidence.
+
+---
+
+### F-010 -- the corpus encodes duplicate-charge ground truth in a fact the capture pack never carries
+
+**When.** 2026-08-31, building the P2.2 collector.
+
+**What broke.** Scenario class a3 (duplicate charge) decides its ground truth
+from `genuineDuplicate`: two captured payments against one order is unwinnable,
+two distinct orders is winnable. But the capture envelope is one order and one
+payment. `genuineDuplicate` is written into the corpus metadata and **never into
+the evidence pack**. So the collector, looking only at what the store holds,
+cannot tell the two apart.
+
+**How it was found.** Writing the `duplicate_payment_analysis` collector and
+asking what data it would actually read. There was none. It was not a failing
+test -- the tests I had written would have passed either way, which is the part
+worth noticing.
+
+**Why it matters more than it looks.** This is a hole in D-011, the rule that
+ground truth is derived from generated evidence rather than asserted alongside
+it. For a3, the label is asserted. Any system scoring well on a3 would be
+scoring on something it could not have known, and the eval would be measuring
+the generator, not the product.
+
+**The fix, and the fix not taken.** The right repair is to capture the sibling
+payment so a duplicate is visible in the data. That is a capture-schema change,
+a migration and a full reseed, at 23:00 on the day of a checkpoint -- and it
+would perturb the seeded stream, so the whole corpus and its committed
+expectations move with it. Not tonight.
+
+What shipped instead: the collector reports `duplicate_payment_analysis` as
+**`not_capturable`**, with the reason stated in the finding, and takes an
+optional `relatedPayments` argument that nothing currently populates. It never
+answers "no duplicate found". The distinction is the point -- returning "not a
+duplicate" from a store that holds one payment per order would be a confident
+wrong answer that contests a real duplicate charge, which is a false positive
+with a fee attached.
+
+**What it taught.** A ground-truth label that no evidence supports is not a hard
+case, it is an unanswerable one, and it will quietly flatter or punish the
+system depending on which way the gate happens to lean. The `not_capturable`
+state exists because of this bug, and it turned out to be the more useful idea:
+"we cannot get this" and "this is missing" are different facts about a dispute
+and the gate should not confuse them.
+
+**Consequence, stated plainly.** a3 disputes will systematically abstain. That
+costs recall on a3-winnable cases and it will show in the P4.1 numbers. It ships
+that way rather than being hidden, and the repair is queued as its own task
+rather than rushed tonight.
