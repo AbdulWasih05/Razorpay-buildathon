@@ -11,6 +11,9 @@ importers:
       '@praman/core':
         specifier: workspace:*
         version: link:packages/core
+      '@praman/llm':
+        specifier: workspace:*
+        version: link:packages/llm
       '@praman/simulator':
         specifier: workspace:*
         version: link:packages/simulator

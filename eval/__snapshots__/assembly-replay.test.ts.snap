@@ -1,0 +1,38 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`one fixed dispute, assembled from the committed recording > matches the recorded draft exactly 1`] = `
+{
+  "ambiguityFlags": [],
+  "assignments": [
+    {
+      "artifacts": [
+        "authorisation_evidence",
+      ],
+      "field": "access_activity_log",
+      "othersType": undefined,
+    },
+    {
+      "artifacts": [
+        "customer_communication",
+      ],
+      "field": "customer_communication",
+      "othersType": undefined,
+    },
+    {
+      "artifacts": [
+        "invoice_breakdown",
+      ],
+      "field": "others",
+      "othersType": "invoice_with_price_breakdown",
+    },
+  ],
+  "auditSteps": [
+    "evidence_collected",
+    "trace_summarised",
+    "contest_drafted",
+  ],
+  "confirmation": "explicit",
+  "outcome": "assembled",
+  "summary": "Dispute reason UPI 128 (unauthorised). Customer purchased a prescription refill for INR 41,900 on 2026-06-01. Evidence supports authorisation. Authorisation evidence shows active mandate, consent recorded at 12:08:00 UTC, and orchestration actions confirming payment capture. Invoice breakdown confirms the single line item and total charged match the dispute amount. Customer communication log records 5 turns where the customer explicitly approved the order for the specific amount. Mandate facts confirm the charge was within the limit and validity window, and consent was recorded before payment. The evidence demonstrates the customer authorised this specific transaction via an active mandate.",
+}
+`;

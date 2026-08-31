@@ -567,3 +567,65 @@ to prevent.
 toward the minimum is our reading of "across any of the evidence object
 attributes". It is asserted in a named test so a reviewer can disagree with it
 in exactly one place.
+
+---
+
+### D-021 -- the assembler runs on a different model family from the one that wrote the holdout
+
+**Decided.** The assembly layer is provider-agnostic behind one interface.
+Anthropic is used whenever `ANTHROPIC_API_KEY` is present. No such key exists in
+this environment, so the committed recordings were produced by
+`qwen/qwen3.8-27b` via Groq -- and the choice of *which* non-Anthropic model is
+the load-bearing part.
+
+**Why not the obvious fallback.** The project already has a working Groq client
+and a proven model in `openai/gpt-oss-120b`. Using it would have been one line.
+It would also have been quietly fatal: gpt-oss-120b **wrote the held-out
+corpus's conversation language**. An assembler running on that model would be
+reading text its own family generated, the holdout would stop being
+out-of-distribution for the system under test, and the OOD delta -- the single
+number offered as evidence that this is not tuned to its own generator -- would
+measure nothing. Everything would still run. The numbers would still look fine.
+
+So the assembler runs on Qwen (Alibaba) and the holdout was written by gpt-oss
+(OpenAI): different labs, different training runs, separation preserved.
+`assertNotHoldoutFamily()` throws if anyone points the assembler at the holdout's
+family, and a test covers it. Enforced in code rather than remembered, because
+this is exactly the kind of contamination that never announces itself.
+
+**The honest cost.** CLAUDE.md §4 names Anthropic and the recordings are not
+Anthropic's. That is a real deviation and it is written into §4 rather than left
+for a reader to discover. It is cheap to undo: provider name and model id are
+both part of the replay key, so setting `ANTHROPIC_API_KEY` and running
+`pnpm assemble --live` re-records everything rather than silently serving output
+from the wrong model. No claim that Praman "uses Claude" appears anywhere.
+
+**Rejected.** (a) `openai/gpt-oss-120b` -- see above; the convenient option was
+the one that destroys the eval. (b) Waiting for an Anthropic key before building
+the layer -- the checkpoint is tonight and the provider is a swappable detail.
+(c) A hand-written stub assembler to demo with -- that is not the assembler, and
+demoing one while describing the other is the kind of thing that gets found at a
+panel.
+
+---
+
+### D-022 -- ambiguity flagging shares the summarisation call
+
+**Decided.** TASKS.md P2.3 names three LLM jobs: trace summary, letter draft,
+ambiguity flags. There are two calls, not three. `summariseTrace` returns the
+summary, a `confirmation` classification and `ambiguityFlags` together.
+
+**Why.** All three outputs come from one reading of the same text. A second call
+to re-read the same trace and emit flags would double the cost, double the
+latency, add a second replay key per dispute, and give two chances to disagree
+about what the trace says. Splitting work across calls is worth it when the
+calls need different context; these need identical context.
+
+`confirmation` (`explicit` / `implied` / `absent` / `contradicted`) is included
+deliberately, and is deliberately NOT a decision: the prompt forbids the model
+from concluding anything about authorisation, because whether consent was valid
+is decided from the mandate record by arithmetic in the collector. The model
+reports what the customer said; code decides what it means.
+
+**Rejected.** Three separate calls for symmetry with the task list -- the task
+list names jobs, not HTTP requests.

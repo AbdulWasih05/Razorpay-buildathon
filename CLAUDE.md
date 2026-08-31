@@ -31,7 +31,7 @@ Built solo by Abdul Wasih for the Razorpay AI Buildathon (submission Sep 4, 2026
 
 - **Runtime:** Node 20+, TypeScript strict, pnpm monorepo
 - **API:** Fastify · **DB:** PostgreSQL via Prisma · **UI:** React (Vite), plain functional table UI — clarity over polish
-- **LLM:** Anthropic Messages API, structured outputs, **single-shot calls — deliberately NOT the Claude Agent SDK (DECISIONS.md D-019)**; model calls isolated in `packages/llm` behind one interface
+- **LLM:** structured outputs, **single-shot calls — deliberately NOT the Claude Agent SDK (DECISIONS.md D-019)**; model calls isolated in `packages/llm` behind one interface. Intended provider is the Anthropic Messages API and it is used whenever `ANTHROPIC_API_KEY` is set; **no such key exists in this environment, so committed recordings were produced by `qwen/qwen3.8-27b` via Groq — deliberately NOT `openai/gpt-oss-120b`, which wrote the held-out corpus and would contaminate the OOD delta (DECISIONS.md D-021, enforced by `assertNotHoldoutFamily`)**
 - **Deploy:** Railway (api+db), Vercel (ui)
 - Layout: `packages/core` (domain: dispute entities, gate, mapping — zero LLM imports), `packages/simulator` (seeded corpus generator + webhook emitter), `packages/llm`, `packages/adapter` (Disputes API contract; simulator client + real client behind one interface), `apps/api` (includes the `POST /evidence-pack` capture endpoint — ALL seeding flows through it, never direct DB writes for evidence packs), `apps/ui`, `eval/` (harness + EVAL.md), docs: `DECISIONS.md`, `FAILURES.md`, `README.md`
 

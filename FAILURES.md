@@ -294,3 +294,86 @@ and the gate should not confuse them.
 costs recall on a3-winnable cases and it will show in the P4.1 numbers. It ships
 that way rather than being hidden, and the repair is queued as its own task
 rather than rushed tonight.
+
+---
+
+### F-011 -- the model made six correct judgements and the pipeline filed them all as broken plumbing
+
+**When.** 2026-08-31, first live assembly run over 10 dev disputes.
+
+**What broke.** 9 of 10 disputes abstained. Six of those carried
+`failureKind: refusal` and the reason "assembly failure, manual review
+required". Reading the underlying detail showed the model had not failed at
+anything:
+
+> "Charged amount (758600) exceeds the mandate cap (481383). Evidence does not
+> support contesting an over-limit charge."
+
+That is the correct answer to a b2 mandate breach. The system reported it as a
+malfunction.
+
+**Cause, and it was mine.** The letter-draft prompt used one channel --
+`{"refused": true}` -- for two entirely different things: "I decline to perform
+this task" and "I performed this task and the evidence does not support a
+contest". Hard rule #4 routes a refusal to abstain-with-assembly-failure, so
+the second meaning inherited the first meaning's handling.
+
+**Why it mattered more than a mislabel.** P4.1 reports abstention rate broken
+down by reason, and the whole point of that breakdown is to separate "the system
+judged correctly" from "the system broke". Shipping this would have put the
+product's best behaviour -- abstention over bluffing, the thing the corpus is
+built to test -- in the same bucket as a 500 from the provider. The headline
+number would have read as a system that fails 60% of the time.
+
+**Fix.** The merits judgement got its own contract: `insufficientEvidence`, a
+distinct abstention reason ("evidence insufficient to support a contest"), a
+distinct audit step (`declined_on_merits`), and no `failureKind`. `refused`
+stays exactly what hard rule #4 means by it. Prompt version bumped 1 -> 2, which
+invalidated the recordings, which is the record/replay design working as
+intended. A test asserts the two abstention classes never collapse into one.
+
+After the fix, the same 10 disputes: 4 assembled, 6 abstained on the merits,
+0 assembly failures.
+
+**What it taught.** A failure taxonomy is only as good as the channels feeding
+it. The four failure paths were right and well tested; the bug was upstream, in
+a prompt that overloaded one JSON key with two meanings. Tests of the failure
+paths could not have caught it -- they proved a refusal abstains, which it did.
+What caught it was reading the detail line of a passing-looking run, which is an
+argument for printing reasons rather than counts.
+
+---
+
+### F-012 -- the rate-limit lesson from F-007 was fixed in one place and not carried anywhere else
+
+**When.** 2026-08-31, same live assembly run.
+
+**What broke.** `groq 429: Limit 8000, Used 7670, Requested 835. Please try
+again in 3.7875s.` Four agentic disputes abstained with `failureKind: error`
+purely because the account's tokens-per-minute ceiling was reached mid-batch.
+
+**The part worth admitting.** This is F-007 again. F-007 was the same provider,
+the same limit, the same error body naming the same wait, and its fix -- retry
+using the delay the provider names -- was written into the corpus generator
+five hours earlier. `packages/llm` was written afterwards and did not have it.
+The lesson was recorded and not generalised.
+
+**Fix.** `withRateLimitRetry` in the provider layer: 429 and 5xx only, bounded
+at four attempts, delay taken from the provider's own message where it names
+one, and `attempts` returned on the response so a retried call is visible rather
+than silent.
+
+**Why this is not a hard-rule-#4 violation, stated because it looks like one.**
+Rule #4 forbids silently retrying a *failed LLM step* onto the money path. A 429
+is not a failed step -- the model never ran, no output exists, nothing is being
+papered over. Retrying completes a request that was never served; it does not
+re-roll a result we disliked. The three constraints that keep it inside the
+rule's intent: transport statuses only, before any model output exists, bounded
+and reported.
+
+**What it taught.** Writing the failure down is not the same as fixing the
+class. F-007's entry named the mechanism precisely enough that the second
+occurrence took two minutes to diagnose -- and the entry did not stop the second
+occurrence, because nothing generalised it into the layer written next. The
+retry now lives in the provider interface, so any future provider inherits it
+rather than rediscovering the limit.
