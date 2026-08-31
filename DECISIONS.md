@@ -21,6 +21,7 @@ must be reproducible. Everything on the money path is deterministic code.
 | Metrics computation (precision, recall, false-positive cost in rupees) | An eval a model participates in scoring is not an eval. |
 | The submission path | One door: the human approve action. Nothing stochastic gets to press it. |
 | Mandate validity, limit and amount consistency checks | Arithmetic and interval comparison. A model here would be strictly worse and strictly less explainable. |
+| An agentic loop anywhere in Praman's own runtime (Claude Agent SDK, tool use, autonomous multi-turn) | The three jobs we hand a model are single-shot text transforms: no decision to delegate, no tool to call, no state to carry. A loop would add nondeterminism and a hard replay problem to buy capability we deliberately do not want. Praman is agentic in its **domain**, not in its **implementation**. See D-019. |
 
 **Where AI genuinely earns its place** (natural language in, natural language
 out, no single correct answer): conversation-trace summarisation, explanation
@@ -92,9 +93,30 @@ a typo.
 able to parse whatever Razorpay returns; we constrain only what we produce. The
 constant is applied on the write path in P2.0.
 
-**Open, for P2.0.** Which home the drafted letter takes. Current lean: `summary`
-inline (no Documents API round-trip needed to demo), with the Documents API path
-built for `explanation_letter` because the real contract requires it.
+**Closed 2026-08-31, ahead of P2.0.** The drafted letter's home is `summary`,
+inline. `explanation_letter` stays typed as a document-id list and the Documents
+API path is built for it, because the real contract requires it and a merchant
+with a genuine signed letter must have somewhere to put it -- but Praman does not
+manufacture a PDF to fill a field it has nothing real to put in.
+
+Two consequences, both load-bearing:
+
+1. *The drafter targets 1000 characters from the start.* The ceiling is stated in
+   the prompt and enforced by the output schema. It is a writing constraint given
+   to the model, not a post-processing step applied behind its back.
+2. *There is no truncation.* An over-length draft is a schema-validation failure
+   -- which is failure path (4) of hard rule #4 -- so the dispute routes to
+   `abstain("assembly failure, manual review required")` and is audit-logged.
+   Silently cutting a contest letter mid-sentence would ship a mangled argument
+   to a card network wearing the appearance of success, which is the exact class
+   of quiet failure the gates exist to prevent. No silent retry either; the same
+   rule already forbids it.
+
+**Rejected.** (a) Truncate-then-submit -- invisible damage on the money path.
+(b) Draft long, then summarise down with a second model call -- a second
+stochastic step and a second replay key, bought for nothing. (c) Always uploading
+the letter as a document -- a Documents API round-trip on every dispute, to
+populate a field whose documented purpose is a letter the merchant actually has.
 
 ---
 
@@ -155,6 +177,19 @@ out-of-distribution, and the OOD delta stops being evidence of anything.
 
 **Note.** The model id was initially written from memory and 404'd; it must be
 read off the live account. See FAILURES.md F-002.
+
+**Precision note, added 2026-08-31.** "Differs in model lineage" is loose, and
+the exact shape matters, because the OOD delta is only evidence if a reader knows
+which axis moved. Precisely: the **dev** corpus makes no model call at generation
+time at all -- its conversation text is static templates with slot interpolation,
+committed in `packages/simulator/src/transaction.ts` and written once during
+development. The **held-out** corpus calls `openai/gpt-oss-120b` at generation
+time and records what comes back. So the axis that actually moved is *frozen,
+developer-authored templates -> live sampling from a different lab's model*,
+which is a wider gap than model-vs-model, not a narrower one. This does not
+weaken the claim, but it does mean the shift is **compound** -- structure and
+language provenance move at once -- so no single axis can be credited for the
+delta. EVAL.md states both halves.
 
 ---
 
@@ -231,6 +266,17 @@ like real data.
 genuine schema-fidelity signal to judges who work on this API. (b) Committing a
 fixture of invented ids that *look* real -- that is the exact dishonesty the
 project's own honesty taxonomy exists to prevent.
+
+**Deadline set 2026-08-31.** The original deferral said "builder's call" and
+named no date, which is how a fifteen-minute task becomes a missing signal on
+submission day. Hard deadline: **before P4.3 deploy, 2026-09-02**, and ideally
+sooner, since it is the one remaining task that can be done while waiting on
+anything else. Why it earns a deadline rather than a shrug: real test-mode
+`pay_` ids are cheap, checkable schema-fidelity evidence for judges who work on
+this exact API, and after P4.3 the corpus is seeded on a deployed instance, so
+swapping ids costs a reseed. Why it is not worth panicking over: if the deadline
+passes unmet, the fixture stays `"pending": true` and no claim is made anywhere.
+The deferral stays honest either way -- it just stops being free.
 
 **Blocker recorded inline in TASKS.md P0.2.**
 
@@ -409,3 +455,55 @@ the sense that "would you trust it" is a stated rubric criterion. A judge who
 opens one evidence pack and sees incoherent data has been given a free reason to
 distrust everything behind it. The fix was ten lines and consumes the same
 number of random draws, so it does not perturb the rest of the seeded stream.
+
+---
+
+### D-019 -- Praman's runtime uses plain structured Messages API calls, not the Claude Agent SDK
+
+**Decided 2026-08-31, before P2.3 writes a line of the LLM layer.** The three
+model-facing jobs -- trace summarisation, letter drafting, ambiguity flagging --
+are single-shot `messages.create` calls with a structured output schema, made
+through one interface in `packages/llm`. No agent loop, no tool use, no
+autonomous multi-turn execution anywhere in Praman's runtime.
+
+**Why.** Four reasons, in descending order of how much they would cost to get
+wrong:
+
+1. *There is nothing for an agent to decide.* An agentic loop earns its place
+   when the model must choose what to do next -- pick a tool, read a result,
+   revise a plan. Every decision in Praman is on the money path and therefore
+   deterministic by hard rule #4: what evidence exists, whether it is sufficient,
+   which typed field each artefact maps to, whether to contest. Adopting the SDK
+   would mean either handing those decisions to the loop -- violating the rule
+   the whole project is built on -- or building a loop with no decisions in it.
+2. *Record/replay would get much harder for no gain.* Reproducibility depends on
+   a stable request-hash -> response mapping. A single call has one key. An agent
+   trajectory has a key per step and a branch structure that varies run to run,
+   so byte-reproducible eval numbers -- the thing the OOD delta means anything
+   only if we have -- become a research problem instead of a `fetch` with a
+   cache.
+3. *It is the smaller trust surface.* A loop can call tools; a loop that can call
+   tools near a submission adapter is a second door, when hard rule #2 says there
+   is exactly one. Not adopting it is cheaper than building the fence.
+4. *Panel honesty.* "We used the SDK" is a worse answer than "we know exactly
+   what the SDK is for, and this workload is deliberately not that." The
+   distinction worth stating out loud: **Praman is agentic in its domain, not in
+   its implementation.** The disputes it defends arise from agent-initiated
+   payments; the defender itself is deterministic code with three narrow text
+   transforms bolted to the side. Conflating those two would be exactly the
+   category error the product exists to argue against.
+
+**Where the Agent SDK genuinely is in use:** Claude Code built this repository.
+It is in the *build loop*, not the *money path*, and that line is worth drawing
+explicitly rather than letting "no agents here" read as false.
+
+**Rejected.** (a) Building the assembly step as an SDK agent with tools for
+"fetch evidence pack", "check mandate", "draft letter" -- it demos well and it
+puts a stochastic step in front of every gate decision. (b) Adopting the SDK for
+the drafting call alone "to have used it" -- resume-driven architecture; the
+call is one turn with no tools, so the loop would be a wrapper around nothing.
+
+**Revisit if.** A future capability genuinely needs iterative tool use off the
+money path -- a research step that reads merchant policy documents, say. If that
+arrives, the SDK is the right tool and this entry is the record of why it was
+not needed earlier, not an argument against it.

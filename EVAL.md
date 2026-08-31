@@ -157,6 +157,36 @@ prompts is deliberate. Same family means the holdout is not out-of-distribution,
 the OOD delta measures sampling noise, and the credibility claim quietly becomes
 false. See DECISIONS.md D-006.
 
+### Exactly what moved, stated precisely
+
+The OOD delta is only evidence if a reader knows which axis moved, so the axes
+are named rather than gestured at:
+
+- **The dev corpus makes no model call at generation time.** Its conversation
+  text is static templates with slot interpolation, committed in
+  `packages/simulator/src/transaction.ts`. They were written once during
+  development (by the builder working through Claude Code) and then frozen. Every
+  `pnpm seed` run replays the same finite set of sentences. There is no sampling,
+  no temperature, and nothing to drift.
+- **The held-out corpus calls `openai/gpt-oss-120b` at generation time** with a
+  six-persona prompt set that appears nowhere in the dev generator, and records
+  what comes back (temperature 0.9). Replay serves that recording thereafter.
+
+So the language axis is not *Claude vs. gpt-oss*. It is **frozen,
+developer-authored templates -> live sampling from a different lab's model**,
+which is a wider gap, not a narrower one: the holdout differs in vocabulary,
+sentence length, register, hedging, and the ways real people are vague, none of
+which any template captures.
+
+**What this costs us, said plainly.** The shift is **compound** -- verticals,
+price band, platforms, protocol versions, class mix, trace length and language
+provenance all move together. That is the right design for asking *"does this
+system survive data it was not built against?"*, which is the question a judge
+cares about. It is the wrong design for asking *"which axis broke it?"* No single
+axis can be credited for the delta, and this document does not attribute it to
+one. Per-axis ablation would need one holdout per axis; at 30 cases each and a
+free-tier budget, it was not affordable and is not claimed.
+
 ### Realised held-out corpus (30 disputes, seed `praman-holdout-2026`)
 
 ```
@@ -282,3 +312,16 @@ Stated here before anyone has to ask.
    They are Razorpay-shaped (`pay_` + 14 base62 characters) and substitute
    one-for-one, but no claim that they are real test-mode ids appears anywhere
    until they are.
+
+8. **The OOD shift is compound, so the delta is not attributable to one axis.**
+   Seven axes move between dev and holdout at once. The aggregate delta answers
+   "does it survive unfamiliar data"; it cannot answer "what specifically broke
+   it". Per-axis ablation would need one holdout per axis and is out of budget.
+   See "Exactly what moved, stated precisely" above.
+
+9. **Dev conversation language is developer-authored, which is the sharpest form
+   of the self-generated problem.** The dev templates were written by the same
+   author-plus-model pairing that built the system that reads them. That is
+   precisely why the holdout's language comes from a model with no involvement in
+   this repository, and precisely why the language axis is called the sharp edge
+   above -- it is the one where familiarity would flatter us most.
