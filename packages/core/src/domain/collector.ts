@@ -351,6 +351,9 @@ const COLLECTORS: Record<EvidenceArtifact, Collect> = {
     };
   },
 
+  item_selection_confirmation: () =>
+    notCapturable(ARTIFACTS.item_selection_confirmation.notSourceableReason as string),
+
   refund_settlement_proof: () =>
     notCapturable(ARTIFACTS.refund_settlement_proof.notSourceableReason as string),
 };

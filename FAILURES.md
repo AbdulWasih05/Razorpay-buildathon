@@ -318,12 +318,18 @@ this task" and "I performed this task and the evidence does not support a
 contest". Hard rule #4 routes a refusal to abstain-with-assembly-failure, so
 the second meaning inherited the first meaning's handling.
 
-**Why it mattered more than a mislabel.** P4.1 reports abstention rate broken
-down by reason, and the whole point of that breakdown is to separate "the system
-judged correctly" from "the system broke". Shipping this would have put the
-product's best behaviour -- abstention over bluffing, the thing the corpus is
-built to test -- in the same bucket as a 500 from the provider. The headline
-number would have read as a system that fails 60% of the time.
+**Why it mattered more than a mislabel, and this is the part to say out loud.**
+It would have **inverted the product's central claim.** Merits-abstention is not
+a side effect of this system; it is the judgement the system exists to make.
+Hard rule #7 is "abstention over bluffing" and the corpus is 62%
+unwinnable-or-ambiguous precisely so that abstention quality is the thing under
+test. Filing that judgement alongside provider 500s would have reported the
+product's best behaviour as its worst -- and P4.1's headline would have read as
+a system that fails 60% of the time, while the truth was a system that was right
+60% of the time in exactly the way it was designed to be.
+
+The metric would not have been merely wrong. It would have pointed the opposite
+way from reality.
 
 **Fix.** The merits judgement got its own contract: `insufficientEvidence`, a
 distinct abstention reason ("evidence insufficient to support a contest"), a
@@ -364,6 +370,12 @@ one, and `attempts` returned on the response so a retried call is visible rather
 than silent.
 
 **Why this is not a hard-rule-#4 violation, stated because it looks like one.**
+The short version, because a skimming reader sees "retry" next to "rule 4" and
+needs the reconciliation immediately: **retry happens at the transport layer,
+abstention happens at the semantic layer, and they are different altitudes.**
+Transport asks "did the request get served?" Semantics asks "was the answer
+usable?" Rule #4 governs the second and says nothing about the first.
+
 Rule #4 forbids silently retrying a *failed LLM step* onto the money path. A 429
 is not a failed step -- the model never ran, no output exists, nothing is being
 papered over. Retrying completes a request that was never served; it does not

@@ -3,6 +3,7 @@ import {
   unmetRequirements,
   type CollectedEvidence,
   type ContestDraft,
+  type GateResult,
 } from '@praman/core';
 
 import { ASSEMBLY_ABSTAIN_REASON, AssemblyFailure, type AssemblyClient } from './client.js';
@@ -32,6 +33,21 @@ import type { ConfirmationSignal } from './schemas.js';
  */
 export const INSUFFICIENT_EVIDENCE_REASON = 'evidence insufficient to support a contest';
 
+/**
+ * Why a dispute abstained. Three classes, counted separately by P4.1, because
+ * they mean completely different things about the system:
+ *
+ *   gate                  -- deterministic rules said no. The normal, correct,
+ *                            most common outcome. No model was ever called.
+ *   drafter_disagreement  -- the gate cleared it and the drafter, reading the
+ *                            same evidence, said the case is not there. Two
+ *                            independent readings disagreeing is precisely when
+ *                            a human should look, so it abstains conservatively.
+ *   assembly_failure      -- the pipeline broke. See hard rule #4.
+ */
+export const ABSTENTION_CLASSES = ['gate', 'drafter_disagreement', 'assembly_failure'] as const;
+export type AbstentionClass = (typeof ABSTENTION_CLASSES)[number];
+
 export const ASSEMBLY_OUTCOMES = ['assembled', 'abstained'] as const;
 export type AssemblyOutcome = (typeof ASSEMBLY_OUTCOMES)[number];
 
@@ -49,6 +65,10 @@ export interface AssembledDispute {
   failureKind?: AssemblyFailure['kind'];
   /** Set when the model judged the evidence insufficient. Not a failure. */
   insufficientEvidenceReason?: string;
+  /** Which class of abstention this was. Present iff `outcome` is `abstained`. */
+  abstentionClass?: AbstentionClass;
+  /** The deterministic gate decision this assembly was built on. */
+  gate: GateResult;
   collected: CollectedEvidence;
   traceSummary?: string;
   confirmation?: ConfirmationSignal;
@@ -125,6 +145,7 @@ function buildLetterPrompt(
 
 function abstain(
   collected: CollectedEvidence,
+  gate: GateResult,
   audit: AuditEntry[],
   ambiguityFlags: string[],
   failure: AssemblyFailure,
@@ -138,8 +159,10 @@ function abstain(
     disputeId: collected.disputeId,
     outcome: 'abstained',
     abstentionReason: ASSEMBLY_ABSTAIN_REASON,
+    abstentionClass: 'assembly_failure',
     failureKind: failure.kind,
     collected,
+    gate,
     ambiguityFlags,
     audit,
   };
@@ -148,6 +171,8 @@ function abstain(
 export interface AssembleOptions {
   client: AssemblyClient;
   collected: CollectedEvidence;
+  /** The deterministic gate decision. Assembly never re-decides it. */
+  gate: GateResult;
   /** The captured conversation, when one exists. Ordinary rail has none. */
   trace?: TraceForSummary;
   /** Amount to contest, in subunits. Defaults to the full disputed amount. */
@@ -155,13 +180,33 @@ export interface AssembleOptions {
 }
 
 export async function assembleDispute(options: AssembleOptions): Promise<AssembledDispute> {
-  const { client, collected, trace, amount } = options;
+  const { client, collected, gate, trace, amount } = options;
   const audit: AuditEntry[] = [
     {
       step: 'evidence_collected',
       detail: `${collected.coverage.present}/${collected.coverage.required} required artifacts present`,
     },
+    { step: 'gated', detail: `${gate.decision}: ${gate.reason ?? 'all rules passed'}` },
   ];
+
+  // The gate decides. If it says abstain, NO MODEL IS CALLED AT ALL -- not for
+  // a summary, not for flags. That is the cleanest possible statement of the
+  // LLM boundary: a dispute the deterministic rules declined never touches a
+  // model, so no model output can have influenced the outcome. It is also, as
+  // it happens, most of the corpus, and therefore most of the cost.
+  if (gate.decision === 'abstain') {
+    audit.push({ step: 'abstained', detail: gate.reason ?? 'gate declined' });
+    return {
+      disputeId: collected.disputeId,
+      outcome: 'abstained',
+      abstentionReason: gate.reason ?? 'gate declined',
+      abstentionClass: 'gate',
+      collected,
+      gate,
+      ambiguityFlags: [],
+      audit,
+    };
+  }
   let ambiguityFlags: string[] = [];
   let traceSummary: string | undefined;
   let confirmation: ConfirmationSignal | undefined;
@@ -178,7 +223,7 @@ export async function assembleDispute(options: AssembleOptions): Promise<Assembl
       });
     } catch (error) {
       if (error instanceof AssemblyFailure) {
-        return abstain(collected, audit, ambiguityFlags, error);
+        return abstain(collected, gate, audit, ambiguityFlags, error);
       }
       throw error;
     }
@@ -191,15 +236,20 @@ export async function assembleDispute(options: AssembleOptions): Promise<Assembl
     const drafted = await client.draftLetter(buildLetterPrompt(collected, traceSummary));
 
     if ('insufficientEvidence' in drafted) {
-      // The pipeline worked and the answer was no. Abstention over bluffing.
-      audit.push({ step: 'declined_on_merits', detail: drafted.reason });
+      // The gate cleared this and the drafter, reading the same evidence, says
+      // the case is not there. Neither reading overrides the other: two
+      // independent disagreeing judgements is exactly when a human should look,
+      // so it abstains conservatively and the disagreement is on the record.
+      audit.push({ step: 'drafter_disagreed_with_gate', detail: drafted.reason });
       audit.push({ step: 'abstained', detail: INSUFFICIENT_EVIDENCE_REASON });
       return {
         disputeId: collected.disputeId,
         outcome: 'abstained',
         abstentionReason: INSUFFICIENT_EVIDENCE_REASON,
+        abstentionClass: 'drafter_disagreement',
         insufficientEvidenceReason: drafted.reason,
         collected,
+        gate,
         ...(traceSummary ? { traceSummary } : {}),
         ...(confirmation ? { confirmation } : {}),
         ambiguityFlags,
@@ -214,7 +264,7 @@ export async function assembleDispute(options: AssembleOptions): Promise<Assembl
     });
   } catch (error) {
     if (error instanceof AssemblyFailure) {
-      return abstain(collected, audit, ambiguityFlags, error);
+      return abstain(collected, gate, audit, ambiguityFlags, error);
     }
     throw error;
   }
@@ -223,6 +273,7 @@ export async function assembleDispute(options: AssembleOptions): Promise<Assembl
     disputeId: collected.disputeId,
     outcome: 'assembled',
     collected,
+    gate,
     ...(traceSummary ? { traceSummary } : {}),
     ...(confirmation ? { confirmation } : {}),
     ambiguityFlags,

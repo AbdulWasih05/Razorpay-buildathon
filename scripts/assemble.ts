@@ -15,6 +15,7 @@ import { loadRootEnv } from '../apps/api/src/env.js';
 import {
   SCENARIOS,
   collectEvidence,
+  evaluateGate,
   evidencePackIngestSchema,
   type CollectedEvidence,
 } from '@praman/core';
@@ -80,6 +81,7 @@ async function main(): Promise<void> {
     const assembled = await assembleDispute({
       client,
       collected,
+      gate: evaluateGate(collected),
       ...(trace ? { trace } : {}),
       amount: entity.amount,
     });
@@ -98,16 +100,16 @@ async function main(): Promise<void> {
       console.log(
         `  ${entity.id}  ${dispute.scenarioClass}  ${dispute.rail.padEnd(8)}  ` +
           `code ${entity.reason_code.padEnd(4)}  evidence ${coverage}  ` +
-          `ABSTAINED [${assembled.failureKind ?? 'on merits'}]  ` +
+          `ABSTAINED [${assembled.abstentionClass}${assembled.failureKind ? '/' + assembled.failureKind : ''}]  ` +
           `${assembled.insufficientEvidenceReason ?? assembled.audit.find((e) => e.step === 'assembly_failed')?.detail ?? assembled.abstentionReason ?? ''}`,
       );
     }
   }
 
   const assembled = results.filter((r) => r.outcome === 'assembled').length;
-  const abstained = results.length - assembled;
+  const byClass = (name: string) => results.filter((r) => r.abstentionClass === name).length;
   console.log(
-    `\n${results.length} processed | ${assembled} assembled | ${abstained} abstained | ` +
+    `\n${results.length} processed | ${assembled} assembled | ${byClass("gate")} gate-abstained | ${byClass("drafter_disagreement")} drafter-disagreed | ${byClass("assembly_failure")} assembly-failed | ` +
       `${cache.size} recordings on disk`,
   );
 

@@ -10,7 +10,7 @@ import { ResponseCache } from './cache.js';
 import { ProviderError, type ModelProvider, type ModelRequest, type ModelResponse } from './provider.js';
 import { assembleDispute } from './assemble.js';
 import { assertNotHoldoutFamily } from './config.js';
-import type { CollectedEvidence } from '@praman/core';
+import type { CollectedEvidence, GateResult } from '@praman/core';
 
 /**
  * CLAUDE.md hard rule #4: "Tests cover all FOUR failure paths: error, timeout,
@@ -61,10 +61,25 @@ const collected: CollectedEvidence = {
 
 const trace = { turns: [{ role: 'customer', content: 'Order the usual, please.' }] };
 
+/**
+ * A gate that says contest. These tests are about what happens AFTER the
+ * deterministic gate clears a dispute -- a gate abstention never calls a model
+ * at all, so it cannot exercise a failure path.
+ */
+const gate: GateResult = {
+  disputeId: collected.disputeId,
+  decision: 'contest',
+  rules: [{ id: 'test_gate', passed: true, detail: 'cleared for this test' }],
+  requiredCoverage: 1,
+  missingRequired: [],
+  thresholds: { requiredCoverageRatio: 1, anomalySignalsBlock: true },
+};
+
 async function assembleWith(provider: ModelProvider, timeoutMs = 50) {
   return assembleDispute({
     client: clientWith(provider, timeoutMs),
     collected,
+    gate,
     trace,
     amount: 224000,
   });

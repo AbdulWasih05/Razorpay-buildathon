@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   SCENARIOS,
   collectEvidence,
+  evaluateGate,
   evidencePackIngestSchema,
 } from '@praman/core';
 import {
+  ABSTENTION_CLASSES,
   ASSEMBLY_ABSTAIN_REASON,
   AssemblyClient,
   INSUFFICIENT_EVIDENCE_REASON,
@@ -59,6 +61,7 @@ async function assemble(index: number): Promise<AssembledDispute> {
   return assembleDispute({
     client: client(),
     collected,
+    gate: evaluateGate(collected),
     ...(trace ? { trace } : {}),
     amount: entity.amount,
   });
@@ -129,36 +132,57 @@ describe('all ten disputes replay without touching a model', () => {
     }
     expect(results).toHaveLength(CORPUS_SIZE);
 
-    // The checkpoint condition: every dispute reaches a coherent outcome.
+    // The checkpoint condition: every dispute reaches a coherent outcome, and
+    // every abstention says why in its own words.
     for (const result of results) {
       expect(['assembled', 'abstained']).toContain(result.outcome);
-      if (result.outcome === 'abstained') {
-        expect([ASSEMBLY_ABSTAIN_REASON, INSUFFICIENT_EVIDENCE_REASON]).toContain(
-          result.abstentionReason,
-        );
-      }
+      if (result.outcome !== 'abstained') continue;
+      expect(ABSTENTION_CLASSES).toContain(result.abstentionClass);
+      expect(result.abstentionReason, result.disputeId).toBeTruthy();
+      expect((result.abstentionReason as string).length).toBeGreaterThan(20);
     }
   });
 
-  it('separates abstention on the merits from assembly failure', async () => {
-    // These are counted separately in P4.1 and a reader of those numbers needs
-    // the difference: one says the answer was no, the other says the pipeline
-    // broke. See FAILURES.md F-011.
+  it('calls no model at all for a dispute the gate declined', async () => {
+    // The strongest statement of the LLM boundary available: a dispute the
+    // deterministic rules turned down never reaches a model, so no model output
+    // can have influenced its outcome. Asserted by the audit trail, which would
+    // carry a trace_summarised or contest_drafted step if one had been called.
+    for (let index = 0; index < CORPUS_SIZE; index += 1) {
+      const result = await assemble(index);
+      if (result.abstentionClass !== 'gate') continue;
+      const steps = result.audit.map((entry) => entry.step);
+      expect(steps, result.disputeId).toEqual(['evidence_collected', 'gated', 'abstained']);
+    }
+  });
+
+  it('keeps the three abstention classes apart', async () => {
+    // P4.1 counts these separately and a reader of those numbers needs the
+    // difference: the rules said no, two readings disagreed, or the pipeline
+    // broke. Collapsing them is F-011, which nearly inverted the headline
+    // metric. On the recorded dev set every abstention is a gate decision --
+    // asserted rather than assumed, so a regression shows up here.
     const results: AssembledDispute[] = [];
     for (let index = 0; index < CORPUS_SIZE; index += 1) {
       results.push(await assemble(index));
     }
-    const merits = results.filter((r) => r.abstentionReason === INSUFFICIENT_EVIDENCE_REASON);
-    const failures = results.filter((r) => r.abstentionReason === ASSEMBLY_ABSTAIN_REASON);
 
-    expect(merits.length).toBeGreaterThan(0);
-    for (const result of merits) {
+    for (const result of results.filter((r) => r.abstentionClass === 'gate')) {
+      expect(result.failureKind, result.disputeId).toBeUndefined();
+      expect(result.insufficientEvidenceReason).toBeUndefined();
+      expect(result.abstentionReason).toBe(result.gate.reason);
+    }
+    for (const result of results.filter((r) => r.abstentionClass === 'drafter_disagreement')) {
       expect(result.failureKind).toBeUndefined();
       expect(result.insufficientEvidenceReason).toBeTruthy();
+      expect(result.abstentionReason).toBe(INSUFFICIENT_EVIDENCE_REASON);
     }
-    for (const result of failures) {
+    for (const result of results.filter((r) => r.abstentionClass === 'assembly_failure')) {
       expect(result.failureKind).toBeDefined();
+      expect(result.abstentionReason).toBe(ASSEMBLY_ABSTAIN_REASON);
     }
+
+    expect(results.filter((r) => r.abstentionClass === 'assembly_failure')).toHaveLength(0);
   });
 
   it('correctly declines the two cases that are unwinnable by arithmetic', async () => {

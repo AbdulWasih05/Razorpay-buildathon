@@ -629,3 +629,153 @@ reports what the customer said; code decides what it means.
 
 **Rejected.** Three separate calls for symmetry with the task list -- the task
 list names jobs, not HTTP requests.
+
+---
+
+### D-023 -- model of record, and the deadline for choosing it
+
+> Numbered D-023, not D-022: D-022 was already taken by the summarisation-call
+> decision in the same session. Same decision, next free number.
+
+**The problem.** Every committed recording in `packages/llm/fixtures/` was
+produced by `qwen/qwen3.8-27b` (D-021). Every number P4.1 computes will
+therefore be a Qwen number. If an Anthropic key appears on Sep 2 and the
+fixtures are regenerated, **every metric changes and the eval report is
+invalidated** -- silently, because the report is a committed markdown file that
+does not know which model produced the recordings behind it.
+
+**Decided.** The model of record is chosen **before P4.1 starts**, not after.
+Exactly two acceptable paths:
+
+1. **Qwen ships as the model of record.** Perfectly acceptable. The README says
+   which model produced the drafts, in plain words, next to the metrics table.
+   The "where we deliberately did NOT use AI" section's honesty extends to
+   *which* AI -- naming the model is the same discipline as naming the boundary.
+2. **The Anthropic key is set and everything is re-recorded ONCE, before the
+   batch run.** `pnpm assemble -- --live` plus a holdout pass; provider and model
+   are both in the replay key, so nothing stale survives the swap.
+
+**Forbidden.** Re-recording after `eval/results.md` exists. That produces a
+report whose numbers no committed fixture can reproduce, which is the precise
+opposite of the property the whole record/replay design exists to provide. If
+the key arrives late, the answer is "we shipped Qwen and said so", not "we
+re-ran it quickly".
+
+**Deadline: P4.1 start (Sep 2).** Whichever path is taken, this entry gets a
+one-line amendment naming the model of record and the date it was fixed, and
+`eval/results.md` carries the model id in its header.
+
+**Why this needs deciding rather than drifting.** The failure mode is not a bad
+number, it is an unreproducible one. A stranger cloning the repo and running
+`pnpm eval` must get the report that is committed. That is the claim; a late
+re-record breaks it without any test going red.
+
+---
+
+### D-024 -- two known recall holes: deferred repairs, not accepted limitations
+
+**Context.** Two gaps cost real recall and are visible in the collector today:
+`refund_settlement_proof` is unobtainable for UPI 1061 (D-016 area, rubric
+`sourceable: false`), and a3's duplicate-charge ground truth rests on a fact the
+capture pack never carries (F-010).
+
+**Decided.** Both are **deferred repairs, not structural limitations**, and both
+land before P4.1 freezes numbers. The distinction matters because the honest
+move differs: a structural gap ships with the ugly number and an explanation, a
+deferred repair gets repaired.
+
+- **`refund_settlement_proof` -- roughly one hour.** The reasoning in the rubric
+  ("a merchant transaction store holds no bank statement") is true of a *bare*
+  transaction store and false of a Razorpay-integrated merchant, which does hold
+  settlement and payout records. We did not model one. Adding a settlement
+  reference to the capture schema is a field, a migration, a generator line and
+  a collector branch. It can be derived from the existing `refundIssued` fact
+  without consuming a new random draw, so the seeded stream is unperturbed.
+- **a3 duplicate payment -- roughly two to three hours.** Capturing a sibling
+  payment adds RNG draws, which perturbs the dev stream: full reseed, and a
+  holdout re-record because a3 prompts change. Bigger, still not structural.
+
+**Why not today.** Day 3's gate is tonight and it comes first. Corpus surgery on
+the morning of a gate is how both get done badly.
+
+**Why not "ship it honestly" either.** Showing a known recall hole is the right
+call when the hole is expensive to close. Neither of these is. "We found it,
+fixed it, and here is the before and after" is a strictly better artifact than
+"we found it and shipped it" -- and the before/after is itself the eval-integrity
+story, since it demonstrates the harness detecting its own corpus bug.
+
+**Scheduled as TASKS.md P4.0, ahead of P4.1.** If either slips past that point,
+it converts to an accepted limitation, is written up as one in EVAL.md's known
+weaknesses, and the recall cost is reported rather than hidden.
+
+---
+
+### D-025 -- the gate runs before the model, and a declined dispute never reaches one
+
+**Decided.** Pipeline order is: collect (deterministic) -> **gate** (deterministic)
+-> draft (model, only if the gate said contest) -> map to fields
+(deterministic). A dispute the gate declines makes **no model call at all** --
+not for a summary, not for ambiguity flags.
+
+**Why, and this is a correction rather than a design.** The P2.4 checkpoint build
+called the model first and let the letter drafter return "the evidence does not
+support a contest". That worked, and it was wrong: a model was effectively
+making the contest/abstain call, which is exactly what hard rule #4 forbids
+("LLM is NEVER used for ... submission decisions, anything on the money path").
+Nobody would have noticed from the output, because the model's judgements were
+good. Good outputs from a boundary violation are worse than bad ones, because
+nothing prompts you to look.
+
+**What the model's judgement became instead.** A second opinion. If the gate
+clears a dispute and the drafter, reading the same evidence, says the case is
+not there, that is recorded as \`drafter_disagreement\` and the dispute abstains
+conservatively. Neither reading overrides the other -- two independent
+judgements disagreeing is precisely when a human should look, which is what the
+review queue is for.
+
+**Three abstention classes, counted separately** (P4.1 reports each):
+\`gate\` (rules said no; no model involved), \`drafter_disagreement\` (two readings
+disagreed), \`assembly_failure\` (the pipeline broke, hard rule #4). Collapsing
+any two of these is F-011 repeating itself.
+
+**Side effect worth naming.** Most of the corpus abstains at the gate, so most
+disputes cost nothing in tokens. The cheap path and the correct path turned out
+to be the same path, which is not always true and is pleasant when it is.
+
+---
+
+### D-026 -- \`necessity\` is our judgement even on published evidence, and saying so fixed the gate
+
+**Decided.** In the rubric, \`provenance\` and \`necessity\` answer different
+questions and are never conflated:
+
+- **provenance** -- who says this evidence is relevant. \`published\` means
+  Razorpay listed it and the exact phrase is quoted. Not our opinion.
+- **necessity** -- whether a contest can stand without it. **Always ours**,
+  including on published items.
+
+**Why it needed deciding.** The first version of the table marked every
+published item \`required\`, which read as fidelity and was actually the
+opposite: Razorpay publishes evidence *guidance*, not a mandatory checklist, and
+the only precondition their API enforces is "a minimum of one document id across
+any of the evidence attributes". Marking their whole list mandatory turned our
+strictness into their rule.
+
+**How it showed up.** With coverage at 1.0, UPI 1064 required *both* delivery
+proof and customer correspondence -- and the ordinary rail captures no customer
+correspondence at all. Every ordinary-rail "goods not received" dispute
+abstained, on a gap in our capture layer rather than on anything about the
+dispute, while the summary line read like a considered judgement. The number
+would have been reported as evidence-sufficiency behaviour and been nothing of
+the kind.
+
+**Fix.** Necessity assigned per code by which fact actually decides the claim:
+delivery proof decides "not received"; authorisation evidence decides "I never
+authorised this"; agreement between what was asked for and what was ordered
+decides "not as described". Everything else Razorpay lists stays \`published\` and
+becomes \`supporting\` -- it corroborates a contest without being load-bearing.
+
+**What it taught.** "Be maximally strict" is not the same as "be faithful", and
+it is the more dangerous of the two, because strictness looks like rigour in a
+diff and only reveals itself as an artefact when you read what the system
+actually declined and why.

@@ -44,6 +44,7 @@ export const EVIDENCE_ARTIFACTS = [
   'duplicate_payment_analysis',
   'refund_record',
   'refund_settlement_proof',
+  'item_selection_confirmation',
 ] as const;
 
 export type EvidenceArtifact = (typeof EVIDENCE_ARTIFACTS)[number];
@@ -134,6 +135,15 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
     contestField: 'refund_confirmation',
     sourceable: true,
   },
+  item_selection_confirmation: {
+    artifact: 'item_selection_confirmation',
+    description:
+      'A structured record that the customer approved the specific item that was ordered -- the requested SKU alongside the selected SKU, not a sentence about it.',
+    contestField: 'customer_communication',
+    sourceable: false,
+    notSourceableReason:
+      'The capture layer records what the agent selected (the orchestration log entry item_selected) but never what the customer requested, so agreement between the two cannot be established from records. The fact exists only as natural language in the conversation trace, and reading it is a model judgement -- which hard rule #4 forbids on the money path. Repairable: capture the requested SKU at selection time. See DECISIONS.md D-026.',
+  },
   refund_settlement_proof: {
     artifact: 'refund_settlement_proof',
     description:
@@ -147,8 +157,27 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
 
 export type RequirementProvenance = 'published' | 'derived';
 
+/**
+ * `provenance` and `necessity` answer different questions, and conflating them
+ * was a real bug in the first version of this table.
+ *
+ *   provenance -- WHO says this evidence is relevant. `published` means Razorpay
+ *                 listed it, and the exact phrase is quoted. Not our opinion.
+ *   necessity  -- WHETHER a contest can stand without it. This is ALWAYS our
+ *                 judgement, including on published items, because Razorpay
+ *                 publishes evidence *guidance*, not a mandatory checklist. The
+ *                 only precondition their API actually enforces is "a minimum of
+ *                 one document id across any of the evidence attributes".
+ *
+ * So a `published` + `supporting` requirement is not a contradiction: Razorpay
+ * listed it, and we judge that a contest can stand without it. Marking every
+ * published item `required` -- which this table did at first -- silently turned
+ * our strictness into their rule, and made the gate abstain on cases Razorpay's
+ * own contract would have accepted.
+ */
 export interface EvidenceRequirement {
   artifact: EvidenceArtifact;
+  /** Our judgement, never Razorpay's. See the note above. */
   necessity: 'required' | 'supporting';
   provenance: RequirementProvenance;
   /** `published` only: the exact phrase from Razorpay's guidance this answers. */
@@ -219,11 +248,16 @@ export const RUBRIC: Record<string, RubricEntry> = {
     category: 'customer_dispute',
     hasPublishedGuidance: true,
     requires: [
-      published('product_description', 'Product description/image screenshots'),
+      published('product_description', 'Product description/image screenshots', 'supporting'),
       published('delivery_proof', 'Proof of product/service delivery'),
       derived(
         'customer_communication',
         'Whether the customer confirmed this specific item is what decides a "not as described" claim, and on the agentic rail the trace records it verbatim.',
+        'supporting',
+      ),
+      derived(
+        'item_selection_confirmation',
+        'This code turns on whether the item ordered is the item asked for. That agreement is the whole dispute, and the capture layer holds no structured record of it -- so the gate refuses to guess rather than reading the answer out of a conversation.',
       ),
     ],
   },
@@ -237,6 +271,12 @@ export const RUBRIC: Record<string, RubricEntry> = {
       published(
         'customer_communication',
         'Customer interaction showcasing product/service related enquiries',
+        // Razorpay lists it; we judge that delivery proof decides a
+        // "not received" claim on its own. An ordinary-rail merchant's support
+        // thread is not captured here at all, so treating this as required
+        // would abstain the entire ordinary rail on a gap in our capture layer
+        // rather than on anything about the dispute.
+        'supporting',
       ),
       derived(
         'shipment_record',
@@ -254,10 +294,15 @@ export const RUBRIC: Record<string, RubricEntry> = {
       // The load-bearing line of the whole product. For an agent-initiated
       // payment, the mandate record and the orchestration log ARE these logs.
       published('authorisation_evidence', 'Internal logs to show authorisation was obtained'),
-      published('invoice_breakdown', 'Invoicing details along with detailed price breakdown'),
+      published(
+        'invoice_breakdown',
+        'Invoicing details along with detailed price breakdown',
+        'supporting',
+      ),
       derived(
         'customer_communication',
         'On the agentic rail the conversation trace is where consent is actually visible, and it cuts both ways: it is also the evidence that defeats a contest when consent is absent.',
+        'supporting',
       ),
     ],
   },
