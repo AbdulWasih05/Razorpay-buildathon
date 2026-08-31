@@ -98,8 +98,6 @@ export type DisputeEvidence = z.infer<typeof disputeEvidenceSchema>;
 export type DisputeEntity = z.infer<typeof disputeEntitySchema>;
 export type DisputeCollection = z.infer<typeof disputeCollectionSchema>;
 
-// DEFERRED to Day 2 (TASKS.md P2.0): contest payload types.
-// The contest REQUEST body (`action: draft | submit`, the write-side evidence
-// object, the <=1000 char enforcement on `summary`) is intentionally not modelled
-// yet. Its verbatim doc fixture is already committed at
-// ../fixtures/dispute-contest-draft-request.json so P2.0 is a typing task only.
+// The contest REQUEST body -- the write side of this contract -- lives in
+// ./contest.ts (TASKS.md P2.0). It is deliberately a separate schema: read
+// parses whatever Razorpay returns, write enforces what we are allowed to send.

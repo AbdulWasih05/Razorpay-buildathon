@@ -118,6 +118,21 @@ stochastic step and a second replay key, bought for nothing. (c) Always uploadin
 the letter as a document -- a Documents API round-trip on every dispute, to
 populate a field whose documented purpose is a letter the merchant actually has.
 
+**Acknowledged trade, with a data-driven revisit trigger (2026-08-31).** Routing
+over-length to abstain buys purity at the cost of recall: an over-length draft on
+a *winnable* dispute becomes a false negative. Unlike the other three failure
+paths, this one is cheaply recoverable -- a single re-prompt stating the budget
+would almost certainly fix it, and one bounded, logged, operator-visible
+re-prompt would violate neither the letter nor the intent of hard rule #4, which
+forbids *silent* retries onto the money path. It is not being added now: the
+current design is simpler and defensible, and adding a retry on taste alone is
+how exception paths multiply.
+
+**Trigger.** P4.1 already counts abstention reasons separately. If
+`over_length_draft` appears more than once or twice across the 100+ dev batch,
+that is the evidence to add the single logged retry, recorded as its own
+DECISIONS entry and decided from the eval numbers rather than from taste.
+
 ---
 
 ### D-004 -- the dispute entity is `.strict()`; the payment entity is not
@@ -507,3 +522,48 @@ call is one turn with no tools, so the loop would be a wrapper around nothing.
 money path -- a research step that reads merchant policy documents, say. If that
 arrives, the SDK is the right tool and this entry is the record of why it was
 not needed earlier, not an argument against it.
+
+---
+
+### D-020 -- read and write are separate schemas, and the submit precondition lives in the type
+
+**Decided.** `packages/core/src/schema/contest.ts` models the contest request
+independently of `disputeEvidenceSchema`, rather than reusing the read schema
+with fields marked optional.
+
+**Why.** They are not the same contract, and collapsing them would break in one
+direction or the other:
+
+| | Read (`disputeEvidenceSchema`) | Write (`contestRequestSchema`) |
+|---|---|---|
+| Every evidence key | present, nullable | optional, omitted rather than null |
+| `summary` length | uncapped | capped at 1000 |
+| Unknown keys | `.strict()` (drift must fail loudly) | `.strict()` (an unknown key is *our* bug) |
+
+Sharing one schema would mean either refusing to parse a legitimate response, or
+failing to enforce a documented limit on our own output. On the money path,
+neither is acceptable.
+
+**The part worth defending at the panel.** The documented precondition -- *"You
+need to provide a minimum of one document id (across any of the evidence object
+attributes) for a successful submission"* -- is enforced **in the schema**, not
+in a service method. `contestRequestSchema.parse({ action: 'submit' })` with no
+documents throws. So "never bluff a contest" is not a policy someone has to
+remember at the call site; it is a type that cannot be constructed. It composes
+with hard rule #2 rather than duplicating it: the one door checks *who* may
+submit, the schema checks *whether there is anything to submit with*.
+
+`amount` is checked against the dispute separately (`contestRequestForDispute`),
+because the ceiling lives on the dispute and not in the payload -- so a payload
+can still be parsed in isolation, and the two rules stay separately explainable.
+
+**Rejected.** (a) One shared evidence schema with a `mode` flag -- one object
+pretending to be two contracts, and the flag would be read wrong exactly once.
+(b) Enforcing the submit precondition in the adapter -- correct until someone
+adds a second call site, which is the failure mode hard rule #2 already exists
+to prevent.
+
+**Noted as interpretation, not quotation.** Counting `others[].document_ids`
+toward the minimum is our reading of "across any of the evidence object
+attributes". It is asserted in a named test so a reviewer can disagree with it
+in exactly one place.
