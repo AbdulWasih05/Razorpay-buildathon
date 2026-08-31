@@ -1,6 +1,32 @@
 {
   "entries": [
     {
+      "key": "0ab1608b166253b0556fcf75cc9823efd960861fbba23cb4d5137b8e25aef0db",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 128 (unauthorized mandate charge). Evidence supports contest. Purchase: 2 Wireless earbuds, INR 523,200, on 2026-06-07. Authorisation evidence shows active mandate (agt_pantry_0062) with consent recorded at 2026-06-07T03:34:00Z, prior to payment capture. Mandate facts confirm charge is within the 725,500 INR limit and validity window. Invoice breakdown matches the charged amount. Customer communication log (5 turns, 2026-06-15) records the customer explicitly approving the purchase of this specific item for Rs 5,232. The sequence of orchestration actions (intent to capture) aligns with the recorded consent. The evidence demonstrates valid authorization and customer approval for this specific transaction.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:14:47.212Z"
+    },
+    {
+      "key": "0dce4d3e9b7ad6513b84a5d8b77a895c70df7c147ed899e8ee267d20e3c91a0a",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 128 (unauthorized mandate charge). Evidence supports contest. 1. Purchase: Monthly grocery bundle, INR 233,500, charged 2026-06-07. 2. Consent: authorisation_evidence shows mandate_status 'active' and consentAt 2026-06-07T16:27:00Z, prior to payment_captured. 3. Limit: Mandate facts confirm charge is within the 531,833 INR cap and validity window. 4. Intent: customer_communication (5 turns, started 2026-06-14) records customer explicitly approving the specific reorder and price before the agent initiated the transaction via saved mandate. The system logged this confirmation. The charge aligns with the agreed item and amount in invoice_breakdown. Evidence demonstrates valid consent and adherence to mandate terms.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:15:34.014Z"
+    },
+    {
       "key": "13239d0b9480000bd08896ef57b35ed11a95ae706caf424b00265eb249ee68e7",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -12,6 +38,19 @@
         "attempts": 1
       },
       "recordedAt": "2026-08-31T19:56:36.410Z"
+    },
+    {
+      "key": "19539c6e19ec1abfd978ffd0215a2a9ba913abb5b6a63bde7ec85c14c7fc6460",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested to reorder a specific item, and the agent identified the product and price. The customer explicitly approved the order for the stated amount, and the agent confirmed the payment using a saved mandate.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:12:45.102Z"
     },
     {
       "key": "22150e8f448fc41f8c5149e5f8f76044e10815cf65dc9f9ed0c24683cb1f3403",
@@ -27,6 +66,188 @@
       "recordedAt": "2026-08-31T19:56:38.048Z"
     },
     {
+      "key": "292c3a16f5ca72486f355153e9a63bc896d14ca54c2438327ea3859f5490c1df",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 1064. Item purchased and shipped on 2026-06-23 via Bluedart. Shipment record confirms status 'delivered'. Delivery proof (ref pod_hc3s5CnwH8DoH2) records successful delivery on 2026-06-24 at 22:12 UTC. Evidence demonstrates the goods were delivered to the customer as per the transaction terms. No customer communication is available, but physical delivery is confirmed by carrier records and proof of delivery.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:15:40.228Z"
+    },
+    {
+      "key": "2d56411b63ef27b99b3d0592262e7d6eeeabef71df1dfa1e9658805437b4df21",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Customer purchased a prescription refill for INR 33,200 on 2026-06-06. Invoice breakdown confirms the single line item and total charge. Authorisation evidence shows the customer explicitly approved the order and amount during the interaction. The payment was processed via an active UPI mandate (agt_pantry_0056). Mandate facts confirm the charge was within the limit and validity window, and consent was recorded before payment. This evidence supports that the transaction was authorised by the customer.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:14:05.042Z"
+    },
+    {
+      "key": "2da9ada74e99be468c8bcbbb61c73fc4a29774cf5f47a0e3ce47ec0f07637b8e",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a prescription refill and the agent identified the item at Rs 332. The customer explicitly approved the order for that specific amount. The agent confirmed the payment using a saved mandate, and the system recorded the customer's confirmation.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:13:57.542Z"
+    },
+    {
+      "key": "301caf880e2d07e0462becaf474662a9a59f7bd8f7073b9117d291f618341f48",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 1064. Evidence confirms physical delivery. shipment_record shows status 'delivered' via Ekart, shipped 2026-06-08. delivery_proof (pod_0LWdgHeT0xMTCz) records delivery at 2026-06-08T18:24:00.000Z. These documents prove the goods were dispatched and received by the customer on the stated date. This directly addresses the dispute by confirming the transaction was completed and the item was delivered, refuting any claim of non-delivery.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:13:31.364Z"
+    },
+    {
+      "key": "37420a071de09f86b7ddf4d7cee0c188df304e514227a38f750c816c0f2a5e7e",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a reorder of wireless earbuds. The agent identified the item at Rs 7,022 and asked for confirmation. The customer explicitly approved the order for that specific amount, and the system recorded the confirmation against the saved mandate.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:15:05.960Z"
+    },
+    {
+      "key": "3c785bf0be5dd0af1f98f9d6438569bf557375f9cd306a9340b4391b4b5ff3ab",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a reorder of wireless earbuds. The agent identified a specific item at Rs 5,773 and asked for confirmation. The customer responded with a broad delegation to 'just sort it out' without explicitly approving the specific price or item, after which the agent proceeded with the order.\",\n  \"confirmation\": \"implied\",\n  \"ambiguityFlags\": [\n    \"Customer did not explicitly confirm the specific price of Rs 5,773\",\n    \"Customer did not explicitly confirm the specific item variant\"\n  ]\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-08-31T20:12:19.762Z"
+    },
+    {
+      "key": "3c8ff7d3c9434acfc63117eb3cb0c60f66f341bf8670c7a9336551cfab5fb270",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a reorder of a monthly grocery bundle. The agent identified the item and price, and the customer explicitly approved the specific purchase. The agent confirmed the transaction using a saved mandate, and the system recorded the customer's confirmation.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:15:25.704Z"
+    },
+    {
+      "key": "3e4002b1bb9d7487f69db76f154e1e2ad93d0fe9ff4cfd5fc94eca6ab8c97bd9",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a reorder of the monthly grocery bundle. The agent identified the item and price, and the customer explicitly approved the specific purchase. The agent confirmed the transaction using a saved mandate, and the system recorded the confirmation.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:13:11.292Z"
+    },
+    {
+      "key": "44bcbb0660c2f3b490b4cf157b29a982cde2aa444c3a12471b88f76cd0712b04",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a reorder of the monthly grocery bundle. The agent identified the item and price, and the customer explicitly approved the specific purchase. The agent confirmed the transaction using a saved mandate, and the system recorded the customer's confirmation.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:13:43.566Z"
+    },
+    {
+      "key": "475e965cf3c7ac6169c4a53788802f8edcdc55eed667d6bf2c3be48cad3bc6cc",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a reorder of wireless earbuds. The agent identified a specific item at Rs 7,451 and asked for confirmation. The customer responded with a broad delegation to 'sort it out' rather than explicitly approving the specific price or item. The agent then proceeded with the transaction.\",\n  \"confirmation\": \"implied\",\n  \"ambiguityFlags\": [\n    \"Customer did not explicitly confirm the specific price of Rs 7,451\",\n    \"Delegation phrase 'sort it out' lacks specific purchase approval\"\n  ]\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:14:52.723Z"
+    },
+    {
+      "key": "543dae58a9eabe6d25d8be9eb2252b2004728b88d88fa5a7d500e672aa1a12eb",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 1064. Customer purchased goods shipped on 2026-06-15 via Delhivery (shipment_record). Delivery proof (pod_DwVaL6FWreH2Do) confirms receipt on 2026-06-18 at 08:23 UTC. Evidence demonstrates the order was fulfilled and delivered as per the transaction. No customer communication is held, but physical delivery is documented.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:13:25.774Z"
+    },
+    {
+      "key": "6d3211ce0a159825df358178d17a46eaa5d28bad386a5df1cc48da25e50ebd25",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 128 (unauthorised mandate charge). Evidence supports contest. 1. Purchase: Family dinner order, INR 68,200, charged 2026-06-07. 2. Authorisation: authorisation_evidence shows active mandate (agt_shop_0060) with consent recorded at 2026-06-07T02:54:00Z, prior to payment capture. Protocol actions confirm intent, selection, and mandate check. 3. Compliance: Mandate facts confirm charge is within the 389,408 INR cap and validity window. 4. Communication: customer_communication (5 turns, 2026-06-20) shows customer requested reorder and explicitly approved the transaction. The system recorded this confirmation. The charge aligns with the customer's explicit request and active mandate terms. No evidence of unauthorised activity.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:14:18.714Z"
+    },
+    {
+      "key": "6dcaf7ffd03623f1afd34d74b8fbf67d4c57114ca358e2b7a3929fce2ecf29a4",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 128 (unauthorized mandate). Customer purchased a Monthly grocery bundle (INR 241,000) on 2026-06-07. Evidence supports authorization: 1) authorisation_evidence shows active mandate, consent recorded at 2026-06-07T10:22:00Z, and orchestration actions confirming intent, selection, and payment capture. 2) Mandate facts confirm the charge of 241,000 is within the 343,349 cap and validity window, with consent preceding payment. 3) customer_communication (5 turns, started 2026-06-16) records the customer explicitly approving the reorder and the system confirming the transaction via the saved mandate. The evidence demonstrates the customer authorized this specific transaction under an active mandate, directly addressing the unauthorized mandate claim.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:14:32.589Z"
+    },
+    {
+      "key": "74bad37aa6ce1d58ea76b0116bbcf3c59393e6625951562aa7bb557857d9abf1",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested to reorder a specific family dinner item. The agent identified the item and price, and the customer explicitly approved the purchase of that specific item for the stated amount. The agent confirmed the transaction using a saved mandate.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-08-31T20:12:13.593Z"
+    },
+    {
       "key": "78679078cc212d1bcf50b0d600a2cdec92a19f40aeb9a7ed1e5f79a9339afb55",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -38,6 +259,188 @@
         "attempts": 1
       },
       "recordedAt": "2026-08-31T19:56:38.846Z"
+    },
+    {
+      "key": "7c7b39c4473e665ec3c3242cb85b7358915d8e8591cfb1b9eb198f9a6f6ab42e",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 128. Customer re-ordered 2 Cotton kurta sets (INR 268,100) on 2026-06-08. Evidence: 1. authorisation_evidence shows active mandate, consent recorded at 01:20:00 UTC, and payment captured via upi-reserve-pay. 2. invoice_breakdown confirms line items match the charged amount of INR 268,100. 3. customer_communication (5 turns) shows the customer explicitly approved the specific item and amount before payment. Mandate facts confirm the charge is within the INR 318,887 cap and validity window. The evidence demonstrates valid customer consent and authorization for this specific transaction.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:16:50.451Z"
+    },
+    {
+      "key": "7d9bfbfa73b579857526d9df0e3b3874bbac4578bf4ef3d5c4741695ad1f6703",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 1064. Item shipped 2026-06-22 via Ekart (shipment_record). Delivered 2026-06-24 at 15:03 UTC (delivery_proof, ref pod_pON6XC1aNMZI3i). Evidence confirms physical delivery to the customer. No customer communication records exist for this checkout.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:16:56.954Z"
+    },
+    {
+      "key": "830d28faf85d809be3e91d3d9860f3ee3b141332c579a75fb83284d1575bf26a",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 128 (unauthorised). Evidence supports contest. Purchase: 2x Family dinner order, INR 160300, charged 2026-06-07. Authorisation evidence shows active mandate (agt_concierge_0069) with consent recorded at 2026-06-07T13:46:00Z, prior to payment capture. Mandate facts confirm amount is within the 302527 cap and validity window. Invoice breakdown matches charged amount exactly. Customer communication log (5 turns) shows customer explicitly approved the specific item and amount before the agent initiated payment via the saved mandate. The orchestration log confirms the sequence: intent received, item selected, mandate checked, payment initiated and captured. This demonstrates explicit customer authorisation for this specific transaction under an active mandate, directly addressing the unauthorised charge claim.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:16:36.069Z"
+    },
+    {
+      "key": "839930cffde63a45a4b8693c058bf63c99f560fd9ed3033fdbc2ae21968b8cf5",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 1064. Customer purchased goods delivered on 2026-06-13. Evidence: shipment_record shows status 'delivered' via Delhivery, shipped 2026-06-13T06:03:00.000Z. delivery_proof (ref pod_OteBUBsPUJ49M5) confirms delivery at 2026-06-13T09:20:00.000Z. These documents prove the order was fulfilled and received by the customer. No customer communication is attached as none was captured during checkout.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:13:37.765Z"
+    },
+    {
+      "key": "860372fba93cd56543267cd38e96a55e06f0c60ebc100c10dfe0979965cea9cc",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute reason UPI 128 (unauthorized mandate). Evidence supports contest. 1. Purchase: 2 Wireless earbuds, total INR 7,02,200, charged 2026-06-08. 2. Mandate: Active mandate (agt_pantry_0073) with cap INR 8,30,464. Charge is within limit and validity window. 3. Consent: authorisation_evidence shows consentAt 2026-06-08T06:55:00Z, prior to payment_captured. Orchestration log confirms intent_received, item_selected, mandate_checked, and payment_initiated. 4. Communication: customer_communication (5 turns) shows customer requested reorder, agent quoted INR 7,022 per unit, and customer explicitly approved the specific amount. System recorded confirmation against the saved mandate. The evidence demonstrates explicit customer authorization for this specific transaction under an active mandate, directly addressing the unauthorized mandate claim.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:15:13.847Z"
+    },
+    {
+      "key": "86245104f2feb1a51e37d6c258f7d582846602bfbc07d41def7dcf9a1ea3d33f",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 128. Customer purchased 2x Monthly grocery bundle (INR 270,500) on 2026-06-07. Evidence supports contest: 1) authorisation_evidence shows active mandate (agt_pantry_0065) with consent recorded at 06:41:00Z, prior to payment capture. 2) Mandate facts confirm charge is within the 517,362 cap and validity window. 3) customer_communication (5 turns, started 2026-06-10) shows customer explicitly approved the specific reorder and price before the agent initiated payment via the saved mandate. The transaction aligns with the customer's explicit instruction and the active mandate terms.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:13:18.620Z"
+    },
+    {
+      "key": "911cd757683b5f93d71e8a9691f5c8e368a893a5d87327b29c4fdf660bdf42e4",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested to reorder a specific family dinner item. The agent identified the item and price, and the customer explicitly approved the purchase of that specific item for the stated amount. The agent confirmed the transaction using a saved mandate, and the system recorded the customer's confirmation.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:16:28.775Z"
+    },
+    {
+      "key": "95687cba026cb7de9b191f1cbeb7929e4caf90b6b56871558b0613f6233b99df",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested to reorder a specific item, and the agent identified the product and price. The customer explicitly approved the order for the stated amount, and the agent confirmed the transaction using a saved mandate.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-08-31T20:12:15.240Z"
+    },
+    {
+      "key": "9ef1b2de81ceee3783cd09b03816b604b83ff55aadd05ef3bf3524cdccc50079",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"insufficientEvidence\": true, \"reason\": \"Customer communication shows broad delegation ('sort it out') rather than explicit approval of the specific item and price, failing to prove specific consent for this transaction.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:15:00.503Z"
+    },
+    {
+      "key": "a6629d403b764cf768413c19105754cde31357dd693b14169af5c2b532d3a292",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested to reorder a monthly grocery bundle. The agent identified the item and price, and the customer explicitly approved the purchase. The agent confirmed the transaction using a saved mandate, and the system recorded the customer's confirmation.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:14:25.097Z"
+    },
+    {
+      "key": "a9bcb9611cab131a2f3b362a8f0c3c07002774af84998628cf0041f3a7793a19",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 1064. Goods were shipped on 2026-06-20 via Bluedart (shipment_record). Delivery proof (pod_RipAlgrOFiH8d2) confirms receipt on 2026-06-21 at 08:38 UTC. The shipment record status is 'delivered'. This evidence demonstrates the transaction was completed and goods were received, directly addressing the dispute reason.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:12:19.048Z"
+    },
+    {
+      "key": "af1f146bede8f3d792895ac73a6bb96e7019f8626fbccbd1ef8235da25f879df",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 1064. Item shipped 2026-06-07 via Ekart (shipment_record). Delivered 2026-06-09 at 21:12 UTC (delivery_proof, ref pod_adwBcTCZ8jw5qJ). Evidence confirms physical delivery to the customer. No customer communication logs exist for this checkout.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:13:00.186Z"
+    },
+    {
+      "key": "bb17f7da3fbfe0ea50b67b66c7edbda1827f39434a9a1e34cabfb06c30bc5f9a",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 128 (unauthorised mandate). Evidence supports contest. 1. Purchase: Family dinner order (2 units), INR 126,300, charged 2026-06-07. 2. Authorisation: authorisation_evidence shows consentAt 2026-06-07T22:01:00Z, mandateStatus active, protocol upi-reserve-pay. Actions include intent_received, item_selected, mandate_checked, payment_captured. 3. Mandate Facts: Charge of 126,300 is within the 283,073 cap and validity window. Consent was recorded before payment. 4. Communication: customer_communication (5 turns, 2026-06-18) shows customer requested reorder, agent identified item/price, customer explicitly approved Rs 1,263 (note: invoice shows 126,300; conversation summary states 1,263, potential discrepancy in summary text vs invoice, but invoice_breakdown confirms 126,300 charged). Agent confirmed payment via saved mandate. 5. Conclusion: Evidence demonstrates active mandate, prior consent, and customer approval of specific transaction. No evidence of unauthorised use.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:16:08.261Z"
+    },
+    {
+      "key": "bbdc49f0388d5ea5c8c5f66210a74b0d7d64ef40796726b2ade416ae817149a3",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a reorder of a specific family dinner order. The agent identified the item and price, and the customer explicitly approved the transaction for Rs 682. The agent confirmed the payment using a saved mandate, and the system recorded the customer's confirmation.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:14:11.218Z"
     },
     {
       "key": "bdc1900fac05af24ee5dc285e78abf6f6bc1db350746f6e19a4c484bfe35564d",
@@ -53,6 +456,110 @@
       "recordedAt": "2026-08-31T19:56:37.508Z"
     },
     {
+      "key": "c38af9b393be2c76883fd48c59fca7668a28c1d0c0c7b554ffce57b813cc2d5d",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 128 (unauthorised mandate). Evidence supports contest. 1. Purchase: 2x Cotton kurta set, total INR 98,400, charged 2026-06-08. 2. Consent: authorisation_evidence shows consentAt 2026-06-08T00:17:00Z, mandateStatus active, protocol upi-reserve-pay. Orchestration logs confirm intent_received, item_selected, mandate_checked, payment_initiated, payment_captured. 3. Limits: Mandate facts confirm amount 98,400 is within 213,969 cap and validity window. Consent recorded before payment. 4. Communication: customer_communication (5 turns, started 2026-06-13) shows customer requested reorder, agent identified product/price, customer explicitly approved order for stated amount, agent confirmed transaction via saved mandate. 5. Invoice: invoice_breakdown matches charged amount 98,400 INR. Evidence demonstrates explicit customer approval and valid mandate usage, refuting unauthorised charge claim.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-08-31T20:12:16.184Z"
+    },
+    {
+      "key": "cd786e88d2f6ee43d9b968ef7b0dfa0074e465aaf9fb6ca0756d17283f463faf",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a reorder of a cotton kurta set. The agent identified the item at Rs 2,681 and asked for confirmation. The customer explicitly approved the specific purchase amount and item, and the agent confirmed the payment via a saved mandate.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:16:42.269Z"
+    },
+    {
+      "key": "d0083be86b7316a8bb05db67d3d2247bb09b951d4319e2e8ec9f1099f6b0cbc2",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 128 (unauthorized mandate charge) is addressed by the following evidence. The customer purchased one Cotton kurta set for INR 171,800 on 2026-06-07. The authorisation_evidence log shows the customer explicitly consented to the payment at 02:21:00 UTC, prior to the payment_initiated and payment_captured actions. The mandate was active and the charge of 171,800 was within the 306,578 cap and validity window. The invoice_breakdown confirms the charged amount matches the item price. The customer_communication record from 2026-06-11 shows the customer requested the reorder and explicitly approved the order and amount before the agent processed the payment via the saved mandate. This sequence demonstrates valid consent and authorization for the specific transaction.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:16:22.264Z"
+    },
+    {
+      "key": "d3c0243ad6ed0c52fb246540e6c216c54c371ea3e69bc74f8af2c2650cc32e92",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute reason UPI 128 (unauthorised). Evidence supports contest. 1. Purchase: Family dinner order, 2 units, INR 165,400, charged 2026-06-07. 2. Consent: customer_communication shows 5 turns starting 2026-06-09. Customer explicitly approved the specific item and amount. Agent confirmed transaction via saved mandate. 3. Mandate: authorisation_evidence confirms mandateStatus 'active', consentAt 2026-06-07T05:15:00Z. Mandate facts confirm amount (165,400) is within cap (245,635), within validity window, and consent was recorded before payment. 4. Invoice: invoice_breakdown matches charged amount exactly. The evidence demonstrates explicit customer approval for this specific transaction under an active, valid mandate, directly addressing the unauthorised charge claim.\"\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-08-31T20:12:14.493Z"
+    },
+    {
+      "key": "d87505ef230c441970b8ad9d9279c2edd66124099ed7fcf192901f2703392c58",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 1064. Customer purchased goods shipped via Delhivery. Shipment record shows status 'delivered' with shippedAt 2026-06-18T23:26:00.000Z. Delivery proof (pod_LuXQ1OH2PujQvM) confirms delivery at 2026-06-21T15:36:00.000Z. Evidence demonstrates the order was fulfilled and received by the customer, directly addressing the dispute reason.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:12:38.527Z"
+    },
+    {
+      "key": "de11d6d6dd0280f021ad7e1bf874649573ddd395252172f1128d7b7f601419e7",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 1064. Item shipped 2026-06-22 via Bluedart (shipment_record). Delivered 2026-06-25 at 03:15 UTC (delivery_proof, ref pod_hUZU7WngZqdK1O). Evidence confirms physical delivery to the customer. No customer communication is attached, as standard checkout does not capture chat logs. The delivery proof directly addresses the non-receipt claim.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:15:20.670Z"
+    },
+    {
+      "key": "df0a9a201110a5888496169b83291e37e451a626607b608a3fe339a59572bdf5",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a reorder of a cotton kurta set. The agent identified the item at Rs 1,336 and asked for confirmation. The customer explicitly approved the order for that specific amount, and the agent confirmed payment via a saved mandate.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:15:46.419Z"
+    },
+    {
+      "key": "e083d7ebe0a34f6f35d775e8bbd9938a6cb5cb6f77a0b79f2b109bb6ba8953e5",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a reorder of a specific family dinner order. The agent identified the item and price, and the customer explicitly approved the transaction for Rs 1,263. The agent confirmed the payment was processed using a saved mandate.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:16:00.128Z"
+    },
+    {
       "key": "e7a7b61434b1d74918a71eccf6061e2666ae77e8ce94ef9091b8423216485720",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -64,6 +571,97 @@
         "attempts": 1
       },
       "recordedAt": "2026-08-31T19:56:35.841Z"
+    },
+    {
+      "key": "e8bc0e20a36baee54c88cca78cab4f99703d4f4f147f9a8875d73704283dadf7",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested to reorder a specific item, and the agent identified the product and price. The customer explicitly approved the order for the stated amount, and the agent confirmed the payment using a saved mandate.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:16:14.845Z"
+    },
+    {
+      "key": "ec6c867b4cfed227d433cdfd5d086150e10737b4956a354ed128dc672c18e413",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 128 (unauthorized mandate charge). Evidence supports contest. 1. Purchase: Monthly grocery bundle, INR 214,700, charged 2026-06-06. 2. Mandate: Active mandate (agt_pantry_0058) used. Charge is within the 557,330 cap and validity window. Consent was recorded before payment. 3. Authorization: authorisation_evidence shows orchestration actions: intent_received, catalogue_searched, item_selected, mandate_checked, payment_initiated, payment_captured. 4. Communication: customer_communication (5 turns, 2026-06-24) shows customer requested reorder, agent identified item/price, customer explicitly approved specific purchase, and system recorded confirmation. 5. Invoice: invoice_breakdown confirms line item and total match charged amount. The evidence demonstrates explicit customer approval for this specific transaction under an active mandate, directly addressing the unauthorized charge claim.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:13:51.291Z"
+    },
+    {
+      "key": "f11ffa253b88d9f76b2c6266f273586b04d949507ad638cf5498cdf713ae915b",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"insufficientEvidence\": true,\n  \"reason\": \"UPI 128 disputes require proof of explicit customer consent for the specific transaction. The provided customer_communication shows the customer gave a broad delegation ('just sort it out') without explicitly approving the specific item or price, and no separate explicit consent artifact is held.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:12:27.944Z"
+    },
+    {
+      "key": "f159710275a2a3ec6eb463804c942cb0e122b3b7301e5f564ea45f4ae0905c4e",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 128 (unauthorised mandate). Evidence supports authorisation. Invoice shows 1x Cotton kurta set, INR 133,600. Authorisation log (agentId agt_concierge_0057) records consent at 2026-06-06T14:09:00Z, mandate active, protocol uap 0.9. Actions: intent_received, catalogue_searched, item_selected, mandate_checked, payment_initiated, payment_captured. Mandate facts: charge 133,600 within 314,892 cap; within validity window; consent recorded before payment. Customer communication (5 turns, started 2026-06-13) shows customer requested reorder, agent identified item, customer explicitly approved order for specific amount, agent confirmed payment via saved mandate. Evidence matches dispute reason: explicit consent and active mandate within limits.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:15:53.977Z"
+    },
+    {
+      "key": "f896cb073edff86c7c0c99c97b05b86a1884ba06bbdedf133bc3cf577e53406f",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 128 (unauthorized mandate charge). Evidence supports contest. 1. Purchase: Cotton kurta set (INR 194,700) on 2026-06-06. 2. Consent: authorisation_evidence shows active mandate and consent recorded at 19:53:00Z, prior to payment capture. 3. Authorization: Mandate facts confirm charge is within the 432,764 cap and validity window. 4. Verification: customer_communication (5 turns) shows the customer explicitly approved the reorder and stated amount before the agent confirmed payment via the saved mandate. The evidence demonstrates valid consent and adherence to mandate limits, directly addressing the unauthorized charge claim.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:12:53.701Z"
+    },
+    {
+      "key": "f9f54de39a7d709ac014254ef21f6f7ddf71e5cb1109c2810d54092affd66429",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute reason UPI 1064. Customer purchased goods delivered via Delhivery. Shipment record shows status 'delivered', shipped 2026-06-22. Delivery proof confirms receipt on 2026-06-23. Evidence demonstrates the order was fulfilled and delivered to the customer as claimed.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:13:05.550Z"
+    },
+    {
+      "key": "ff86f68bc25391f7296cf1bd8718583434721819c57060a2f8e1beae10601913",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a reorder of wireless earbuds. The agent identified the item and price, and the customer explicitly approved the purchase of that specific item for Rs 5,232. The agent confirmed the transaction using a saved mandate, and the system recorded the customer's confirmation.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-08-31T20:14:38.381Z"
     }
   ]
 }

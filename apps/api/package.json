@@ -14,7 +14,9 @@
     "zod": "^3.24.1",
     "@praman/core": "workspace:*",
     "@praman/simulator": "workspace:*",
-    "@prisma/client": "^6.19.3"
+    "@prisma/client": "^6.19.3",
+    "@praman/llm": "workspace:*",
+    "@praman/adapter": "workspace:*"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",

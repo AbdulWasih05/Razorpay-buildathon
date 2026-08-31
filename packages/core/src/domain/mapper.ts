@@ -1,4 +1,4 @@
-import type { ContestEvidenceField } from '../schema/contest.js';
+import { contestRequestSchema, type ContestEvidenceField, type ContestRequestInput } from '../schema/contest.js';
 import type { CollectedEvidence } from './collector.js';
 import { ARTIFACTS, type EvidenceArtifact } from './rubric.js';
 
@@ -76,8 +76,17 @@ export function mapEvidenceToContestFields(
  */
 export interface ContestDraft {
   disputeId: string;
-  /** Subunits. The amount contested, never more than the disputed amount. */
+  /** Subunits. The amount contested. Razorpay caps this at `disputedAmount`. */
   amount: number;
+  /**
+   * Subunits. What the customer disputed.
+   *
+   * Carried separately from `amount` even though today they are always equal,
+   * because the adapter's ceiling check compares the two -- and a check that
+   * compares a value to itself is worse than no check, since it reads as a
+   * guard and enforces nothing. Partial contests become expressible here.
+   */
+  disputedAmount: number;
   /** The drafted explanation. Goes in `summary`; already length-validated. */
   summary: string;
   action: 'draft';
@@ -86,15 +95,71 @@ export interface ContestDraft {
   references: string[];
 }
 
+/**
+ * Exchange capture-store references for real Razorpay document ids and produce
+ * the contest request body.
+ *
+ * The `documents` map comes from whoever uploaded the evidence -- the
+ * Documents API in production, the simulator in eval. This function NEVER mints
+ * an id: a missing mapping throws. Inventing a plausible `doc_` id to make the
+ * type check would be exactly the fabrication CLAUDE.md hard rule #1 forbids,
+ * and it would fail at Razorpay rather than here, where it is diagnosable.
+ *
+ * `action` is hardcoded to `draft`. Submission is a separate, human-approved
+ * step: this function cannot produce a submit payload at all (hard rule #2).
+ */
+export function materialiseContest(
+  draft: ContestDraft,
+  documents: ReadonlyMap<string, string>,
+): ContestRequestInput {
+  const request: Record<string, unknown> = {
+    amount: draft.amount,
+    summary: draft.summary,
+    action: 'draft',
+  };
+  const others: { type: string; document_ids: string[] }[] = [];
+
+  for (const assignment of draft.assignments) {
+    const documentIds = assignment.references.map((reference) => {
+      const documentId = documents.get(reference);
+      if (!documentId) {
+        throw new Error(
+          `no uploaded document for capture reference "${reference}" (${assignment.artifacts.join(', ')}); ` +
+            'upload the evidence before materialising the contest -- ids are never invented here',
+        );
+      }
+      return documentId;
+    });
+    if (documentIds.length === 0) continue;
+
+    if (assignment.field === 'others') {
+      others.push({
+        type: assignment.othersType ?? 'other_evidence',
+        document_ids: documentIds,
+      });
+      continue;
+    }
+    const existing = (request[assignment.field] as string[] | undefined) ?? [];
+    request[assignment.field] = [...existing, ...documentIds];
+  }
+
+  if (others.length > 0) request['others'] = others;
+  // Validate against the contract types before this leaves the domain.
+  return contestRequestSchema.parse(request) as ContestRequestInput;
+}
+
 export function buildContestDraft(
   collected: CollectedEvidence,
   summary: string,
-  amount: number,
+  disputedAmount: number,
+  /** Defaults to contesting the full disputed amount. */
+  contestAmount: number = disputedAmount,
 ): ContestDraft {
   const assignments = mapEvidenceToContestFields(collected);
   return {
     disputeId: collected.disputeId,
-    amount,
+    amount: contestAmount,
+    disputedAmount,
     summary,
     action: 'draft',
     assignments,

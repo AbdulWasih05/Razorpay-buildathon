@@ -389,3 +389,69 @@ occurrence took two minutes to diagnose -- and the entry did not stop the second
 occurrence, because nothing generalised it into the layer written next. The
 retry now lives in the provider interface, so any future provider inherits it
 rather than rediscovering the limit.
+
+---
+
+### F-013 -- a convenience line in an API route defeated the one-door rule, and every test still passed
+
+**When.** 2026-09-01, first end-to-end run of the approve-and-submit loop.
+
+**What broke.** This, against the live API:
+
+```
+POST /review/disputes/dsp_dev-v1_b1_64/approve  {"approvedBy": "system"}
+-> {"state":"submitted","simulated":true,"documentCount":10}
+```
+
+A contest was drafted, approved and submitted with **no human involved at any
+point**. That is CLAUDE.md hard rule #2 -- "the submit path has exactly one
+door" -- broken outright, on the money path.
+
+**Cause.** One line in the route layer, written to be helpful:
+
+```ts
+const actor = approvedBy.startsWith('human:') ? approvedBy : `human:${approvedBy}`;
+```
+
+Every downstream guard then passed, correctly, on the input it was given.
+`AuditTrail.append` checked `isHumanActor('human:system')` -- true.
+`ApprovalToken.approve` checked the `human:` prefix -- present. Both did exactly
+what they were written to do. The prefix was proof of humanity, and the layer
+above manufactured the proof.
+
+**Why the tests did not catch it.** They tested the guard, not the path. Two
+tests asserted that `ApprovalToken.approve(id, 'system', ...)` throws, and it
+does. Nothing exercised the guard **through the route**, which was the only
+place the string got rewritten. A unit test of a check cannot see a caller that
+satisfies the check dishonestly.
+
+**Fix, at both layers.**
+
+1. The route no longer prefixes anything. A caller that cannot produce a real
+   reviewer identity does not get one manufactured for it -- it gets a 400.
+2. `ApprovalToken` now validates the **name behind** the prefix against a
+   reserved list (system, gate, llm, adapter, bot, automation, ...), because the
+   prefix is trivially addable and therefore proves nothing on its own.
+3. Four regression tests, including one asserting that `human:systems-team-anita`
+   still works -- the check is on the whole name, not a substring, so tightening
+   it did not make it paranoid.
+
+Verified after the fix, against the running API: `system`, `human:system`,
+`human:`, `human:bot` and `""` are all refused with distinct messages;
+`human:wasih` submits.
+
+**What it taught.** Two things, and the second is the uncomfortable one.
+
+The mechanical lesson: a guard that reads a *format* is not a guard. `human:` is
+a shape, not an identity, and any layer above can produce the shape. The check
+now looks at what the string means, not what it looks like.
+
+The lesson about my own testing: I had written the invariant into the type
+system (`ApprovalToken` has a private constructor), into the state machine
+(`approved` requires a human actor), and into a source-tree test (eval cannot
+import the adapter) -- three independent mechanisms, all correct, all passing,
+and the rule was still broken by a caller that satisfied all three. **Defence in
+depth is worth nothing if every layer trusts the same string.** The bug was
+found by curling the endpoint with a hostile value, which no unit test in this
+repo was ever going to do. Route-level adversarial tests are now owed for
+anything on the money path.

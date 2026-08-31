@@ -8,7 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/ui",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -20,7 +20,9 @@
     "seed": "tsx scripts/seed.ts",
     "api:dev": "pnpm --filter @praman/api dev",
     "holdout:generate": "tsx scripts/generate-holdout.ts",
-    "assemble": "tsx scripts/assemble.ts"
+    "assemble": "tsx scripts/assemble.ts",
+    "ui:dev": "pnpm --filter @praman/ui dev",
+    "ui:build": "pnpm --filter @praman/ui build"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

@@ -16,4 +16,5 @@ export * from './domain/rubric.js';
 export * from './domain/collector.js';
 export * from './domain/mapper.js';
 export * from './domain/gate.js';
+export * from './domain/lifecycle.js';
 export * from './domain/scenarios.js';

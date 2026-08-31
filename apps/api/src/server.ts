@@ -11,7 +11,11 @@ import {
 import { DEV_CONFIG, generateTransaction } from '@praman/simulator';
 import { z } from 'zod';
 
+import { adapterFromEnv } from '@praman/adapter';
+import { AssemblyClient, ResponseCache, providerFromEnv } from '@praman/llm';
+
 import { captureEvidencePack, readEvidencePack } from './capture.js';
+import { approveAndSubmit, listQueue, readDispute, runPipeline } from './review.js';
 
 const asJsonValue = (value: unknown): Prisma.InputJsonValue => value as Prisma.InputJsonValue;
 
@@ -308,6 +312,112 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
       evidencePackId: result.evidencePackId,
       inspect: `/evidence-packs/${parsed.externalId}`,
     });
+  });
+
+  // --- Review pipeline (TASKS.md P3.2, P3.3) -------------------------------
+
+  /**
+   * The assembly client is built once per server.
+   *
+   * Replay by default: the API never makes a live model call unless
+   * `ASSEMBLY_MODE=live` is set explicitly. A demo that quietly calls a model
+   * is a demo whose behaviour depends on a network and a rate limit.
+   */
+  const assemblyClient = new AssemblyClient({
+    provider: providerFromEnv(
+      process.env['ASSEMBLY_MODE'] === 'live'
+        ? process.env
+        : { GROQ_API_KEY: 'replay-only' },
+    ),
+    cache: new ResponseCache(),
+    mode: process.env['ASSEMBLY_MODE'] === 'live' ? 'live' : 'replay',
+  });
+
+  const adapter = adapterFromEnv(process.env, () => new Date());
+
+  /** Run the pipeline over disputes that have not been processed yet. */
+  app.post('/review/run', async (request, reply) => {
+    const query = z
+      .object({ limit: z.coerce.number().int().positive().max(500).default(25), all: z.coerce.boolean().default(false) })
+      .parse(request.query ?? {});
+
+    const pending = await prisma.dispute.findMany({
+      where: query.all ? {} : { state: 'received' },
+      orderBy: { respondBy: 'asc' },
+      take: query.limit,
+      select: { externalId: true },
+    });
+
+    const results: { externalId: string; state: string; error?: string }[] = [];
+    for (const dispute of pending) {
+      try {
+        const result = await runPipeline({ prisma, client: assemblyClient }, dispute.externalId);
+        results.push({ externalId: dispute.externalId, state: result.state });
+      } catch (error) {
+        // A replay miss or a broken pack must not abort the batch: the other
+        // disputes are still processable and the failure is reported per case.
+        results.push({
+          externalId: dispute.externalId,
+          state: 'error',
+          error: (error as Error).message,
+        });
+      }
+    }
+
+    const counts = results.reduce<Record<string, number>>((acc, result) => {
+      acc[result.state] = (acc[result.state] ?? 0) + 1;
+      return acc;
+    }, {});
+    return reply.send({ processed: results.length, counts, results });
+  });
+
+  app.get('/review/queue', async (_request, reply) => {
+    return reply.send({ disputes: await listQueue(prisma) });
+  });
+
+  app.get('/review/disputes/:externalId', async (request, reply) => {
+    const params = z.object({ externalId: z.string().min(1) }).parse(request.params);
+    const dispute = await readDispute(prisma, params.externalId);
+    if (!dispute) return reply.status(404).send({ error: 'unknown_dispute' });
+    return reply.send(dispute);
+  });
+
+  /**
+   * THE DOOR (CLAUDE.md hard rule #2).
+   *
+   * The only route that can cause a submission. It requires a named reviewer;
+   * there is no default and no service account. Everything downstream refuses
+   * a non-human actor again, so this is defence in depth rather than the only
+   * check.
+   */
+  app.post('/review/disputes/:externalId/approve', async (request, reply) => {
+    const params = z.object({ externalId: z.string().min(1) }).parse(request.params);
+    const body = z
+      .object({
+        approvedBy: z
+          .string()
+          .min(1, 'an approval needs a named reviewer')
+          .startsWith('human:', 'approvedBy must look like "human:<name>"'),
+      })
+      .strict()
+      .safeParse(request.body ?? {});
+    if (!body.success) {
+      return reply.status(400).send({
+        error: 'invalid_approval',
+        detail: body.error.issues.map((issue) => issue.message).join('; '),
+      });
+    }
+
+    try {
+      const result = await approveAndSubmit(
+        { prisma, client: assemblyClient, adapter, now: () => new Date() },
+        params.externalId,
+        body.data.approvedBy,
+      );
+      return reply.send({ ...result, adapter: adapter.name });
+    } catch (error) {
+      return reply.status(409).send({ error: 'approval_refused', detail: (error as Error).message });
+    }
   });
 
   app.addHook('onClose', async () => {

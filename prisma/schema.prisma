@@ -323,6 +323,23 @@ model Dispute {
   externalId String @unique
   paymentId  String
   rail       Rail
+
+  // --- Review pipeline state (TASKS.md P3.2) -------------------------------
+  /// Lifecycle state: received | triaged | gated | drafted | approved | submitted | abstained.
+  /// The AuditLog table is the authority on how it got here; this is a
+  /// denormalised copy so the queue can be listed without replaying trails.
+  state             String    @default("received")
+  gateDecision      String?
+  gateReason        String?
+  /// Why it abstained: gate | drafter_disagreement | assembly_failure.
+  abstentionClass   String?
+  collectedJson     Json?
+  contestDraftJson  Json?
+  /// The payload actually sent, recorded verbatim. Null until submitted.
+  submittedRequestJson Json?
+  /// Human identity that approved. Null unless a person approved it.
+  approvedBy        String?
+  approvedAt        DateTime?
   /// Generator scenario class: a1..a4 (ordinary) or b1..b5 (agentic).
   scenarioClass        String
   corpus               Corpus

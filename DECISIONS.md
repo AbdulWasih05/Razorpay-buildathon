@@ -779,3 +779,30 @@ becomes \`supporting\` -- it corroborates a contest without being load-bearing.
 it is the more dangerous of the two, because strictness looks like rigour in a
 diff and only reveals itself as an artefact when you read what the system
 actually declined and why.
+
+---
+
+### D-027 -- the review UI shows the reviewer everything except the answer
+
+**Decided.** `GET /review/disputes/:id` returns the gate decision, every
+evidence finding with its reason, the drafted letter, and the full audit
+timeline. It does **not** return `groundTruth` or `groundTruthRationale`, and a
+test asserts their absence.
+
+**Why.** Ground truth is corpus bookkeeping. A reviewer who can see the label is
+not reviewing, they are confirming, and a demo of that is theatre. It would also
+quietly contaminate any human-in-the-loop measurement we might want later. The
+field exists in the database because the eval needs it; the review surface is
+simply not where it belongs.
+
+**Two more omissions, for the same family of reason.** No bulk approve -- an
+approval authorises one dispute, and a "select all" is how one click becomes
+fifty submissions. No simulated won/lost anywhere in the UI, per hard rule #6:
+the simulator does not even produce one, so there is nothing for a renderer to
+leak.
+
+**What the reviewer does see, deliberately:** the gate's reason in its own
+words, every artifact with `present` / `absent` / `not_capturable` and why, and
+the letter with its character count against the 1000 limit. The intent is that
+a reviewer can disagree with the system on the evidence, which requires seeing
+the evidence rather than a score.

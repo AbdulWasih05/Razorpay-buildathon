@@ -20,6 +20,9 @@
     "verbatimModuleSyntax": true,
     "noEmit": true
   },
-  "include": ["packages/*/src", "apps/*/src", "eval", "scripts"],
+  // apps/ui is excluded here and typechecked by its own config: it is the one
+  // package that needs DOM and JSX, and adding those globally would let a
+  // browser-only API compile in a Node package without complaint.
+  "include": ["packages/*/src", "apps/api/src", "eval", "scripts"],
   "exclude": ["node_modules", "**/dist"]
 }
