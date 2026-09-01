@@ -281,13 +281,16 @@ export async function readDispute(prisma: PrismaClient, externalId: string) {
  * benefit: the collector takes the domain envelope, not Prisma rows, so core
  * stays free of any database type.
  */
-async function readPackAsIngest(prisma: PrismaClient, externalId: string): Promise<unknown> {
+export async function readPackAsIngest(
+  prisma: PrismaClient,
+  externalId: string,
+): Promise<unknown> {
   const pack = await prisma.evidencePack.findUnique({
     where: { externalId },
     include: {
       merchant: true,
       mandate: true,
-      order: { include: { customer: true, payment: true, fulfillment: true } },
+      order: { include: { customer: true, payment: true, fulfillment: true, refund: true } },
       conversationTrace: { include: { turns: { orderBy: { seq: 'asc' } } } },
       orchestrationLogs: { orderBy: { seq: 'asc' } },
     },
@@ -307,13 +310,14 @@ async function readPackAsIngest(prisma: PrismaClient, externalId: string): Promi
     merchant: cleanRow(strip(pack.merchant)),
     customer: cleanRow(strip(pack.order.customer)),
     order: {
-      ...cleanRow(strip(pack.order)),
+      ...cleanRow(strip(pack.order), ORDER_RELATIONS),
       items: pack.order.itemsJson,
       placedAt: pack.order.placedAt.toISOString(),
     },
     payment: cleanRow(strip(pack.order.payment!)),
     mandate: pack.mandate ? cleanRow(strip(pack.mandate)) : null,
     fulfillment: pack.order.fulfillment ? cleanRow(strip(pack.order.fulfillment)) : null,
+    refund: pack.order.refund ? cleanRow(strip(pack.order.refund)) : null,
     agentic: pack.agentId
       ? {
           agentId: pack.agentId,
@@ -345,15 +349,30 @@ async function readPackAsIngest(prisma: PrismaClient, externalId: string): Promi
  *     identity and not part of the captured domain event;
  *   - `*Json` columns, which every caller re-attaches explicitly under the name
  *     the domain uses;
- *   - **included relation objects**. Prisma returns nested `customer`,
- *     `payment` and `fulfillment` objects on an order when they are included,
- *     and the capture schema is `.strict()`, so passing them through fails
- *     ingest with "unrecognized keys". They are attached at the top level of
- *     the envelope instead, which is where the schema puts them.
+ *   - **included relation objects**, named explicitly by the caller. Prisma
+ *     returns nested `customer`, `payment`, `fulfillment` and `refund` objects
+ *     on an order when they are included, and the capture schema is
+ *     `.strict()`, so passing them through fails ingest with "unrecognized
+ *     keys". They are attached at the top level of the envelope instead, which
+ *     is where the schema puts them.
+ *
+ * Relations are dropped BY NAME rather than by inspecting the value, and that
+ * is the whole point of the `relations` parameter. Value-shape cannot tell a
+ * null relation from a null column: an order with no refund yields
+ * `refund: null`, which is indistinguishable from `vpa: null` on a payment,
+ * and dropping every null would delete real captured facts. Guessing from the
+ * value worked only for as long as every included relation happened to be
+ * present -- see FAILURES.md F-014, where adding one optional relation broke
+ * every dispute that did NOT have it.
  */
-function cleanRow(row: Record<string, unknown>): Record<string, unknown> {
+export function cleanRow(
+  row: Record<string, unknown>,
+  relations: readonly string[] = [],
+): Record<string, unknown> {
+  const drop = new Set(relations);
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(row)) {
+    if (drop.has(key)) continue;
     if (key.endsWith('Id') && key !== 'externalId' && key !== 'agentId' && key !== 'razorpayPaymentId') {
       continue;
     }
@@ -362,9 +381,20 @@ function cleanRow(row: Record<string, unknown>): Record<string, unknown> {
       out[key] = value.toISOString();
       continue;
     }
-    // Nested relation objects and arrays never belong in a flattened row.
+    // Backstop for a populated relation the caller forgot to name. It cannot
+    // catch a null one, which is exactly why `relations` exists.
     if (value !== null && typeof value === 'object') continue;
     out[key] = value;
   }
   return out;
 }
+
+/** Relations Prisma can attach to an order row, none of which belong in it. */
+export const ORDER_RELATIONS = [
+  'customer',
+  'payment',
+  'fulfillment',
+  'refund',
+  'merchant',
+  'evidencePack',
+] as const;

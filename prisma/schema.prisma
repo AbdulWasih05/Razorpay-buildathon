@@ -127,6 +127,7 @@ model Order {
   customer     Customer      @relation(fields: [customerId], references: [id])
   payment      Payment?
   fulfillment  Fulfillment?
+  refund       Refund?
   evidencePack EvidencePack?
 
   @@index([merchantId])
@@ -178,6 +179,37 @@ model Fulfillment {
   order Order @relation(fields: [orderId], references: [id])
 }
 
+enum RefundStatus {
+  created
+  processed
+  failed
+}
+
+/// A refund issued against an order, and whether the money actually landed.
+///
+/// Added in P4.0. Its absence was a real capture gap: order.status = "refunded"
+/// says a refund was *generated*, and UPI reason code 1061 asks for proof that
+/// it *settled*. The two are not the same fact, and the difference is exactly
+/// the case Praman must not contest -- a refund raised and never paid means the
+/// customer is right. See DECISIONS.md D-030.
+model Refund {
+  id          String       @id @default(cuid())
+  externalId  String       @unique
+  orderId     String       @unique
+  amount      Int // currency subunits
+  currency    String       @default("INR")
+  status      RefundStatus
+  /// Bank settlement reference (UTR / ARN). Present only once money has moved.
+  utr         String?
+  /// When it settled at the customer's bank, not when it was raised.
+  settledAt   DateTime?
+  initiatedAt DateTime
+  occurredAt  DateTime
+  createdAt   DateTime     @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
 // ---------------------------------------------------------------------------
 // The capture layer
 // ---------------------------------------------------------------------------
@@ -200,11 +232,11 @@ model EvidencePack {
   rail       Rail
 
   /// Who transacted, and on whose stack.
-  agentId       String?
-  agentPlatform String?
+  agentId          String?
+  agentPlatform    String?
   /// Agentic protocol identifiers, e.g. UPI Reserve Pay / UAP, and its version.
-  protocol        String?
-  protocolVersion String?
+  protocol         String?
+  protocolVersion  String?
   /// Protocol fields with no first-class column yet. Kept rather than dropped:
   /// an unmodelled field we retained beats one we needed and never captured.
   protocolMetadata Json?
@@ -263,8 +295,8 @@ model ConversationTurn {
 /// Timestamped agent actions, including the payment call. Source for
 /// access_activity_log. Append-only by convention: never updated, never deleted.
 model OrchestrationLog {
-  id             String @id @default(cuid())
-  externalId     String @unique
+  id             String   @id @default(cuid())
+  externalId     String   @unique
   evidencePackId String
   seq            Int
   /// e.g. intent_received | catalogue_searched | item_selected |
@@ -328,18 +360,18 @@ model Dispute {
   /// Lifecycle state: received | triaged | gated | drafted | approved | submitted | abstained.
   /// The AuditLog table is the authority on how it got here; this is a
   /// denormalised copy so the queue can be listed without replaying trails.
-  state             String    @default("received")
-  gateDecision      String?
-  gateReason        String?
+  state                String      @default("received")
+  gateDecision         String?
+  gateReason           String?
   /// Why it abstained: gate | drafter_disagreement | assembly_failure.
-  abstentionClass   String?
-  collectedJson     Json?
-  contestDraftJson  Json?
+  abstentionClass      String?
+  collectedJson        Json?
+  contestDraftJson     Json?
   /// The payload actually sent, recorded verbatim. Null until submitted.
   submittedRequestJson Json?
   /// Human identity that approved. Null unless a person approved it.
-  approvedBy        String?
-  approvedAt        DateTime?
+  approvedBy           String?
+  approvedAt           DateTime?
   /// Generator scenario class: a1..a4 (ordinary) or b1..b5 (agentic).
   scenarioClass        String
   corpus               Corpus
@@ -363,11 +395,11 @@ model Dispute {
 /// This is trust evidence, not decoration (rubric: "would you trust it").
 /// Nothing in this table is ever updated or deleted.
 model AuditLog {
-  id        String  @id @default(cuid())
-  disputeId String
-  seq       Int
-  fromState String?
-  toState   String
+  id         String   @id @default(cuid())
+  disputeId  String
+  seq        Int
+  fromState  String?
+  toState    String
   /// system | llm | gate | human:<name> | adapter
   actor      String
   reason     String?

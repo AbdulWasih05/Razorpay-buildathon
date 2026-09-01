@@ -144,6 +144,64 @@ export const fulfillmentInputSchema = z
   })
   .strict();
 
+export const REFUND_STATUSES = ['created', 'processed', 'failed'] as const;
+
+/**
+ * A refund the merchant issued against this order, and whether the money
+ * actually landed.
+ *
+ * This slot did not exist until P4.0. Its absence was a real recall hole, not a
+ * corpus one: UPI reason code 1061 ("credit not processed") asks for proof that
+ * a promised refund settled, `order.status = "refunded"` says only that a
+ * refund was *generated*, and nothing in the envelope could say the customer
+ * received the money. Every 1061 dispute therefore reported the requirement as
+ * structurally unmet -- correctly, but the merchant genuinely holds this record.
+ * See DECISIONS.md D-030 and D-024.
+ *
+ * The distinction that does the work is `status` plus `utr`. A refund that was
+ * created and never settled is exactly the case Praman must NOT contest: the
+ * customer is right, they never got their money. So the settlement reference is
+ * modelled separately from the refund itself rather than assumed to follow it.
+ */
+export const refundInputSchema = z
+  .object({
+    externalId,
+    amount: amountInSubunits,
+    currency,
+    status: z.enum(REFUND_STATUSES),
+    /**
+     * The bank's settlement reference (UTR / ARN). Present only once the money
+     * has actually moved -- which is what "credit processed" means, and what a
+     * created-but-unsettled refund cannot show.
+     */
+    utr: z.string().min(1).nullable().optional(),
+    /** When the refund settled at the customer's bank, not when it was raised. */
+    settledAt: domainTime.nullable().optional(),
+    initiatedAt: domainTime,
+    occurredAt: domainTime,
+  })
+  .strict()
+  .superRefine((refund, ctx) => {
+    // A processed refund with no settlement reference would let the collector
+    // report proof it does not hold -- the exact shape of confident wrongness
+    // on the money path that hard rule #7 exists to prevent.
+    if (refund.status === 'processed' && !refund.utr) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['utr'],
+        message:
+          'a processed refund must carry its settlement reference: without a UTR there is no evidence the money moved',
+      });
+    }
+    if (refund.status !== 'processed' && refund.utr) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['utr'],
+        message: 'only a processed refund has a settlement reference',
+      });
+    }
+  });
+
 /** Protocol-level identity of the agent that transacted. Agentic rail only. */
 export const agenticContextSchema = z
   .object({
@@ -211,6 +269,7 @@ export const evidencePackIngestSchema = z
 
     mandate: mandateInputSchema.nullable().optional(),
     fulfillment: fulfillmentInputSchema.nullable().optional(),
+    refund: refundInputSchema.nullable().optional(),
     agentic: agenticContextSchema.nullable().optional(),
     conversationTrace: conversationTraceSchema.nullable().optional(),
     orchestrationLogs: z.array(orchestrationLogSchema).default([]),

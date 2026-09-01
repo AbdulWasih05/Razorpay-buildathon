@@ -455,3 +455,161 @@ depth is worth nothing if every layer trusts the same string.** The bug was
 found by curling the endpoint with a hostile value, which no unit test in this
 repo was ever going to do. Route-level adversarial tests are now owed for
 anything on the money path.
+
+---
+
+### F-014 -- adding an optional field broke every dispute that did not have it
+
+**When.** 2026-09-01, first API run after P4.0(a) added the refund slot to the
+capture envelope.
+
+**What broke.** 85 of 97 disputes failed to process:
+
+```
+POST /review/run?states=drafted,abstained&limit=200
+-> {"processed":97,"counts":{"error":85,"abstained":7,"drafted":5}}
+
+  "message": "Unrecognized key(s) in object: 'refund'"   path: ["order"]
+```
+
+The 12 that succeeded were **exactly the 12 a4 disputes** -- the only ones that
+actually have a refund. Everything the new feature did not touch was broken by
+it, which is the opposite of the usual direction and the thing that made the
+count legible: 85 + 12 = 97, and 12 is the a4 population.
+
+**Cause.** `cleanRow` in `apps/api/src/review.ts` flattens a Prisma row into the
+`.strict()` capture envelope, and it identified relation objects to drop **by
+inspecting the value**:
+
+```ts
+if (value !== null && typeof value === 'object') continue;
+```
+
+The `value !== null` guard is there for a real reason: `vpa: null`,
+`deliveredAt: null` and `utr: null` are captured facts, and dropping every null
+would silently delete evidence. But it means a **null relation** and a **null
+column** are indistinguishable. An order with no refund yields `refund: null`,
+which sailed through into a schema that declares no such key.
+
+The check had been correct only because every previously-included relation
+happened to always be populated. It was never true; it was untested.
+
+**Why the tests did not catch it.** All 203 of them are pure -- corpus in,
+collector out -- and nothing round-trips through Prisma. The whole failure lives
+in the gap between "the domain logic is right" and "the row the database hands
+back is the shape the domain expects", and no pure test can stand in that gap.
+The 203 stayed green for the entire time the API was returning errors for 88% of
+the corpus.
+
+**Fix.** `cleanRow` now takes the relation names explicitly
+(`cleanRow(row, ORDER_RELATIONS)`) and drops by name, because the caller knows
+what the relations are and the value never did. The value-shape check stays as a
+backstop for a populated relation someone forgot to list -- it cannot catch a
+null one, which is precisely why the parameter exists. `ORDER_RELATIONS` is
+exported and asserted, so the next relation added has one obvious place to be
+registered.
+
+Seven regression tests in a new `apps/api/src/review.test.ts`, and the important
+one is deliberately the **null** case: a test that only drops a populated
+relation reproduces the original blindness exactly.
+
+Re-run after the fix: `processed 97, errors 0`.
+
+**Cost.** ~20 min, all of it after the feature itself worked.
+
+**What it taught.** Twice now the same shape (D-029): a check that reads like
+rigour, passes, and is deciding on the wrong evidence. Here it inferred a
+structural fact -- *is this key a relation?* -- from a runtime value that cannot
+carry it. Schema questions must be answered from the schema.
+
+The sharper lesson is about test topology rather than about nulls. This repo's
+suite is strong precisely where it is pure, and that purity is why it was blind:
+**the API round-trip is the only place capture-layer drift is visible, and it
+had no test at all.** The pure tests were never going to fail, no matter how
+many I wrote. It also matters *when* this surfaced -- the day the corpus was
+extended -- because a capture-layer change is exactly the kind of change that
+looks finished when the domain tests pass.
+
+---
+
+### F-015 -- I verified a feature against a server I had not started
+
+**When.** 2026-09-01, verifying P4.0(a) end to end.
+
+**What broke.** Nothing in the product. What broke was the verification, which
+is worse, because a wrong result is loud and a result obtained the wrong way is
+not.
+
+Every request in that session -- the reseed, three pipeline runs, twelve
+per-dispute evidence checks -- was answered by **a stale API process left over
+from an earlier session, running `ASSEMBLY_MODE=live`**. My own server had died
+at startup:
+
+```
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+```
+
+I never read the log. I ran `curl /health`, got `{"status":"ok"}`, and took that
+as proof my server was up. It proved only that *a* server was up.
+
+**How it surfaced.** Not by looking. `git add -A` showed
+`packages/llm/fixtures/assembly.json` modified, and I had not run
+`pnpm assemble`. Five new recordings, timestamped inside my run window. Since
+replay mode cannot call a model -- `ReplayMissError` is thrown before the
+provider is ever reached -- either the client was broken or the server was not
+mine.
+
+**How diagnosed.** In the wrong order, which is the part worth recording. I
+spent about twenty minutes reasoning about which code path could record in
+replay mode: re-read the cache, re-read the client, checked `.env`, checked the
+dev script, checked the shell environment, and finally wrote a probe that
+constructed the client exactly as the server does and confirmed replay throws.
+The code was innocent every time I looked at it. Only then did I read the log
+file I had been writing since the beginning, where the answer was line 8.
+
+`Get-CimInstance Win32_Process` then showed **five** `tsx watch src/index.ts`
+trees accumulated across sessions. One held the port; the rest were idle.
+Because they all watch the same directory, the stale one had hot-reloaded my
+edits -- which is why the new `?states=` parameter worked, and why nothing
+behaved oddly enough to give it away.
+
+**Fix.**
+
+1. Killed all five watcher trees, confirmed port 3000 free, started one server
+   and confirmed **it** bound (`bound cleanly`, no EADDRINUSE in its log).
+2. `/health` now reports `assemblyMode`, `recordings`, `startedAt` and `pid`. A
+   health check that answers only "ok" answers the least useful question about
+   a running process. The mode is also logged at startup, LIVE in capitals.
+3. Re-ran the whole verification against the clean replay-mode server:
+   **97 processed, 0 errors, and the fixture file byte-identical afterwards** --
+   which is the check that actually proves replay made no call.
+
+**Effect on the recordings, stated plainly.** The five entries are genuine live
+Groq output on `qwen/qwen3.8-27b` for the five a4 letters whose evidence changed
+when the settlement field landed. The diff is **65 insertions, 0 deletions** --
+recordings are keyed by request hash, so new evidence mints new keys and
+overwrites nothing. They were needed regardless; what is wrong is that they were
+minted by accident rather than by an intended `--live` run. No report exists
+yet, so the D-023 rule ("re-recording after the report exists is forbidden") is
+not breached, and if D-023 chooses Anthropic every recording is regenerated
+anyway.
+
+**Cost.** ~25 min, ~20 of it spent suspecting correct code.
+
+**What it taught.** Three things, and the third is the one that stings.
+
+A health check should report what the process *is*, not that it is. `{"status":
+"ok"}` is compatible with every version of the truth I needed to distinguish.
+
+The functional result survived -- the same 97/0 and the same 31 contested, twice,
+under both modes -- but I did not know that when I wrote it down. **I reported
+"verified end-to-end through the running API" without checking whose API it
+was.** The claim happened to be true. That is luck, and on the money path it is
+the same mistake as F-013: trusting a condition a layer beneath me had actually
+determined.
+
+And this is the second time a stale process has cost this project real time. The
+first fix was to kill that PID; the lesson was recorded as an incident rather
+than as a class, so nothing changed and it recurred within a day. The
+countermeasure had to be one a tired person cannot skip, which is why it is in
+`/health` rather than in a note telling me to check `netstat` next time.

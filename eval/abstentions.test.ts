@@ -78,9 +78,35 @@ describe('the numbers that must not regress', () => {
   });
 
   it('has recall on winnable disputes no worse than it does today', () => {
-    // A floor, not a target. P4.0 should push this up; nothing should push it
-    // down without the drop being visible here first.
-    expect(recall(rows).ratio).toBeGreaterThanOrEqual(0.68);
+    // A floor, not a target, raised as P4.0 lands: 26/38 before the capture
+    // repairs, 31/38 after P4.0(a) closed refund_settlement_proof. Nothing may
+    // push it down without the drop being visible here first.
+    //
+    // Asserted as a COUNT, not a ratio: 31/38 is 81.6%, which the report prints
+    // as "82%" after rounding, and a floor written from the rounded figure
+    // fails against the number it was copied from. A count cannot drift like
+    // that.
+    const r = recall(rows);
+    expect(r.winnable).toBe(38);
+    expect(r.contested).toBeGreaterThanOrEqual(31);
+  });
+
+  it('still abstains on every refund that was raised and never settled', () => {
+    // The direction that matters for P4.0(a). Closing a capture gap is supposed
+    // to win the cases where the merchant genuinely paid -- NOT to start
+    // contesting the ones where the customer never got their money and is
+    // right. A repair that moved recall up by also moving this number would be
+    // a worse product with a better metric.
+    const a4 = rows.filter((row) => row.scenarioClass === 'a4');
+    const owedButUnpaid = a4.filter((row) => row.groundTruth === 'unwinnable');
+    expect(owedButUnpaid.length).toBeGreaterThan(0);
+    for (const row of owedButUnpaid) {
+      expect(row.decision, row.externalId).toBe('abstain');
+    }
+    // And the settled ones are now all contested, which is the win.
+    for (const row of a4.filter((row) => row.groundTruth === 'winnable')) {
+      expect(row.decision, row.externalId).toBe('contest');
+    }
   });
 
   it('loses recall only to named capture gaps, never to a gate misjudgement', () => {

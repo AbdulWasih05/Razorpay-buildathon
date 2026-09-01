@@ -147,11 +147,14 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
   refund_settlement_proof: {
     artifact: 'refund_settlement_proof',
     description:
-      'Bank statement showing the refund amount, matching the payment amount, actually settled.',
+      'Evidence that the refund actually settled -- its bank settlement reference (UTR/ARN) and the date the money reached the customer, not merely that a refund was raised.',
     contestField: 'refund_confirmation',
-    sourceable: false,
-    notSourceableReason:
-      'A merchant transaction store holds no bank statement. This would come from the settlement or gateway payout record, which Praman does not capture. Disputes on UPI 1061 will therefore report this requirement as structurally unmet rather than pretend otherwise.',
+    // Was `sourceable: false` until P4.0. The capture envelope had no refund
+    // object at all, so no merchant using Praman could have supplied this and
+    // every UPI 1061 dispute reported it structurally unmet -- correctly, but
+    // it cost 5 winnable disputes on the dev corpus (D-030). The fix added the
+    // slot to the product; a merchant genuinely holds this record.
+    sourceable: true,
   },
 };
 

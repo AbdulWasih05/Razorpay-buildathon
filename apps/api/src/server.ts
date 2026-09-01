@@ -17,6 +17,12 @@ import { AssemblyClient, ResponseCache, providerFromEnv } from '@praman/llm';
 import { captureEvidencePack, readEvidencePack } from './capture.js';
 import { approveAndSubmit, listQueue, readDispute, runPipeline } from './review.js';
 
+/**
+ * When this process started. Reported by `/health` so a caller can tell a
+ * freshly started server from a stale one still holding the port (F-015).
+ */
+const STARTED_AT = new Date().toISOString();
+
 const asJsonValue = (value: unknown): Prisma.InputJsonValue => value as Prisma.InputJsonValue;
 
 /**
@@ -63,7 +69,25 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
 
   app.decorate('prisma', prisma);
 
-  app.get('/health', async () => ({ status: 'ok' }));
+  /**
+   * Whether this server may call a model, decided once and surfaced.
+   *
+   * Declared here rather than beside the client because `/health` reports it.
+   * F-015: a stale server from an earlier session was answering on this port in
+   * live mode while a newly started one had silently failed with EADDRINUSE,
+   * and nothing a caller could see distinguished them. A health check that says
+   * only "ok" answers the least useful question about a running process.
+   */
+  const assemblyMode = process.env['ASSEMBLY_MODE'] === 'live' ? 'live' : 'replay';
+  const assemblyCache = new ResponseCache();
+
+  app.get('/health', async () => ({
+    status: 'ok',
+    assemblyMode,
+    recordings: assemblyCache.size,
+    startedAt: STARTED_AT,
+    pid: process.pid,
+  }));
 
   // -------------------------------------------------------------------------
   // Capture
@@ -325,24 +349,50 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
    */
   const assemblyClient = new AssemblyClient({
     provider: providerFromEnv(
-      process.env['ASSEMBLY_MODE'] === 'live'
-        ? process.env
-        : { GROQ_API_KEY: 'replay-only' },
+      assemblyMode === 'live' ? process.env : { GROQ_API_KEY: 'replay-only' },
     ),
-    cache: new ResponseCache(),
-    mode: process.env['ASSEMBLY_MODE'] === 'live' ? 'live' : 'replay',
+    cache: assemblyCache,
+    mode: assemblyMode,
   });
+
+  // Announced at startup and exposed on /health, because F-015 was diagnosed
+  // for twenty minutes on the assumption that a server was in replay mode. A
+  // process whose eval-integrity behaviour is invisible is one you end up
+  // reasoning about instead of reading.
+  app.log.info(
+    { assemblyMode, recordings: assemblyCache.size },
+    assemblyMode === 'live'
+      ? 'ASSEMBLY MODE: LIVE -- model calls will be made and recorded'
+      : 'assembly mode: replay -- no model call will be made',
+  );
 
   const adapter = adapterFromEnv(process.env, () => new Date());
 
   /** Run the pipeline over disputes that have not been processed yet. */
   app.post('/review/run', async (request, reply) => {
     const query = z
-      .object({ limit: z.coerce.number().int().positive().max(500).default(25), all: z.coerce.boolean().default(false) })
+      .object({
+        limit: z.coerce.number().int().positive().max(500).default(25),
+        all: z.coerce.boolean().default(false),
+        /**
+         * Re-run only disputes currently in these states, e.g.
+         * `?states=drafted,abstained`. Added in P4.0: closing a capture gap
+         * changes what the collector can see, so every already-processed
+         * dispute needs reprocessing -- but re-running a `submitted` one would
+         * walk its state backwards while its audit trail still says submitted.
+         * Naming the states is how a re-run stays inside the lifecycle.
+         */
+        states: z
+          .string()
+          .optional()
+          .transform((value) =>
+            value ? value.split(',').map((part) => part.trim()).filter(Boolean) : undefined,
+          ),
+      })
       .parse(request.query ?? {});
 
     const pending = await prisma.dispute.findMany({
-      where: query.all ? {} : { state: 'received' },
+      where: query.states ? { state: { in: query.states } } : query.all ? {} : { state: 'received' },
       orderBy: { respondBy: 'asc' },
       take: query.limit,
       select: { externalId: true },
@@ -368,7 +418,32 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
       acc[result.state] = (acc[result.state] ?? 0) + 1;
       return acc;
     }, {});
-    return reply.send({ processed: results.length, counts, results });
+    // The denominator reconciles, out loud.
+    //
+    // A run reports how many disputes it touched, and `processed` alone cannot
+    // be checked against anything: a filtered re-run of 97 and a silent drop of
+    // 3 produce the same number. This returns the corpus total and what was
+    // deliberately left out, so "97" is never a figure a reader has to trust.
+    // It cost a round of questions in review when a run of 97 was reported
+    // against a corpus of 100 with the difference living only in a query
+    // parameter (F-015's class: a number stated without what produced it).
+    const total = await prisma.dispute.count();
+    const skipped = total - results.length;
+    return reply.send({
+      processed: results.length,
+      corpusTotal: total,
+      skipped,
+      skippedBecause:
+        skipped === 0
+          ? null
+          : query.states
+            ? `not in states [${query.states.join(', ')}]`
+            : query.all
+              ? `limit ${query.limit} reached`
+              : 'not in state "received"',
+      counts,
+      results,
+    });
   });
 
   app.get('/review/queue', async (_request, reply) => {

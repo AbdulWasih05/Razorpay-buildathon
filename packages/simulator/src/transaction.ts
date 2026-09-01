@@ -416,6 +416,35 @@ export function generateTransaction(
       occurredAt: (deliveredAt ?? shippedAt ?? capturedAt).toISOString(),
     },
 
+    // P4.0(a). A refund exists in the data only where the scenario is about one,
+    // and its shape is DERIVED from `refundIssued` -- the draw the generator
+    // already made -- so this consumes no new randomness and the seeded stream
+    // stays byte-identical. That property is load-bearing: the dev corpus ids,
+    // amounts and every other case are unchanged, so the before/after recall
+    // comparison isolates the capture repair rather than measuring a different
+    // corpus (DECISIONS.md D-030).
+    //
+    // Both branches are real merchant states. A refund that settled carries its
+    // UTR; a refund raised and stalled carries none -- and that second case is
+    // the one Praman must not contest, because the customer never got their
+    // money and is right to dispute.
+    refund:
+      scenarioClass === 'a4'
+        ? {
+            externalId: `rfd_${config.name}_${scenarioClass}_${index}`,
+            amount,
+            currency: 'INR',
+            status: refundIssued ? ('processed' as const) : ('created' as const),
+            utr: refundIssued ? razorpayShapedId('utr_', `${config.seed}:utr:${label}`) : null,
+            settledAt: refundIssued ? shift(placedAt, 9 * MINUTES_PER_DAY).toISOString() : null,
+            initiatedAt: shift(placedAt, 6 * MINUTES_PER_DAY).toISOString(),
+            occurredAt: shift(
+              placedAt,
+              (refundIssued ? 9 : 6) * MINUTES_PER_DAY,
+            ).toISOString(),
+          }
+        : null,
+
     mandate: isAgentic
       ? {
           externalId: `mdt_${config.name}_${scenarioClass}_${index}`,

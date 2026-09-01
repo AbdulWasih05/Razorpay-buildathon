@@ -182,6 +182,32 @@ export async function captureEvidencePack(
       });
     }
 
+    if (input.refund) {
+      await tx.refund.upsert({
+        where: { externalId: input.refund.externalId },
+        create: {
+          externalId: input.refund.externalId,
+          orderId: order.id,
+          amount: input.refund.amount,
+          currency: input.refund.currency,
+          status: input.refund.status,
+          utr: input.refund.utr ?? null,
+          settledAt: input.refund.settledAt ?? null,
+          initiatedAt: input.refund.initiatedAt,
+          occurredAt: input.refund.occurredAt,
+        },
+        update: {
+          amount: input.refund.amount,
+          currency: input.refund.currency,
+          status: input.refund.status,
+          utr: input.refund.utr ?? null,
+          settledAt: input.refund.settledAt ?? null,
+          initiatedAt: input.refund.initiatedAt,
+          occurredAt: input.refund.occurredAt,
+        },
+      });
+    }
+
     const packData = {
       merchantId: merchant.id,
       orderId: order.id,

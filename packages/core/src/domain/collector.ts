@@ -354,8 +354,31 @@ const COLLECTORS: Record<EvidenceArtifact, Collect> = {
   item_selection_confirmation: () =>
     notCapturable(ARTIFACTS.item_selection_confirmation.notSourceableReason as string),
 
-  refund_settlement_proof: () =>
-    notCapturable(ARTIFACTS.refund_settlement_proof.notSourceableReason as string),
+  refund_settlement_proof: (pack) => {
+    // The distinction this artifact exists for: a refund that was RAISED is not
+    // a refund that was PAID, and UPI 1061 is a complaint that the money never
+    // arrived. Reporting a created-but-unsettled refund as settlement proof
+    // would contest a dispute the customer is right about.
+    const refund = pack.refund;
+    if (!refund) {
+      return absent('no refund was captured against this order');
+    }
+    if (refund.status !== 'processed' || !refund.utr) {
+      return absent(
+        `refund ${refund.externalId} is "${refund.status}" with no settlement reference: it was raised but the money has not been shown to reach the customer`,
+      );
+    }
+    return {
+      state: 'present',
+      references: [refund.externalId, refund.utr],
+      detail: {
+        utr: refund.utr,
+        amount: refund.amount,
+        settledAt: refund.settledAt ?? null,
+        initiatedAt: refund.initiatedAt,
+      },
+    };
+  },
 };
 
 /**

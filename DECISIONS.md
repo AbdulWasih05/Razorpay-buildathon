@@ -21,6 +21,7 @@ must be reproducible. Everything on the money path is deterministic code.
 | Metrics computation (precision, recall, false-positive cost in rupees) | An eval a model participates in scoring is not an eval. |
 | The submission path | One door: the human approve action. Nothing stochastic gets to press it. |
 | Mandate validity, limit and amount consistency checks | Arithmetic and interval comparison. A model here would be strictly worse and strictly less explainable. |
+| **Any model influence that could ADD a contest, raise an amount, or submit** | The drafter can change an outcome, but in one direction only: it may withhold a contest the gate approved (recorded as `drafter_disagreement`), and it can never create one the gate declined -- a declined dispute makes no model call at all. It cannot touch the amount, choose an evidence field, attach a document, or reach the adapter. Every path it can take leads to less money being claimed, never more; a component whose worst case is excess caution is not a stochastic step a money action depends on. See D-025. |
 | An agentic loop anywhere in Praman's own runtime (Claude Agent SDK, tool use, autonomous multi-turn) | The three jobs we hand a model are single-shot text transforms: no decision to delegate, no tool to call, no state to carry. A loop would add nondeterminism and a hard replay problem to buy capability we deliberately do not want. Praman is agentic in its **domain**, not in its **implementation**. See D-019. |
 
 **Where AI genuinely earns its place** (natural language in, natural language
@@ -733,6 +734,40 @@ conservatively. Neither reading overrides the other -- two independent
 judgements disagreeing is precisely when a human should look, which is what the
 review queue is for.
 
+**The asymmetry that keeps this inside hard rule #4, stated because it is the
+obvious challenge.** On the dev corpus the drafter changed the outcome of two
+disputes: the gate said contest, the drafter disagreed, and both abstained. A
+reader of the "where we deliberately did NOT use AI" table is entitled to say
+*that is a model changing a contest/abstain decision, which is the money path.*
+
+The answer is that the drafter holds a **veto toward safety only**, and the
+direction is enforced by the pipeline's shape rather than promised in prose:
+
+| The drafter CAN | The drafter CANNOT |
+| --- | --- |
+| withhold a contest the gate approved | create a contest the gate declined -- a declined dispute makes no model call at all |
+| cause a `drafter_disagreement` abstention | raise, lower or otherwise touch the contested amount |
+| decline to write a letter | choose an evidence field, attach a document, or map an artifact |
+| | reach the submission adapter, which requires a human `ApprovalToken` |
+
+Every path the model can take leads to **less** money being claimed, never more
+and never faster. A money action still requires two independent approvals it
+cannot supply: deterministic gate clearance, and a named human pressing approve.
+
+That is what makes it not a stochastic step the money action depends on. The
+rule exists because a payment must not hinge on a model returning something
+useful -- and if this model fails, times out, refuses or emits garbage, the
+dispute abstains (the four failure paths). **Every failure mode of the model,
+including "it was wrong", costs at most a contest we did not file.** A component
+whose worst case is excess caution is not on the money path in the sense hard
+rule #4 means; a component that could file, raise, or submit would be, and this
+one structurally cannot.
+
+Worth being blunt about the cost: this trades recall for safety, and the two
+cases in question were both labelled `ambiguous` by the corpus, so a contest on
+either would not have been obviously wrong. We paid two disputes of recall for
+the property. D-031 is the argument for why that trade is the cheap direction.
+
 **Three abstention classes, counted separately** (P4.1 reports each):
 \`gate\` (rules said no; no model involved), \`drafter_disagreement\` (two readings
 disagreed), \`assembly_failure\` (the pipeline broke, hard rule #4). Collapsing
@@ -947,6 +982,16 @@ evidence it already held. The lost recall is four artifacts, countable:
   2  item_selection_confirmation  (b4)
   1  delivery_proof               (b4_91, genuinely absent from that pack)
 ```
+
+**Result of P4.0(a), measured the same way.** Closing `refund_settlement_proof`
+moved recall from **26/38 (68%) to 31/38 (81.6%)** with false positives still at
+zero. The prediction was +5 and the outcome was +5, on the same seed and the
+same 100 disputes -- the generator change consumed no new randomness, so the
+corpus is byte-identical apart from the new field and the comparison isolates
+the repair. The a4 split afterwards is 5/5 winnable contested and 7/7 unwinnable
+abstained, which is the number that mattered: the repair won the cases where the
+merchant genuinely paid without starting to contest the ones where the customer
+never got their money. A test pins both halves.
 
 **Consequence, and this is why the decomposition was worth a morning.** P4.0
 stops being hygiene and becomes the highest-value work left: closing the two

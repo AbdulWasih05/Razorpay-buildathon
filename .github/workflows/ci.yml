@@ -36,3 +36,59 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  # The persistence path, which the default job cannot see.
+  #
+  # F-014: cleanRow let a null relation through into a .strict() schema and 85
+  # of 97 disputes failed ingest while all 203 pure tests stayed green, because
+  # nothing in that suite round-trips through Prisma. The seam between "the
+  # domain is correct" and "the row Postgres returns is the shape the domain
+  # expects" needs a database to test, so it gets its own job rather than a
+  # test that skips forever and reports success (DECISIONS.md D-029).
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: praman
+          POSTGRES_PASSWORD: praman
+          POSTGRES_DB: praman
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://praman:praman@localhost:5433/praman
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Apply migrations
+        run: pnpm exec prisma migrate deploy --schema prisma/schema.prisma
+
+      - name: Round-trip test
+        run: pnpm exec vitest run apps/api/src/roundtrip.test.ts
+
+      # A test that silently skips is worse than no test, because it reports
+      # success. If the database were unreachable here the suite would pass with
+      # zero assertions run, so the run is asserted to have executed them.
+      - name: Assert the round-trip actually ran
+        run: |
+          pnpm exec vitest run apps/api/src/roundtrip.test.ts --reporter=json --outputFile=rt.json
+          node -e "const r=require('./rt.json'); const n=r.numPassedTests??0; if(n<5){console.error('round-trip did not run: '+n+' tests passed'); process.exit(1);} console.log('round-trip executed '+n+' assertions against a real database');"

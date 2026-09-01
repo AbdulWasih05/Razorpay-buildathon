@@ -53,6 +53,19 @@
       "recordedAt": "2026-08-31T20:12:45.102Z"
     },
     {
+      "key": "207b4c825f0d47662d4409f5b578818507c9fce6ab2c24d69ba4205418bda7b8",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Order placed 2026-06-18 for INR 119,600. Dispute code UPI 1061 indicates a refund was initiated but not received. Evidence shows the refund was processed. refund_record confirms order status is 'refunded' for the full amount. refund_settlement_proof provides the UTR (utr_lcV8JGd4PmJUj2) and confirms settlement on 2026-06-27. The funds were returned to the customer's account as per the settlement proof. This directly addresses the dispute reason by proving the refund was executed and settled.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-01T11:06:13.012Z"
+    },
+    {
       "key": "22150e8f448fc41f8c5149e5f8f76044e10815cf65dc9f9ed0c24683cb1f3403",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -248,6 +261,19 @@
       "recordedAt": "2026-08-31T20:12:13.593Z"
     },
     {
+      "key": "76c86595a4ecd69d580c5541f0b45ce1182c595ebc09571b92d2aac0401da9b5",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 1061. Order placed 2026-06-06 for INR 79,600. Merchant processed a full refund of INR 79,600. Evidence: order_record shows status 'refunded'. refund_record confirms orderStatus 'refunded' for amount 79600. refund_settlement_proof provides UTR utr_EBirIXAjEx6jOr, showing settlement on 2026-06-15. The transaction was fully refunded as per the dispute requirement.\"\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-01T11:06:10.436Z"
+    },
+    {
       "key": "78679078cc212d1bcf50b0d600a2cdec92a19f40aeb9a7ed1e5f79a9339afb55",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -404,6 +430,19 @@
       "recordedAt": "2026-08-31T20:12:19.048Z"
     },
     {
+      "key": "aef4ec2fb5aefcdda90f088e545e676b0134052be93e7ee9e5dbe67471d5f67a",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Order placed 2026-06-25 for INR 187,300. Merchant issued a full refund of INR 187,300. Order record confirms status 'refunded'. Refund record confirms amount INR 187,300. Refund settlement proof shows UTR utr_A3yn8tmF0paBeP, initiated 2026-07-01, settled 2026-07-04. Dispute reason UPI 1061 (duplicate charge) is resolved as the original transaction was fully refunded. No duplicate charge remains outstanding.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-01T11:06:11.125Z"
+    },
+    {
       "key": "af1f146bede8f3d792895ac73a6bb96e7019f8626fbccbd1ef8235da25f879df",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -415,6 +454,32 @@
         "attempts": 2
       },
       "recordedAt": "2026-08-31T20:13:00.186Z"
+    },
+    {
+      "key": "b0a9e326f57adc6631506d06c464e2ba3cc8032d6ce10a32f16a829127b38e7b",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Order placed 2026-06-22 for INR 101,000. Dispute reason UPI 1061 typically indicates a refund issue. Evidence shows the refund was processed. refund_record confirms orderStatus is 'refunded' for the full amount of 101,000. refund_settlement_proof provides the UTR (utr_rKZ2XoriD0RWfS) and confirms the refund was initiated on 2026-06-28 and settled on 2026-07-01. order_record corroborates the original transaction amount and current refunded status. The customer has already received the full refund as per the settlement proof. This resolves the dispute as the funds have been returned to the customer.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-01T11:06:14.282Z"
+    },
+    {
+      "key": "b79301c82c3591fcee2353ee554babb4885b9f01ec5cc5b40f62e4593ac118a5",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Order placed 2026-06-21 for INR 300700. The order record confirms the status is 'refunded'. A refund record shows the full amount of INR 300700 was processed. The refund settlement proof provides UTR utr_1EJ0v4TqJM56PG, confirming the refund was initiated on 2026-06-27 and settled on 2026-06-30. The customer has already received the full refund for this transaction. The dispute is invalid as the funds have been returned.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-01T11:06:12.215Z"
     },
     {
       "key": "bb17f7da3fbfe0ea50b67b66c7edbda1827f39434a9a1e34cabfb06c30bc5f9a",

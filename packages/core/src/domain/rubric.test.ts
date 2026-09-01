@@ -124,15 +124,32 @@ describe('artifacts map onto the real Razorpay contest fields', () => {
     }
   });
 
-  it('knows it cannot produce a bank statement for UPI 1061', () => {
-    // Named explicitly because it is the one place the docs ask for something
-    // a merchant transaction store structurally does not hold.
-    expect(ARTIFACTS.refund_settlement_proof.sourceable).toBe(false);
+  it('can produce settlement evidence for UPI 1061, since P4.0 added the slot', () => {
+    // This test used to assert the opposite, and the inversion is the point.
+    // Until P4.0 the capture envelope had no refund object at all, so this
+    // requirement was structurally unmeetable and 5 winnable dev disputes were
+    // abstained on our own capture gap (D-030). The fix added the slot to the
+    // PRODUCT -- a merchant genuinely holds a settlement reference for a refund
+    // it paid -- and only then did the generator emit one.
+    expect(ARTIFACTS.refund_settlement_proof.sourceable).toBe(true);
     const entry = requirementsFor('upi', '1061');
     expect(entry?.requires.map((r) => r.artifact)).toContain('refund_settlement_proof');
-    expect(sourceableRequirements(entry!).map((r) => r.artifact)).not.toContain(
+    expect(sourceableRequirements(entry!).map((r) => r.artifact)).toContain(
       'refund_settlement_proof',
     );
+  });
+
+  it('still declares what it cannot source, so the list did not quietly empty', () => {
+    // The guard against this repair being read as "we can source everything
+    // now". `item_selection_confirmation` remains genuinely unobtainable, and
+    // if this list ever reaches zero it should be because the gaps were closed
+    // rather than because the honesty column was deleted (D-029: assert the
+    // guard has a subject).
+    const unsourceable = EVIDENCE_ARTIFACTS.filter((a) => !ARTIFACTS[a].sourceable);
+    expect(unsourceable).toContain('item_selection_confirmation');
+    for (const artifact of unsourceable) {
+      expect(ARTIFACTS[artifact].notSourceableReason, artifact).toBeTruthy();
+    }
   });
 });
 
