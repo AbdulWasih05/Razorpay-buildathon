@@ -666,6 +666,49 @@ re-ran it quickly".
 one-line amendment naming the model of record and the date it was fixed, and
 `eval/results.md` carries the model id in its header.
 
+**CLOSED 2026-09-01, path 1: `qwen/qwen3.8-27b` via Groq is the model of
+record.** Fixed before P4.1 starts, as required, and it does not move again.
+
+Why path 1 and not path 2: no `ANTHROPIC_API_KEY` exists in this environment and
+none is expected before the deadline, so path 2 was never actually available --
+choosing it would have meant hoping for a key and re-recording late, which is
+the forbidden thing wearing an optimistic face. Deciding it now costs a README
+sentence; discovering it on Sep 2 would have cost the report.
+
+State of the recordings at the moment of freezing, so the claim is checkable:
+
+```
+56 recordings, all groq / qwen/qwen3.8-27b
+   36  letter-draft   v2
+   20  trace-summary  v1
+```
+
+**What this obliges.**
+
+- The README names the model in plain words **next to the metrics table**, not
+  in a footnote. The "where we deliberately did NOT use AI" section's honesty
+  extends to *which* AI; naming the boundary and hiding the model would be a
+  strange pair of choices.
+- `eval/results.md` carries `qwen/qwen3.8-27b` in its header.
+- No re-recording after `eval/results.md` exists, whatever arrives later. If a
+  key appears on Sep 3, the answer is "we shipped Qwen and said so."
+
+**One wrinkle recorded rather than tidied away.** Five of the 56 recordings were
+minted accidentally on 2026-09-01 by a stale live-mode server (F-015), not by an
+intended `--live` run. They are genuine output for the five a4 letters whose
+evidence changed when the settlement field landed, the diff was purely additive
+(65 insertions, 0 deletions -- recordings are keyed by request hash, so new
+evidence mints new keys and overwrites nothing), and no report existed at the
+time. So the rule holds. It is written down here because a reader comparing
+timestamps in the fixture file will notice the gap, and finding it explained is
+different from finding it.
+
+**Not claimed:** that Qwen is the right model, or that Anthropic would score the
+same. The eval measures this pipeline with this model, and a different model
+would need its own run. What *is* claimed is that the committed report is
+reproducible from the committed fixtures, which is the property that matters and
+the one a stranger can check.
+
 **Why this needs deciding rather than drifting.** The failure mode is not a bad
 number, it is an unreproducible one. A stranger cloning the repo and running
 `pnpm eval` must get the report that is committed. That is the claim; a late
@@ -1115,3 +1158,73 @@ and the product would get worse. It is the specific trade this decision exists
 to refuse, and the reason the eval reports false-positive cost in rupees beside
 recall rather than recall alone -- so that making this trade would be visible
 in the numbers rather than hidden by them.
+
+### D-032 -- no Razorpay account: the simulator is the design, and the ids say so
+
+**Decided (2026-09-01).** P0.2 is **cut**, not deferred again. Praman ships with
+no Razorpay account, no live API call, and synthetic payment ids -- and every
+one of those ids now announces itself.
+
+**The fact that settled it, checked rather than assumed.** Against
+https://razorpay.com/docs/api/disputes/ : the Disputes API exposes **fetch,
+accept and contest, and nothing else**. A dispute arises when "your customer or
+the issuing bank questions the validity of a payment" -- it originates outside
+the merchant, and there is no endpoint to create or simulate one.
+
+That collapses the case for the account. The implicit assumption behind P0.2 was
+that real credentials would let us exercise the real path; they would not.
+`RazorpayClient.contest()` is unreachable against a real dispute **with or
+without an account**, because no real dispute can be made to exist. What an
+account would have bought is five `pay_` ids nobody can verify, and optionally
+one live Documents API upload. Neither is worth a signup on the last build day.
+
+**Why this is a design and not a shortfall.** The adapter was always two
+implementations behind one interface, and the honest version of the story is
+better than a half-wired live account would have been:
+
+- `RazorpayClient` exists, mirrors the documented request shapes, and is
+  contract-tested against examples transcribed verbatim from the docs. It
+  refuses any key without the `rzp_test_` prefix, so it cannot touch a live
+  account even by accident.
+- `SimulatorClient` is what runs, and `adapterFromEnv` **defaults to it**, so
+  the demo cannot reach Razorpay by mistake.
+- It does not decide won or lost. A contested dispute goes to `under_review`,
+  because inventing an outcome is how a simulated number becomes the thing
+  everyone quotes.
+
+"We built the real client, verified its shapes against the documentation, and
+run the simulator" is a claim that survives a panel. "We have a test account"
+would have invited *"so show us a contest going through"* -- which nobody can
+do, and which would then need explaining.
+
+**The consequence that needed engineering, not prose.** Until today these ids
+were synthetic *temporarily*. Cutting P0.2 makes them synthetic *permanently*,
+and that changes what honesty requires of them. `pay_LkvKHWZCvw7WFk` is
+indistinguishable from a real Razorpay payment id, and the judges are the
+engineers who own that namespace. Hard rule #6 says a simulated thing is
+labelled **wherever it is rendered** -- and the only way to guarantee that for
+an id is to put the label inside the id, where no renderer has to remember:
+
+```
+pay_SIMzSR4DUVsdOB      disp_SIMzSR4DUVsdOB      order_SIMzSR4DUVsdOB
+```
+
+Prefix plus exactly 14 base62 characters, so every schema, every
+`startsWith('pay_')` and every `payment_id` match is unchanged; a test pins both
+the marker and the shape. Only Razorpay's namespace is marked -- `ord_`, `ful_`,
+`mdt_`, `rfd_` are the merchant store's own and cannot be mistaken for theirs,
+and marking everything would train a reader to stop seeing the marker. Same
+device as `SimulatorClient`'s `doc_SIM...`, which was already doing this for
+document ids.
+
+**Rejected: keeping the ids realistic for a better-looking demo.** A queue full
+of `pay_SIM...` is visibly a simulation, which is the point. An id that looks
+real, in a submission whose entire argument is that it does not overclaim, is a
+small lie sitting on top of a large honesty.
+
+**Rejected: deferring P0.2 a third time.** It had already been deferred twice
+with a hard deadline attached. A task that keeps not happening is a decision
+that has not been written down, and the cost of writing it down is one README
+sentence, which is now owed: payment ids are synthetic and shape-valid, no live
+Razorpay call is ever made, and the contest path is verified against documented
+examples rather than a live dispute.

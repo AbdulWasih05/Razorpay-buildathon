@@ -341,6 +341,29 @@ set alone it is mostly evidence about D-011.
 
 ---
 
+## Model of record
+
+Every recording behind every number in this file was produced by
+**`qwen/qwen3.8-27b` via Groq**. Fixed 2026-09-01, before the eval ran, and it
+does not move (DECISIONS.md D-023).
+
+The intended provider is the Anthropic Messages API and the code uses it
+whenever `ANTHROPIC_API_KEY` is set (CLAUDE.md §4). No such key exists in this
+environment, so Qwen is what shipped, and saying so is the same discipline as
+naming the LLM boundary in the first place.
+
+Deliberately **not** the model that wrote the held-out corpus:
+`openai/gpt-oss-120b` generated the OOD set, and `assertNotHoldoutFamily` throws
+if the assembler is ever pointed at that family, because a model grading its own
+prose would flatter the distribution-shift delta (D-021).
+
+**Not claimed:** that Qwen is the best choice, or that another model would score
+the same. This eval measures this pipeline with this model. What is claimed is
+that the committed report is reproducible from the committed fixtures, which is
+the property a stranger can check.
+
+---
+
 ## Metrics reported
 
 Not yet measured. The harness lands in P4.1 and will report, for **both** the

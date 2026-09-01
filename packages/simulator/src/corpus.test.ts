@@ -12,6 +12,7 @@ import {
 
 import { DEV_CONFIG, OOD_CONFIG } from './configs.js';
 import { allocate, generateCorpus, summarise } from './corpus.js';
+import { isSimulatedId } from './ids.js';
 import { generateTransaction } from './transaction.js';
 
 const CORPUS_SIZE = 100;
@@ -150,6 +151,50 @@ describe('prompt inputs touch only seed-derived fields', () => {
     expect(promptInput.mandate?.maxAmount).toBeGreaterThan(0);
     expect(promptInput.conversationTurns.length).toBeGreaterThan(0);
     expect(promptInput.orchestrationLogs.some((l) => l.action === 'payment_captured')).toBe(true);
+  });
+});
+
+describe('synthetic ids announce that they are synthetic', () => {
+  /**
+   * P0.2 (obtain real Razorpay test-mode `pay_` ids) was cut once the docs
+   * confirmed a test account cannot originate a dispute, so these ids are
+   * synthetic permanently rather than until Wednesday. That changes what
+   * honesty requires of them: `pay_LkvKHWZCvw7WFk` is indistinguishable from a
+   * real payment id, and the judges are the engineers who own that namespace.
+   *
+   * Hard rule #6 says a simulated thing is labelled wherever it is rendered.
+   * The only way to guarantee that for an id is to put the label inside it.
+   */
+  const corpus = generateCorpus(DEV_CONFIG, 20);
+
+  it('marks every id in the Razorpay namespace', () => {
+    for (const dispute of corpus.disputes) {
+      const entity = dispute.event.payload.dispute.entity;
+      expect(isSimulatedId(entity.id), entity.id).toBe(true);
+      expect(isSimulatedId(entity.payment_id), entity.payment_id).toBe(true);
+      expect(
+        isSimulatedId(dispute.transaction.pack.payment.razorpayPaymentId),
+        dispute.transaction.pack.payment.razorpayPaymentId,
+      ).toBe(true);
+    }
+  });
+
+  it('keeps the documented shape, so no schema check is weakened', () => {
+    // The marker must cost nothing: prefix plus exactly 14 base62 characters,
+    // which is what every startsWith() check and every contract test assumes.
+    for (const dispute of corpus.disputes) {
+      const paymentId = dispute.transaction.pack.payment.razorpayPaymentId;
+      expect(paymentId).toMatch(/^pay_[A-Za-z0-9]{14}$/);
+      expect(dispute.event.payload.dispute.entity.id).toMatch(/^disp_[A-Za-z0-9]{14}$/);
+    }
+  });
+
+  it('leaves the merchant store namespace unmarked', () => {
+    // `ord_`, `ful_`, `mdt_` are ours and cannot be mistaken for Razorpay's, so
+    // marking them would be noise that trains a reader to ignore the marker.
+    for (const dispute of corpus.disputes) {
+      expect(isSimulatedId(dispute.transaction.pack.order.externalId)).toBe(false);
+    }
   });
 });
 
