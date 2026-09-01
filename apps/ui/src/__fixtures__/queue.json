@@ -1,0 +1,53 @@
+[
+  {
+    "externalId": "dsp_dev-v1_a1_21",
+    "razorpayDisputeId": "disp_I7iDOXkDIzA3uT",
+    "amount": 735500,
+    "currency": "INR",
+    "reasonCode": "1064",
+    "phase": "pre_arbitration",
+    "respondBy": "2026-07-20T14:44:00.000Z",
+    "rail": "ordinary",
+    "scenarioClass": "a1",
+    "state": "drafted",
+    "gateDecision": "contest",
+    "gateReason": null,
+    "abstentionClass": null,
+    "approvedBy": null,
+    "reasonDescription": "Service or goods not received"
+  },
+  {
+    "externalId": "dsp_dev-v1_a2_24",
+    "razorpayDisputeId": "disp_edC3oB4ZSpsrCX",
+    "amount": 56100,
+    "currency": "INR",
+    "reasonCode": "128",
+    "phase": "chargeback",
+    "respondBy": "2026-07-06T11:59:00.000Z",
+    "rail": "ordinary",
+    "scenarioClass": "a2",
+    "state": "abstained",
+    "gateDecision": "abstain",
+    "gateReason": "holds 0 of 1 required artifacts; missing authorisation_evidence",
+    "abstentionClass": "gate",
+    "approvedBy": null,
+    "reasonDescription": "Unrecognised charge"
+  },
+  {
+    "externalId": "dsp_dev-v1_b1_64",
+    "razorpayDisputeId": "disp_KJih2TGDmDS3IL",
+    "amount": 165400,
+    "currency": "INR",
+    "reasonCode": "128",
+    "phase": "chargeback",
+    "respondBy": "2026-07-09T22:05:00.000Z",
+    "rail": "agentic",
+    "scenarioClass": "b1",
+    "state": "submitted",
+    "gateDecision": "contest",
+    "gateReason": null,
+    "abstentionClass": null,
+    "approvedBy": "human:system",
+    "reasonDescription": "Valid agent purchase the customer does not remember"
+  }
+]

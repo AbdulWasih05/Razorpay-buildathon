@@ -250,6 +250,97 @@ timestamp differs. See DECISIONS.md D-007.
 
 ---
 
+## Abstention decomposition, and what "capture gap" is allowed to mean
+
+An abstention rate is not a finding. "74% abstained" is equally consistent with
+a gate doing its job on a corpus deliberately loaded with undefendable disputes
+and with a gate too timid to contest anything, and the number cannot tell them
+apart. So every abstention is attributed to a cause (`pnpm abstentions`,
+`eval/abstentions.ts`, DECISIONS.md D-030). Dev corpus, 100 disputes:
+
+| Cause | n | Meaning |
+| --- | --- | --- |
+| `correct_unwinnable` | 52 | corpus says unwinnable, we declined. |
+| `conservative_ambiguous` | 8 | corpus says ambiguous, we declined (D-031). |
+| `capture_gap` | 11 | winnable, lost to a missing capture slot. |
+| `evidence_absent` | 1 | winnable, artifact capturable but absent from this pack. |
+| `false_negative` | 0 | winnable, full coverage, declined anyway. |
+
+Recall on winnable: **26/38 = 68%**. False positives on unwinnable: **0**.
+
+### The distinction the before/after depends on
+
+P4.0 closes two of these gaps and recall moves. That number is only meaningful
+if the gap was **in the product**, and it is worth being explicit about what
+would make it meaningless, because "they fixed their own corpus and recall went
+up" is the obvious attack and it would be a fair one.
+
+There are two different things that could sit behind a `capture_gap`:
+
+1. **The capture envelope has no slot for the artifact.** No merchant using
+   Praman could have supplied it, because there is nowhere to put it. Closing
+   the gap means *adding a field to the product* — and the generator then emits
+   it because real checkouts genuinely produce it. Recall improves because the
+   product improved.
+2. **The slot exists and the generator simply never filled it.** Closing the
+   gap means *editing the test data*. Recall would improve because the exam got
+   easier, and reporting that as a product result would be circular.
+
+**Both P4.0 gaps are case 1, and it is checkable in one grep rather than taken
+on trust.** `packages/core/src/capture/ingest.ts` is the whole capture
+envelope, and it is a `.strict()` Zod schema — meaning the capture endpoint
+**rejects** any key it does not declare:
+
+- `refund_settlement_proof`: the envelope contains **no settlement, payout or
+  UTR field anywhere** (`grep -c settlement packages/core/src/capture/ingest.ts`
+  → `0`). `order.status` can be `refunded`, which is how `refund_record` is
+  derived, but nothing records that the money actually landed. A generator
+  emitting a settlement reference today would get a 400 from
+  `POST /evidence-pack`.
+- `duplicate_payment_analysis`: the envelope declares `payment` — **singular**.
+  There is no `payments` array and no sibling-payment slot, so a second payment
+  against one order cannot be represented at all. This is FAILURES.md F-010:
+  the corpus knew a duplicate existed and the pack had no way to say so.
+
+So in both cases the generator *could not* have populated the field. The repair
+is a schema change to the capture layer first, and a generator change second and
+only because a real merchant's data would contain it. That order of causation is
+the whole argument, and it is why these are counted separately from
+`evidence_absent` — which is the honest name for "this pack happens to lack
+something it could have carried", and which P4.0 does not touch.
+
+A third gap, `item_selection_confirmation`, is the same shape: the orchestration
+log records what the agent *selected*, and there is no field for what the
+customer *requested*, so agreement between them cannot be established from
+records (D-026).
+
+### False positives are zero, and here is what that does and does not show
+
+Zero contests were filed against a dispute the corpus calls unwinnable, so the
+false-positive cost is **₹0** rather than a small number. That is the right
+result and it is also partly a statement about the corpus, not only about the
+gate.
+
+Most of the dev set's unwinnables are **structurally** unwinnable by
+construction (D-011): b2's charge exceeds its mandate cap, b3's payment falls
+outside the validity window. Those are caught by arithmetic — a `<=` and an
+interval comparison — not by judgement. A gate that could do nothing but compare
+numbers would also score ₹0 here. **FP = 0 must never be quoted without that
+sentence beside it.**
+
+The gate's discrimination is actually tested in two places, and both are
+reported on their own row rather than folded into the headline:
+
+- **The 8 ambiguous cases**, where the evidence genuinely does not settle the
+  question and no arithmetic decides it.
+- **The held-out set**, where unwinnables were written by a different model
+  against a different persona set and may not announce themselves as cleanly.
+
+If FP stays 0 on the held-out set, that is evidence about the gate. On the dev
+set alone it is mostly evidence about D-011.
+
+---
+
 ## Metrics reported
 
 Not yet measured. The harness lands in P4.1 and will report, for **both** the

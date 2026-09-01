@@ -1,0 +1,597 @@
+[
+  {
+    "externalId": "dsp_dev-v1_a1_21",
+    "disputeId": "disp_I7iDOXkDIzA3uT",
+    "amount": 735500,
+    "currency": "INR",
+    "reasonCode": "1064",
+    "phase": "pre_arbitration",
+    "status": "open",
+    "respondBy": "2026-07-20T14:44:00.000Z",
+    "rail": "ordinary",
+    "scenarioClass": "a1",
+    "scenarioLabel": "Service or goods not received",
+    "state": "drafted",
+    "gateDecision": "contest",
+    "gateReason": null,
+    "abstentionClass": null,
+    "collected": {
+      "rail": "ordinary",
+      "rubric": {
+        "code": "1064",
+        "network": "upi",
+        "category": "customer_dispute",
+        "requires": [
+          {
+            "artifact": "delivery_proof",
+            "necessity": "required",
+            "provenance": "published",
+            "sourcePhrase": "Proof of service/product delivery"
+          },
+          {
+            "artifact": "customer_communication",
+            "necessity": "supporting",
+            "provenance": "published",
+            "sourcePhrase": "Customer interaction showcasing product/service related enquiries"
+          },
+          {
+            "artifact": "shipment_record",
+            "necessity": "supporting",
+            "rationale": "Dispatch is the weaker half of delivery evidence: it supports a contest but does not establish receipt on its own.",
+            "provenance": "derived"
+          }
+        ],
+        "hasPublishedGuidance": true
+      },
+      "mandate": {
+        "present": false,
+        "chargedAmount": 735500
+      },
+      "network": "upi",
+      "coverage": {
+        "ratio": 1,
+        "present": 1,
+        "required": 1
+      },
+      "findings": [
+        {
+          "state": "present",
+          "detail": {
+            "proofRef": "pod_LuXQ1OH2PujQvM",
+            "deliveredAt": "2026-06-21T15:36:00.000Z"
+          },
+          "artifact": "delivery_proof",
+          "necessity": "required",
+          "references": [
+            "ful_dev-v1_a1_21",
+            "pod_LuXQ1OH2PujQvM"
+          ]
+        },
+        {
+          "state": "absent",
+          "detail": {},
+          "reason": "an ordinary checkout leaves no captured conversation with the customer",
+          "artifact": "customer_communication",
+          "necessity": "supporting",
+          "references": []
+        },
+        {
+          "state": "present",
+          "detail": {
+            "status": "delivered",
+            "carrier": "Delhivery",
+            "shippedAt": "2026-06-18T23:26:00.000Z",
+            "trackingId": null
+          },
+          "artifact": "shipment_record",
+          "necessity": "supporting",
+          "references": [
+            "ful_dev-v1_a1_21"
+          ]
+        }
+      ],
+      "disputeId": "disp_I7iDOXkDIzA3uT",
+      "reasonCode": "1064",
+      "anomalySignals": [],
+      "packExternalId": "evp_dev-v1_a1_21",
+      "missingRequired": [],
+      "structurallyUnavailable": []
+    },
+    "draft": {
+      "action": "draft",
+      "amount": 735500,
+      "summary": "Dispute code UPI 1064. Customer purchased goods shipped via Delhivery. Shipment record shows status 'delivered' with shippedAt 2026-06-18T23:26:00.000Z. Delivery proof (pod_LuXQ1OH2PujQvM) confirms delivery at 2026-06-21T15:36:00.000Z. Evidence demonstrates the order was fulfilled and received by the customer, directly addressing the dispute reason.",
+      "disputeId": "disp_I7iDOXkDIzA3uT",
+      "references": [
+        "ful_dev-v1_a1_21",
+        "pod_LuXQ1OH2PujQvM"
+      ],
+      "assignments": [
+        {
+          "field": "shipping_proof",
+          "artifacts": [
+            "delivery_proof",
+            "shipment_record"
+          ],
+          "references": [
+            "ful_dev-v1_a1_21",
+            "pod_LuXQ1OH2PujQvM",
+            "ful_dev-v1_a1_21"
+          ]
+        }
+      ],
+      "disputedAmount": 735500
+    },
+    "submittedRequest": null,
+    "approvedBy": null,
+    "timeline": [
+      "2026-07-15T14:44:00.000Z  system          received",
+      "2026-07-15T14:44:01.000Z  system          received -> triaged  (1 of 1 required artifacts present)",
+      "2026-07-15T14:44:02.000Z  gate            triaged -> gated  (all rules passed)",
+      "2026-07-15T14:44:03.000Z  llm             gated -> drafted  (351 character draft across 1 evidence fields)"
+    ],
+    "auditLogs": [
+      {
+        "seq": 0,
+        "fromState": null,
+        "toState": "received",
+        "actor": "system",
+        "reason": null,
+        "occurredAt": "2026-07-15T14:44:00.000Z"
+      },
+      {
+        "seq": 1,
+        "fromState": "received",
+        "toState": "triaged",
+        "actor": "system",
+        "reason": "1 of 1 required artifacts present",
+        "occurredAt": "2026-07-15T14:44:01.000Z"
+      },
+      {
+        "seq": 2,
+        "fromState": "triaged",
+        "toState": "gated",
+        "actor": "gate",
+        "reason": "all rules passed",
+        "occurredAt": "2026-07-15T14:44:02.000Z"
+      },
+      {
+        "seq": 3,
+        "fromState": "gated",
+        "toState": "drafted",
+        "actor": "llm",
+        "reason": "351 character draft across 1 evidence fields",
+        "occurredAt": "2026-07-15T14:44:03.000Z"
+      }
+    ]
+  },
+  {
+    "externalId": "dsp_dev-v1_a2_24",
+    "disputeId": "disp_edC3oB4ZSpsrCX",
+    "amount": 56100,
+    "currency": "INR",
+    "reasonCode": "128",
+    "phase": "chargeback",
+    "status": "open",
+    "respondBy": "2026-07-06T11:59:00.000Z",
+    "rail": "ordinary",
+    "scenarioClass": "a2",
+    "scenarioLabel": "Unrecognised charge",
+    "state": "abstained",
+    "gateDecision": "abstain",
+    "gateReason": "holds 0 of 1 required artifacts; missing authorisation_evidence",
+    "abstentionClass": "gate",
+    "collected": {
+      "rail": "ordinary",
+      "rubric": {
+        "code": "128",
+        "network": "upi",
+        "category": "fraud",
+        "requires": [
+          {
+            "artifact": "authorisation_evidence",
+            "necessity": "required",
+            "provenance": "published",
+            "sourcePhrase": "Internal logs to show authorisation was obtained"
+          },
+          {
+            "artifact": "invoice_breakdown",
+            "necessity": "supporting",
+            "provenance": "published",
+            "sourcePhrase": "Invoicing details along with detailed price breakdown"
+          },
+          {
+            "artifact": "customer_communication",
+            "necessity": "supporting",
+            "rationale": "On the agentic rail the conversation trace is where consent is actually visible, and it cuts both ways: it is also the evidence that defeats a contest when consent is absent.",
+            "provenance": "derived"
+          }
+        ],
+        "hasPublishedGuidance": true
+      },
+      "mandate": {
+        "present": false,
+        "chargedAmount": 56100
+      },
+      "network": "upi",
+      "coverage": {
+        "ratio": 0,
+        "present": 0,
+        "required": 1
+      },
+      "findings": [
+        {
+          "state": "absent",
+          "detail": {},
+          "reason": "an ordinary checkout leaves no authorisation log: the payment record shows a charge occurred, not that the customer authorised it",
+          "artifact": "authorisation_evidence",
+          "necessity": "required",
+          "references": []
+        },
+        {
+          "state": "present",
+          "detail": {
+            "charged": 56100,
+            "currency": "INR",
+            "lineItems": [
+              {
+                "name": "Prescription refill",
+                "amount": 56100,
+                "quantity": 2
+              }
+            ],
+            "orderTotal": 56100
+          },
+          "artifact": "invoice_breakdown",
+          "necessity": "supporting",
+          "references": [
+            "ord_dev-v1_a2_24",
+            "pmt_dev-v1_a2_24"
+          ]
+        },
+        {
+          "state": "absent",
+          "detail": {},
+          "reason": "an ordinary checkout leaves no captured conversation with the customer",
+          "artifact": "customer_communication",
+          "necessity": "supporting",
+          "references": []
+        }
+      ],
+      "disputeId": "disp_edC3oB4ZSpsrCX",
+      "reasonCode": "128",
+      "anomalySignals": [],
+      "packExternalId": "evp_dev-v1_a2_24",
+      "missingRequired": [
+        "authorisation_evidence"
+      ],
+      "structurallyUnavailable": []
+    },
+    "draft": null,
+    "submittedRequest": null,
+    "approvedBy": null,
+    "timeline": [
+      "2026-07-01T11:59:00.000Z  system          received",
+      "2026-07-01T11:59:01.000Z  system          received -> triaged  (0 of 1 required artifacts present)",
+      "2026-07-01T11:59:02.000Z  gate            triaged -> gated  (holds 0 of 1 required artifacts; missing authorisation_evidence)",
+      "2026-07-01T11:59:03.000Z  gate            gated -> abstained  (holds 0 of 1 required artifacts; missing authorisation_evidence)"
+    ],
+    "auditLogs": [
+      {
+        "seq": 0,
+        "fromState": null,
+        "toState": "received",
+        "actor": "system",
+        "reason": null,
+        "occurredAt": "2026-07-01T11:59:00.000Z"
+      },
+      {
+        "seq": 1,
+        "fromState": "received",
+        "toState": "triaged",
+        "actor": "system",
+        "reason": "0 of 1 required artifacts present",
+        "occurredAt": "2026-07-01T11:59:01.000Z"
+      },
+      {
+        "seq": 2,
+        "fromState": "triaged",
+        "toState": "gated",
+        "actor": "gate",
+        "reason": "holds 0 of 1 required artifacts; missing authorisation_evidence",
+        "occurredAt": "2026-07-01T11:59:02.000Z"
+      },
+      {
+        "seq": 3,
+        "fromState": "gated",
+        "toState": "abstained",
+        "actor": "gate",
+        "reason": "holds 0 of 1 required artifacts; missing authorisation_evidence",
+        "occurredAt": "2026-07-01T11:59:03.000Z"
+      }
+    ]
+  },
+  {
+    "externalId": "dsp_dev-v1_b1_64",
+    "disputeId": "disp_KJih2TGDmDS3IL",
+    "amount": 165400,
+    "currency": "INR",
+    "reasonCode": "128",
+    "phase": "chargeback",
+    "status": "open",
+    "respondBy": "2026-07-09T22:05:00.000Z",
+    "rail": "agentic",
+    "scenarioClass": "b1",
+    "scenarioLabel": "Valid agent purchase the customer does not remember",
+    "state": "submitted",
+    "gateDecision": "contest",
+    "gateReason": null,
+    "abstentionClass": null,
+    "collected": {
+      "rail": "agentic",
+      "rubric": {
+        "code": "128",
+        "network": "upi",
+        "category": "fraud",
+        "requires": [
+          {
+            "artifact": "authorisation_evidence",
+            "necessity": "required",
+            "provenance": "published",
+            "sourcePhrase": "Internal logs to show authorisation was obtained"
+          },
+          {
+            "artifact": "invoice_breakdown",
+            "necessity": "supporting",
+            "provenance": "published",
+            "sourcePhrase": "Invoicing details along with detailed price breakdown"
+          },
+          {
+            "artifact": "customer_communication",
+            "necessity": "supporting",
+            "rationale": "On the agentic rail the conversation trace is where consent is actually visible, and it cuts both ways: it is also the evidence that defeats a contest when consent is absent.",
+            "provenance": "derived"
+          }
+        ],
+        "hasPublishedGuidance": true
+      },
+      "mandate": {
+        "status": "active",
+        "present": true,
+        "maxAmount": 245635,
+        "paymentAt": "2026-06-09T22:05:00.000Z",
+        "validFrom": "2026-06-07T05:15:00.000Z",
+        "validUntil": "2026-07-06T22:05:00.000Z",
+        "withinLimit": true,
+        "chargedAmount": 165400,
+        "consentBeforePayment": true,
+        "withinValidityWindow": true
+      },
+      "network": "upi",
+      "coverage": {
+        "ratio": 1,
+        "present": 1,
+        "required": 1
+      },
+      "findings": [
+        {
+          "state": "present",
+          "detail": {
+            "agentId": "agt_concierge_0064",
+            "protocol": "uap",
+            "consentAt": "2026-06-07T05:15:00.000Z",
+            "agentPlatform": "ConciergeAI",
+            "mandateStatus": "active",
+            "protocolVersion": "0.9",
+            "orchestrationActions": [
+              "intent_received",
+              "catalogue_searched",
+              "item_selected",
+              "mandate_checked",
+              "payment_initiated",
+              "payment_captured"
+            ]
+          },
+          "artifact": "authorisation_evidence",
+          "necessity": "required",
+          "references": [
+            "mdt_dev-v1_b1_64",
+            "log_dev-v1_b1_64_0",
+            "log_dev-v1_b1_64_1",
+            "log_dev-v1_b1_64_2",
+            "log_dev-v1_b1_64_3",
+            "log_dev-v1_b1_64_4",
+            "log_dev-v1_b1_64_5"
+          ]
+        },
+        {
+          "state": "present",
+          "detail": {
+            "charged": 165400,
+            "currency": "INR",
+            "lineItems": [
+              {
+                "name": "Family dinner order",
+                "amount": 165400,
+                "quantity": 2
+              }
+            ],
+            "orderTotal": 165400
+          },
+          "artifact": "invoice_breakdown",
+          "necessity": "supporting",
+          "references": [
+            "ord_dev-v1_b1_64",
+            "pmt_dev-v1_b1_64"
+          ]
+        },
+        {
+          "state": "present",
+          "detail": {
+            "roles": [
+              "customer",
+              "agent",
+              "customer",
+              "agent",
+              "system"
+            ],
+            "startedAt": "2026-06-09T21:49:00.000Z",
+            "turnCount": 5
+          },
+          "artifact": "customer_communication",
+          "necessity": "supporting",
+          "references": [
+            "trc_dev-v1_b1_64"
+          ]
+        }
+      ],
+      "disputeId": "disp_KJih2TGDmDS3IL",
+      "reasonCode": "128",
+      "anomalySignals": [],
+      "packExternalId": "evp_dev-v1_b1_64",
+      "missingRequired": [],
+      "structurallyUnavailable": []
+    },
+    "draft": {
+      "action": "draft",
+      "amount": 165400,
+      "summary": "Dispute reason UPI 128 (unauthorised). Evidence supports contest. 1. Purchase: Family dinner order, 2 units, INR 165,400, charged 2026-06-07. 2. Consent: customer_communication shows 5 turns starting 2026-06-09. Customer explicitly approved the specific item and amount. Agent confirmed transaction via saved mandate. 3. Mandate: authorisation_evidence confirms mandateStatus 'active', consentAt 2026-06-07T05:15:00Z. Mandate facts confirm amount (165,400) is within cap (245,635), within validity window, and consent was recorded before payment. 4. Invoice: invoice_breakdown matches charged amount exactly. The evidence demonstrates explicit customer approval for this specific transaction under an active, valid mandate, directly addressing the unauthorised charge claim.",
+      "disputeId": "disp_KJih2TGDmDS3IL",
+      "references": [
+        "log_dev-v1_b1_64_0",
+        "log_dev-v1_b1_64_1",
+        "log_dev-v1_b1_64_2",
+        "log_dev-v1_b1_64_3",
+        "log_dev-v1_b1_64_4",
+        "log_dev-v1_b1_64_5",
+        "mdt_dev-v1_b1_64",
+        "ord_dev-v1_b1_64",
+        "pmt_dev-v1_b1_64",
+        "trc_dev-v1_b1_64"
+      ],
+      "assignments": [
+        {
+          "field": "access_activity_log",
+          "artifacts": [
+            "authorisation_evidence"
+          ],
+          "references": [
+            "mdt_dev-v1_b1_64",
+            "log_dev-v1_b1_64_0",
+            "log_dev-v1_b1_64_1",
+            "log_dev-v1_b1_64_2",
+            "log_dev-v1_b1_64_3",
+            "log_dev-v1_b1_64_4",
+            "log_dev-v1_b1_64_5"
+          ]
+        },
+        {
+          "field": "customer_communication",
+          "artifacts": [
+            "customer_communication"
+          ],
+          "references": [
+            "trc_dev-v1_b1_64"
+          ]
+        },
+        {
+          "field": "others",
+          "artifacts": [
+            "invoice_breakdown"
+          ],
+          "othersType": "invoice_with_price_breakdown",
+          "references": [
+            "ord_dev-v1_b1_64",
+            "pmt_dev-v1_b1_64"
+          ]
+        }
+      ],
+      "disputedAmount": 165400
+    },
+    "submittedRequest": {
+      "action": "draft",
+      "amount": 165400,
+      "others": [
+        {
+          "type": "invoice_with_price_breakdown",
+          "document_ids": [
+            "doc_SIM00080000000",
+            "doc_SIM00090000000"
+          ]
+        }
+      ],
+      "summary": "Dispute reason UPI 128 (unauthorised). Evidence supports contest. 1. Purchase: Family dinner order, 2 units, INR 165,400, charged 2026-06-07. 2. Consent: customer_communication shows 5 turns starting 2026-06-09. Customer explicitly approved the specific item and amount. Agent confirmed transaction via saved mandate. 3. Mandate: authorisation_evidence confirms mandateStatus 'active', consentAt 2026-06-07T05:15:00Z. Mandate facts confirm amount (165,400) is within cap (245,635), within validity window, and consent was recorded before payment. 4. Invoice: invoice_breakdown matches charged amount exactly. The evidence demonstrates explicit customer approval for this specific transaction under an active, valid mandate, directly addressing the unauthorised charge claim.",
+      "access_activity_log": [
+        "doc_SIM00070000000",
+        "doc_SIM00010000000",
+        "doc_SIM00020000000",
+        "doc_SIM00030000000",
+        "doc_SIM00040000000",
+        "doc_SIM00050000000",
+        "doc_SIM00060000000"
+      ],
+      "customer_communication": [
+        "doc_SIM00100000000"
+      ]
+    },
+    "approvedBy": "human:system",
+    "timeline": [
+      "2026-07-01T22:05:00.000Z  system          received",
+      "2026-07-01T22:05:01.000Z  system          received -> triaged  (1 of 1 required artifacts present)",
+      "2026-07-01T22:05:02.000Z  gate            triaged -> gated  (all rules passed)",
+      "2026-07-01T22:05:03.000Z  llm             gated -> drafted  (774 character draft across 3 evidence fields)",
+      "2026-08-31T20:17:09.143Z  human:system    drafted -> approved  (reviewer approved the draft)",
+      "2026-08-31T20:17:09.147Z  adapter         approved -> submitted  (simulator: 10 documents, action draft)"
+    ],
+    "auditLogs": [
+      {
+        "seq": 0,
+        "fromState": null,
+        "toState": "received",
+        "actor": "system",
+        "reason": null,
+        "occurredAt": "2026-07-01T22:05:00.000Z"
+      },
+      {
+        "seq": 1,
+        "fromState": "received",
+        "toState": "triaged",
+        "actor": "system",
+        "reason": "1 of 1 required artifacts present",
+        "occurredAt": "2026-07-01T22:05:01.000Z"
+      },
+      {
+        "seq": 2,
+        "fromState": "triaged",
+        "toState": "gated",
+        "actor": "gate",
+        "reason": "all rules passed",
+        "occurredAt": "2026-07-01T22:05:02.000Z"
+      },
+      {
+        "seq": 3,
+        "fromState": "gated",
+        "toState": "drafted",
+        "actor": "llm",
+        "reason": "774 character draft across 3 evidence fields",
+        "occurredAt": "2026-07-01T22:05:03.000Z"
+      },
+      {
+        "seq": 4,
+        "fromState": "drafted",
+        "toState": "approved",
+        "actor": "human:system",
+        "reason": "reviewer approved the draft",
+        "occurredAt": "2026-08-31T20:17:09.143Z"
+      },
+      {
+        "seq": 5,
+        "fromState": "approved",
+        "toState": "submitted",
+        "actor": "adapter",
+        "reason": "simulator: 10 documents, action draft",
+        "occurredAt": "2026-08-31T20:17:09.147Z"
+      }
+    ]
+  }
+]

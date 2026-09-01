@@ -806,3 +806,267 @@ words, every artifact with `present` / `absent` / `not_capturable` and why, and
 the letter with its character count against the 1000 limit. The intent is that
 a reviewer can disagree with the system on the evidence, which requires seeing
 the evidence rather than a score.
+
+### D-028 -- the demo has no auth, so reviewer identity is client-asserted and says so
+
+**Decided.** `POST /review/disputes/:id/approve` takes `approvedBy` in the
+request body. There is no authentication in front of it. The client asserts its
+own identity, the server validates the shape and the name, and that is the whole
+story in the demo.
+
+This is a scope decision, not an oversight, and the distinction only survives if
+it is written down.
+
+**What production would do instead.** The approving actor derives from the
+authenticated session -- whoever the request is authenticated as IS the actor --
+and the request body is **never consulted for identity at all**. `approvedBy`
+would not exist as an input field. That is the first layer, and it is the one
+that actually makes the one-door rule true: a caller cannot claim to be someone
+because a caller cannot claim anything.
+
+**What the reserved-name validation is, then.** Defence in depth *behind* that
+first layer, not a substitute for it. `ApprovalToken` refuses `human:system`,
+`human:bot` and the rest because a session-derived actor can still be a service
+account, and a service account approving a contest is the same violation of
+hard rule #2 by a slower route. The check earns its place in a real deployment;
+it just is not the thing standing between an anonymous caller and a submission.
+
+**Why say this out loud rather than let the fix speak.** After F-013 the honest
+reading of the repository is *"the prefix bug is fixed, and we know the request
+body should not be the source of truth for identity"*. Without this entry the
+reading available to a panelist is only the first half, which invites exactly
+the follow-up question the second half answers. F-013's whole lesson was that a
+guard reading a **format** is not a guard; leaving identity in the body is the
+same shape of mistake one layer further out, and pretending otherwise would be
+a strange thing to do in the same repository.
+
+**Rejected: building auth for the demo.** A login, a session store and a user
+table would consume most of a remaining day to demonstrate a property nobody
+doubts we could implement, on a submission whose scarce resource is time. The
+gap is cheap to state and expensive to close, so it gets stated. What is NOT
+acceptable is a deploy that reads as production-shaped while quietly accepting
+any identity, so the deployed demo carries a banner saying it is a demo (P4.3)
+and this entry carries the rest.
+
+**What this does not excuse.** The route still validates. An unauthenticated
+demo is a reason to have no session, not a reason to accept `{"approvedBy":
+"system"}` -- which is precisely what it did accept until F-013.
+
+### D-029 -- naming the pattern: a check that reads like rigour and enforces nothing
+
+**The pattern.** A guard whose *code* asserts a real property, whose test passes,
+whose reviewer nods -- and which cannot fail, because of something outside the
+assertion itself. Not a wrong check. An empty one, wearing the costume of a
+right one.
+
+Three instances so far, in three different mechanisms:
+
+| Where | Why it could not fail |
+| --- | --- |
+| F-009, the holdout import guard | The glob could match zero files and the test would still pass. A guard over an empty set is vacuously true. |
+| The adapter's amount ceiling (P3.4) | `prepare()` compared the contest amount against `draft.amount` -- the same field. `x > x` is never true, so "may not exceed the disputed amount" enforced nothing. |
+| F-013, the approval guard | The check was real and the input was manufactured one layer above it. `isHumanActor('human:system')` is correctly true; the string was a lie before it arrived. |
+
+**Decided: three countermeasures, applied wherever a guard is load-bearing.**
+
+1. **Assert the guard has a subject.** F-009's suite now asserts the glob finds
+   more than ten files; the eval-cannot-import-adapter test asserts it found
+   more than two eval sources first. A guard over an empty set is worse than no
+   guard, because it produces confidence.
+2. **Drive both sides.** The amount test now asserts that
+   `disputedAmount + 1` is refused *and* that `disputedAmount - 1` is accepted.
+   One-sided tests cannot distinguish a working check from a dead one; the
+   passing case is what proves the guard has a boundary rather than a floor at
+   infinity.
+3. **Give the check its own inputs.** `ContestDraft` carries `disputedAmount`
+   separately from `amount` for exactly this reason. A comparison whose two
+   operands come from one field is not a comparison, and no amount of careful
+   reading catches that as reliably as making the second operand exist.
+
+**Why this is a decision and not just three fixes.** The three instances share
+no code and were found three different ways -- one by a false positive, one by
+reading, one by curling an endpoint with a hostile value. What they share is a
+failure mode: **the confidence a guard produces is not proportional to the work
+it does**, and passing tests measure the first. On a money path that asymmetry
+is the whole risk, because every one of these read as evidence of safety in a
+review.
+
+**The uncomfortable generalisation.** All three were written by me, in files
+whose docblocks argue at length for why the guard matters. Fluency about a
+safety property is not the same as enforcing it, and this repository is full of
+fluency. Where a guard defends a hard rule, the question worth asking is not
+"is this check correct?" but **"what would have to be true for this check to
+fail, and has anything ever made it true?"** If nothing in the suite has ever
+made it fail, it is decoration until proven otherwise.
+
+### D-030 -- an abstention rate is not a finding, so every abstention is attributed to a cause
+
+**The problem with the headline.** The first full run reported **74 abstained,
+26 drafted**. That number is equally consistent with two opposite products: a
+gate doing its job on a corpus deliberately loaded with undefendable disputes,
+and a gate too timid to contest anything. It cannot distinguish them, and
+neither can a reader. Shipping it as a headline would have been a number
+pretending to be a result.
+
+**Decided.** Every abstention is attributed to one of five causes, against
+ground truth, by `eval/abstentions.ts` (`pnpm abstentions`):
+
+| Cause | Meaning |
+| --- | --- |
+| `correct_unwinnable` | corpus says unwinnable, we declined. The product working. |
+| `conservative_ambiguous` | corpus says ambiguous, we declined. Defensible under hard rule #7 -- counted **separately**, because a contest here would not have been obviously wrong and folding it into "correct" would flatter the number. |
+| `capture_gap` | winnable, and every required artifact we lack is one Praman structurally cannot produce for **any** dispute. Recall lost to our capture layer. |
+| `evidence_absent` | winnable, and a capturable artifact is missing from this particular pack. |
+| `false_negative` | winnable, **full required coverage**, declined anyway. The gate was wrong, with no excuse attached. |
+
+The dev corpus, 100 disputes:
+
+```
+contested  28 (gate)  ->  26 drafted, after 2 drafter disagreements
+abstained  72 (gate)  +   2 drafter  =  74
+
+  52  72%  correct: corpus says unwinnable
+   8  11%  conservative: corpus says ambiguous
+  11  15%  RECALL LOST -- capture gap
+   1   1%  RECALL LOST -- evidence absent from this pack
+   0   0%  RECALL LOST -- gate declined with full coverage
+
+recall on winnable: 26/38 = 68%      false positives on unwinnable: 0
+```
+
+**What the split says, which the total could not.** Seventy-two percent of the
+abstentions are correct on cases the corpus calls unwinnable, and **zero**
+contests were filed against an unwinnable dispute -- so the false-positive cost
+is ₹0, not a small number. Of the twelve winnable disputes we lost, **every one
+is attributable to a named capture gap**, and none to the gate misjudging
+evidence it already held. The lost recall is four artifacts, countable:
+
+```
+  5  duplicate_payment_analysis   (a3 -- F-010, P4.0b)
+  5  refund_settlement_proof      (a4 -- P4.0a)
+  2  item_selection_confirmation  (b4)
+  1  delivery_proof               (b4_91, genuinely absent from that pack)
+```
+
+**Consequence, and this is why the decomposition was worth a morning.** P4.0
+stops being hygiene and becomes the highest-value work left: closing the two
+scheduled gaps moves recall from **68% to ~95%** (36/38), and the third
+(`item_selection_confirmation`, not previously scheduled) takes it to 37/38.
+One case, `b4_91`, stays abstained honestly -- its pack has no delivery proof,
+so declining it is the system reading the data correctly.
+
+The rule this sets for P4.1: **the report leads with the decomposition, not the
+abstention rate.** A single percentage is not evidence about a system whose
+entire claim is that it knows when not to act.
+
+**Rejected: reporting abstention rate with a paragraph of explanation.** Prose
+around a number does not survive being quoted, and the number is what gets
+quoted. The buckets travel with it.
+
+**One honesty constraint on the P4.0 repair, stated precisely enough to be
+attacked.** Closing a capture gap makes evidence exist that did not exist
+before. That is a change to the corpus as well as to the product, and whether
+the before/after means anything depends entirely on which one came first.
+
+Two different things could sit behind a `capture_gap`:
+
+1. **The capture envelope has no slot for the artifact.** No merchant using
+   Praman could have supplied it, because there is nowhere to put it. The fix
+   adds a field to the **product**, and the generator then emits it because
+   real checkouts genuinely produce it. Recall improves because the product
+   improved.
+2. **The slot exists and the generator never filled it.** The fix edits the
+   **test data**. Recall improves because the exam got easier, and quoting that
+   as a product result is circular.
+
+**Both P4.0 gaps are case 1, and it is checkable in one grep rather than taken
+on trust.** `packages/core/src/capture/ingest.ts` is the entire capture
+envelope and it is a `.strict()` Zod schema, so the capture endpoint rejects
+any key it does not declare:
+
+- `refund_settlement_proof` -- the envelope contains **no settlement, payout or
+  UTR field anywhere**; `grep -c settlement packages/core/src/capture/ingest.ts`
+  returns `0`. `order.status` can be `refunded`, which is how `refund_record`
+  is derived, but nothing records that the money actually landed. A generator
+  emitting a settlement reference today gets a 400 from `POST /evidence-pack`.
+- `duplicate_payment_analysis` -- the envelope declares `payment`, **singular**.
+  No `payments` array, no sibling-payment slot, so a second payment against one
+  order cannot be represented at all. That is F-010 exactly: the corpus knew a
+  duplicate existed and the pack had no way to say so.
+
+The generator therefore *could not* have populated either field. The repair is a
+capture-schema change first and a generator change second, and only because a
+real merchant's records would contain it. **That order of causation is the whole
+argument**, and it is why these are counted separately from `evidence_absent` --
+the honest name for "this pack happens to lack something it could have carried",
+which P4.0 does not touch.
+
+Beyond that: report **before/after on both sets**, and re-record the holdout so
+the repair is not fitted to dev alone. Fixing a gap and reporting only the
+after-number would be indistinguishable from tuning to the eval.
+
+**And the caveat that travels with FP = 0.** Zero contests were filed against an
+unwinnable dispute, so false-positive cost is ₹0. That is the right result and
+it is also partly a statement about the corpus. Most of the dev set's
+unwinnables are **structurally** unwinnable by construction (D-011) -- b2's
+charge exceeds its mandate cap, b3's payment falls outside its validity window
+-- and those are caught by arithmetic, not judgement. A gate that could do
+nothing but compare numbers would also score ₹0 here. FP = 0 is never quoted
+without that sentence beside it. The gate's actual discrimination is tested on
+the 8 ambiguous cases and on the held-out set, and both get their own row rather
+than being folded into the headline.
+
+### D-031 -- ambiguity abstains by default, because the two errors do not cost the same
+
+**Decided.** Where the evidence genuinely does not settle the question, Praman
+abstains. Not as a fallback when nothing else fires -- as the stated policy for
+the ambiguous case, with the reason attached.
+
+**Why: the errors are asymmetric, and the asymmetry is arithmetic rather than
+taste.**
+
+| | outcome | cost |
+| --- | --- | --- |
+| Contest a dispute we lose | false positive | the disputed **amount** + the dispute **fee** + handling time |
+| Abstain on a dispute we could have won | false negative | the disputed **amount** |
+
+A bluffed contest that loses costs strictly more than not contesting at all --
+the amount is gone either way, and the fee and the handling time are the
+premium paid for guessing. So on a case where the evidence is genuinely
+balanced, abstaining is the cheaper error **before** any judgement about which
+way the case would have gone. That is the false-positive cost the track bar
+asks about, stated as a design rule rather than discovered as an outcome.
+
+It is also the honest reading of what a merchant is buying. A dispute responder
+that contests marginal cases produces a number that looks like activity and a
+bill that looks like fees. Abstention with a stated reason routes the case to a
+person, who can do the thing the system cannot: look outside the capture store.
+
+**What this does NOT mean.** It is not "abstain when unsure" applied to every
+uncertainty, which would be a system that never acts. The gate contests
+whenever required coverage is met and no rule blocks; ambiguity here means the
+specific case where the captured evidence supports both readings. On the dev
+corpus that is 8 disputes, and they are reported on their own row precisely
+because they are where the policy costs something -- a contest on those would
+not have been obviously wrong, so counting them as "correct abstentions" would
+flatter the result (D-030).
+
+**Where the policy is actually enforced, which is not only the gate.** The gate
+contests 8 of the 10 dev ambiguous cases correctly and lets 2 through -- and
+**both** of those were then caught by the drafter's second opinion and abstained
+as `drafter_disagreement` (D-025). That is worth stating because it was not
+designed as an ambiguity backstop; it was designed as "two independent readings
+that disagree is when a human should look", and the cases it caught turned out
+to be exactly the ambiguous ones. End to end, all 10 abstain.
+
+**Rejected: a confidence score with a tunable threshold.** It would let the
+same evidence produce a contest or an abstention depending on a number nobody
+can defend at a panel, and it would put a knob on the money path that could be
+turned until the metrics looked better. The gate's rules are individually
+explainable; a threshold on an aggregate score is not.
+
+**Rejected: contesting ambiguous cases to raise recall.** Recall would improve
+and the product would get worse. It is the specific trade this decision exists
+to refuse, and the reason the eval reports false-positive cost in rupees beside
+recall rather than recall alone -- so that making this trade would be visible
+in the numbers rather than hidden by them.

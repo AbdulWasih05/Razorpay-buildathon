@@ -62,6 +62,10 @@ function stepTime(raisedAt: Date, step: number): Date {
   return new Date(raisedAt.getTime() + step * 1000);
 }
 
+function fieldSummary(characters: number, fields: number): string {
+  return `${characters} character draft across ${fields} evidence ${fields === 1 ? 'field' : 'fields'}`;
+}
+
 export async function processDispute(
   options: ProcessDisputeOptions,
 ): Promise<ProcessedDispute> {
@@ -121,7 +125,14 @@ export async function processDispute(
     trail.append({
       toState: 'drafted',
       actor: 'llm',
-      reason: `${assembled.draft?.summary.length ?? 0} character draft across ${assembled.draft?.assignments.length ?? 0} evidence fields`,
+      // Rendered verbatim in the review UI's audit trail, so it is written
+      // as a sentence rather than as a format string: "1 evidence fields" on
+      // screen is the kind of small wrongness that makes a reviewer trust the
+      // rest of the panel less.
+      reason: fieldSummary(
+        assembled.draft?.summary.length ?? 0,
+        assembled.draft?.assignments.length ?? 0,
+      ),
       detail: {
         steps: assembled.audit,
         ambiguityFlags: assembled.ambiguityFlags,

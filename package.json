@@ -21,6 +21,7 @@
     "api:dev": "pnpm --filter @praman/api dev",
     "holdout:generate": "tsx scripts/generate-holdout.ts",
     "assemble": "tsx scripts/assemble.ts",
+    "abstentions": "tsx scripts/abstentions.ts",
     "ui:dev": "pnpm --filter @praman/ui dev",
     "ui:build": "pnpm --filter @praman/ui build"
   },

@@ -176,11 +176,11 @@ export function App() {
   );
 }
 
-function StateBadge({ state }: { state: string }) {
+export function StateBadge({ state }: { state: string }) {
   return <span className={`badge ${state}`}>{state}</span>;
 }
 
-function Detail({
+export function Detail({
   detail,
   busy,
   reviewer,
