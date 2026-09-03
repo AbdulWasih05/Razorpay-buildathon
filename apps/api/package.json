@@ -10,13 +10,14 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
-    "fastify": "^5.2.0",
-    "zod": "^3.24.1",
+    "@fastify/static": "^10.1.3",
+    "@praman/adapter": "workspace:*",
     "@praman/core": "workspace:*",
+    "@praman/llm": "workspace:*",
     "@praman/simulator": "workspace:*",
     "@prisma/client": "^6.19.3",
-    "@praman/llm": "workspace:*",
-    "@praman/adapter": "workspace:*"
+    "fastify": "^5.2.0",
+    "zod": "^3.24.1"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",

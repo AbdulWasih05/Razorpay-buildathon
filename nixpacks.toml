@@ -1,0 +1,21 @@
+# Railway build (TASKS.md P4.3).
+#
+# One service: the Fastify API, the Postgres client, and the built review UI,
+# served from a single origin. See DECISIONS.md D-035 for why this is not the
+# two-deploy Railway+Vercel split the plan originally named.
+#
+# There is no TypeScript build step anywhere in this repository (D-001):
+# packages export `src/index.ts` and run under `tsx`. The only build here is
+# Prisma's generated client and Vite's static bundle for the UI.
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "pnpm"]
+
+[phases.install]
+cmds = ["pnpm install --frozen-lockfile"]
+
+[phases.build]
+cmds = ["pnpm db:generate", "pnpm ui:build"]
+
+[start]
+cmd = "pnpm start"

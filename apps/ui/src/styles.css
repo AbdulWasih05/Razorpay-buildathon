@@ -59,3 +59,11 @@ pre { white-space: pre-wrap; word-break: break-word; font-size: 12px;
   text-align: left; white-space: nowrap; vertical-align: top; }
 .report th { font-weight: 700; }
 .report code { font-size: 12px; }
+
+/* The demo banner. Deliberately loud: a simulated dispute that looks like a
+   real one is the failure hard rule #6 exists to prevent. */
+.demo { border: 1px solid #ca8a04; color: #a16207; padding: 10px 12px; margin: 0 0 14px;
+  line-height: 1.5; font-size: 13px; }
+.demo code { color: inherit; }
+.demo-actions { display: block; margin-top: 8px; }
+.demo-actions .chip { margin-right: 8px; }

@@ -208,7 +208,7 @@ Four mechanisms, none of which is a promise:
 3. `assertDevOnly()` throws `HoldoutAccessError` if a held-out id reaches a dev
    code path.
 4. A **static test** over the whole source tree asserts that no file outside a
-   four-entry allowlist references `OOD_CONFIG` in executable code or reads
+   six-entry allowlist references `OOD_CONFIG` in executable code or reads
    `holdout.json`. It checks what the code *can* do, not what it happens to do.
 
 `eval/holdout.json` deliberately contains **ids and aggregate counts only** —

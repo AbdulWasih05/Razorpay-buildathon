@@ -23,6 +23,7 @@
     "assemble": "tsx scripts/assemble.ts",
     "abstentions": "tsx scripts/abstentions.ts",
     "eval": "tsx eval/run.ts",
+    "start": "prisma migrate deploy --schema prisma/schema.prisma && tsx apps/api/src/index.ts",
     "ui:dev": "pnpm --filter @praman/ui dev",
     "ui:build": "pnpm --filter @praman/ui build"
   },

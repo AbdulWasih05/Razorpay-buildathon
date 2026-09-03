@@ -1328,3 +1328,57 @@ would be measured with a definition nobody had ever examined.
 headline numbers two orders of magnitude apart is an invitation to quote the
 bigger one. The gross figure is still in the report, on its own row, labelled as
 not counted and why.
+
+---
+
+### D-035 -- one origin, not two: the UI ships from the API process
+
+**Context.** TASKS.md P4.3 named Railway for the api and database and Vercel for
+the ui. That split is the normal shape and it was written down weeks ago, when
+the deploy was a week away rather than a day.
+
+**Decided.** One Railway service. The Fastify process serves the API and the
+built Vite bundle from the same origin, with `/api/...` stripped at the router
+so the browser sends identical URLs in development and production.
+
+**Why.** Count what the two-deploy version has to get right on the last
+afternoon: a Vercel project, a Railway project, a rewrite rule or a CORS
+allowlist holding a hostname that does not exist until one of them has already
+deployed, an environment variable in each, and a first-line README link that is
+correct only if both are up. Count what this version has to get right: one
+service, one URL. The UI has no server-side rendering and no framework runtime
+-- it is static files -- so nothing is bought by hosting it separately except
+a CDN this demo does not need.
+
+The deadline is the argument. On a Tuesday with a week to spare, two deploys is
+the better architecture and the split is worth having. The day before
+submission, with a live link in the first line of the README, the right question
+is not "which is better designed" but "which has fewer ways to be broken at
+9pm", and one origin has strictly fewer.
+
+**What it costs, stated.** No CDN for the bundle, and the UI restarts whenever
+the API does. Both are irrelevant for a demo instance and would matter for a
+product. If this were real, the split comes back.
+
+**Consequences the deploy inherits.**
+
+- `rewriteUrl` strips a leading `/api`, so there is no build-time base-URL
+  switch that could be right in dev and wrong in production. The original URL
+  is kept on the request, because the 404 handler needs to tell an API route
+  that does not exist from a client-side route the SPA will handle -- after the
+  rewrite those two look identical.
+- The SPA fallback refuses anything with a file extension. Returning the index
+  page for a missing hashed asset is the classic version of this bug: the
+  browser asks for a script, receives HTML, and reports `Unexpected token '<'`
+  from somewhere unrelated. A 404 is worth more than a 200 that lies.
+- `SEED_ON_BOOT` seeds the corpus **through `POST /evidence-pack`** against the
+  process that just started, exactly as `pnpm seed` does locally (D-012). There
+  is deliberately no direct-to-Prisma path for the deployed case: if the capture
+  endpoint were broken, a boot seed that bypassed it would hide that behind a
+  full queue, which is the one thing the capture layer must never be able to do.
+  It runs only when the store is empty, so a container restart cannot silently
+  undo what a visitor did.
+
+**Rejected: keeping the plan because it was the plan.** The plan was written to
+be executed, not obeyed. What it was actually protecting -- a live link in the
+first line of the README -- is better served by this.

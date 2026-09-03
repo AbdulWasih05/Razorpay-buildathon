@@ -1,6 +1,8 @@
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
+import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { Prisma, PrismaClient } from '@prisma/client';
 import {
@@ -18,6 +20,7 @@ import { adapterFromEnv } from '@praman/adapter';
 import { AssemblyClient, ResponseCache, providerFromEnv } from '@praman/llm';
 
 import { captureEvidencePack, readEvidencePack } from './capture.js';
+import { DEMO_RELEASE_CAP, RateLimiter, releaseNextDispute, resetDemo } from './demo.js';
 import { approveAndSubmit, listQueue, readDispute, runPipeline } from './review.js';
 
 /**
@@ -28,6 +31,9 @@ const STARTED_AT = new Date().toISOString();
 
 /** The committed eval report, served by `GET /eval/report`. */
 const EVAL_REPORT_PATH = fileURLToPath(new URL('../../../eval/results.md', import.meta.url));
+
+/** The built review UI, when `pnpm ui:build` has produced one. */
+const UI_DIST = fileURLToPath(new URL('../../ui/dist/', import.meta.url));
 
 const asJsonValue = (value: unknown): Prisma.InputJsonValue => value as Prisma.InputJsonValue;
 
@@ -71,7 +77,24 @@ export interface BuildServerOptions {
 
 export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   const prisma = options.prisma ?? new PrismaClient();
-  const app = Fastify({ logger: options.logger ?? false });
+  const app = Fastify({
+    logger: options.logger ?? false,
+    /**
+     * The UI calls `/api/...` in development, where Vite proxies that prefix
+     * to this server. In production the same bundle is served from this same
+     * origin, so the prefix has to mean something here too. Stripping it at
+     * the router keeps one code path: the browser sends the same URLs in both
+     * environments, and no build-time base-URL switch can be wrong in only
+     * one of them.
+     */
+    rewriteUrl: (request) => {
+      // Keep the address the browser actually asked for. The 404 handler needs
+      // it to tell "an API route that does not exist" from "a client-side route
+      // the SPA will handle", and after the rewrite those two are identical.
+      (request as { originalUrl?: string }).originalUrl = request.url;
+      return request.url?.startsWith('/api/') ? request.url.slice(4) : (request.url ?? '/');
+    },
+  });
 
   app.decorate('prisma', prisma);
 
@@ -87,9 +110,32 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   const assemblyMode = process.env['ASSEMBLY_MODE'] === 'live' ? 'live' : 'replay';
   const assemblyCache = new ResponseCache();
 
+  /**
+   * Demo mode: on for the deployed instance, off by default.
+   *
+   * Reported by `/health` so the UI can show a banner. A demo that does not
+   * announce itself as a demo is the exact failure hard rule #6 is about, and
+   * the UI cannot know unless the server says.
+   */
+  const demoMode = process.env['DEMO_MODE'] === 'true';
+
+  /**
+   * Two budgets, not one, and that is the whole point.
+   *
+   * Both endpoints are unauthenticated writes, which is defensible for a demo
+   * only while hammering them is pointless. But a shared budget would let a
+   * visitor spend it all on releases, hit the cap, and then be refused the
+   * reset that would clear it -- wedging the demo with the trigger, which is
+   * precisely what P4.3 says must not be possible. The escape hatch has to have
+   * its own budget or it is not an escape hatch.
+   */
+  const releaseLimiter = new RateLimiter(20, 5 * 60_000);
+  const resetLimiter = new RateLimiter(6, 60_000);
+
   app.get('/health', async () => ({
     status: 'ok',
     assemblyMode,
+    demoMode,
     recordings: assemblyCache.size,
     startedAt: STARTED_AT,
     pid: process.pid,
@@ -370,6 +416,94 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
       inspect: `/evidence-packs/${parsed.externalId}`,
     });
   });
+
+  /**
+   * Release the next dispute, so a demo can show one arriving.
+   *
+   * Guarded three ways because it is an unauthenticated write on the open
+   * internet (TASKS.md P4.3): rate limited per caller, capped in total, and
+   * undoable by `POST /demo/reset`. Demo disputes carry a `demo-` prefix and
+   * are generated at indices far above the seeded corpus, so a visitor pressing
+   * this cannot touch, shift or overwrite the 100 disputes the eval measures.
+   */
+  app.post('/demo/release-dispute', async (request, reply) => {
+    const gate = releaseLimiter.take(request.ip);
+    if (!gate.allowed) {
+      return reply
+        .code(429)
+        .header('retry-after', String(gate.retryAfterSeconds))
+        .send({ error: 'rate_limited', retryAfterSeconds: gate.retryAfterSeconds });
+    }
+
+    const released = await releaseNextDispute(prisma);
+    if ('capped' in released) {
+      return reply.code(409).send({
+        error: 'demo_release_cap_reached',
+        released: released.released,
+        cap: DEMO_RELEASE_CAP,
+        detail: 'POST /demo/reset clears released disputes and restores a clean queue.',
+      });
+    }
+    return reply.code(201).send(released);
+  });
+
+  /**
+   * Restore a clean demo.
+   *
+   * Rewinds every seeded dispute to `received` and deletes the ones the demo
+   * released. It does NOT truncate the audit trail: that table's contract is
+   * append-only, so a rewind appends a `demo_reset` entry recording what it
+   * undid rather than erasing it.
+   */
+  app.post('/demo/reset', async (request, reply) => {
+    const gate = resetLimiter.take(request.ip);
+    if (!gate.allowed) {
+      return reply
+        .code(429)
+        .header('retry-after', String(gate.retryAfterSeconds))
+        .send({ error: 'rate_limited', retryAfterSeconds: gate.retryAfterSeconds });
+    }
+    return reply.send(await resetDemo(prisma));
+  });
+
+  /**
+   * Serve the built review UI from this same process, when one exists.
+   *
+   * TASKS.md P4.3 said Railway for the api and Vercel for the ui. This ships
+   * both from one origin instead (DECISIONS.md D-035): one URL for the README's
+   * first line, no CORS, no rewrite rule holding a hard-coded hostname, and one
+   * deploy that can fail rather than two that can fail independently the night
+   * before a submission. The UI has no server-side rendering and no framework
+   * runtime -- it is a Vite bundle of static files -- so nothing is lost.
+   *
+   * Registered last so every API route above wins on a path collision, and the
+   * SPA fallback only catches what nothing else claimed. `pnpm ui:build`
+   * produces the directory; if it is absent the API still runs and only the
+   * pages are missing, which is the right way round for a service whose routes
+   * are the product.
+   */
+  if (existsSync(UI_DIST)) {
+    void app.register(fastifyStatic, { root: UI_DIST, prefix: '/', wildcard: false });
+
+    app.setNotFoundHandler((request, reply) => {
+      const asked = (request.raw as { originalUrl?: string }).originalUrl ?? request.url;
+      const path = asked.split('?')[0] ?? '/';
+
+      // Two things must NOT get the index page, and both are cases where
+      // returning HTML would replace a clear 404 with a confusing success:
+      // an API path that does not exist, and a missing bundle file. The second
+      // is the classic SPA-fallback bug -- the browser asks for a hashed asset,
+      // receives a page, and reports `Unexpected token '<'` from somewhere
+      // unrelated.
+      const isApi = path.startsWith('/api/');
+      const looksLikeFile = /\.[a-z0-9]+$/i.test(path);
+
+      if (request.method !== 'GET' || isApi || looksLikeFile) {
+        return reply.code(404).send({ error: 'not_found', path });
+      }
+      return reply.sendFile('index.html');
+    });
+  }
 
   // --- Review pipeline (TASKS.md P3.2, P3.3) -------------------------------
 

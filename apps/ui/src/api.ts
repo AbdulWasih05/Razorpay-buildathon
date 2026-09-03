@@ -97,6 +97,43 @@ export async function approve(
   return json(response);
 }
 
+export interface Health {
+  status: string;
+  assemblyMode: 'live' | 'replay';
+  demoMode: boolean;
+  recordings: number;
+  startedAt: string;
+  pid: number;
+}
+
+/**
+ * What the server says about itself.
+ *
+ * The UI does not decide whether it is a demo — the server does, and says so.
+ * A banner the front-end switches on for itself would be a banner that can be
+ * wrong, and this one is load-bearing for hard rule #6.
+ */
+export async function fetchHealth(): Promise<Health> {
+  return json<Health>(await fetch('/api/health'));
+}
+
+export interface ReleasedDispute {
+  externalId: string;
+  razorpayDisputeId: string;
+  scenarioClass: string;
+  reasonCode: string;
+  released: number;
+  remaining: number;
+}
+
+export async function releaseDispute(): Promise<ReleasedDispute> {
+  return json<ReleasedDispute>(await fetch('/api/demo/release-dispute', { method: 'POST' }));
+}
+
+export async function resetDemo(): Promise<{ rewound: number; demoDisputesRemoved: number }> {
+  return json(await fetch('/api/demo/reset', { method: 'POST' }));
+}
+
 /**
  * The eval report, as markdown.
  *
