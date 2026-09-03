@@ -74,8 +74,15 @@ export const UPI_REASON_CODES: readonly ReasonCode[] = [
     // payment, the mandate record and the orchestration log ARE the "internal
     // logs to show authorisation was obtained". The agentic module is not a
     // stretch of the schema; it is the schema's own answer.
+    //
+    // Corrected 2026-09-03 by the P5.4 fact-check (FAILURES.md F-019). The
+    // published guidance has THREE clauses; this transcription carried two and
+    // dropped the delivery one, which hard rule #1 forbids -- "never invent
+    // fields, and never omit documented ones". Re-read from
+    // https://razorpay.com/docs/payments/disputes/submit-evidence/ on that date.
     evidenceGuidance:
-      'Internal logs to show authorisation was obtained, Invoicing details along with detailed price breakdown',
+      'Internal logs to show authorisation was obtained, Invoicing details along with detailed price breakdown, ' +
+      'Proof of service/goods delivery clearly mentioning customer name and address details',
   },
   {
     code: '108',

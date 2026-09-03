@@ -214,6 +214,64 @@ describe('what abstention does and does not do', () => {
   });
 });
 
+describe('a correct judgement is never filed as broken plumbing (F-011, F-019)', () => {
+  /**
+   * The model declining on the merits is the product working. Routing it to
+   * "assembly failure, manual review required" would corrupt the abstention
+   * breakdown the eval reports -- it would claim the pipeline broke on a case
+   * where the pipeline reached the right answer.
+   *
+   * F-011 was that bug. F-019 was the same bug wearing a length limit: a
+   * genuine `insufficientEvidence` payload whose reason ran 532 characters
+   * failed a `max(500)` bound, fell through to the letter schema, and was
+   * reported as an assembly failure in a committed eval report.
+   */
+  // The trace summariser runs before the drafter, so it has to succeed for the
+  // drafter's response to be the thing under test. Answering both prompts with
+  // the same body would fail at the first call and prove nothing about the
+  // second.
+  function declineWith(reason: string) {
+    return assembleWith(
+      fake(async (request) => ({
+        text:
+          request.promptId === 'letter-draft'
+            ? JSON.stringify({ insufficientEvidence: true, reason })
+            : JSON.stringify({
+                summary: 'The customer asked the agent to buy groceries and approved the total.',
+                confirmation: 'explicit',
+                ambiguityFlags: [],
+              }),
+        providerRefused: false,
+      })),
+    );
+  }
+
+  it('files a long-but-valid decline as a judgement, not a failure', async () => {
+    // 900 characters: comfortably past the old cap, comfortably inside a real
+    // explanation. The exact number that broke it was 532.
+    const result = await declineWith('E'.repeat(900));
+    expect(result.abstentionClass).toBe('drafter_disagreement');
+    expect(result.failureKind).toBeUndefined();
+    expect(result.abstentionReason).not.toBe(ASSEMBLY_ABSTAIN_REASON);
+  });
+
+  it('still refuses an unbounded reason, so the guard is a guard', async () => {
+    const result = await declineWith('E'.repeat(5000));
+    expect(result.abstentionClass).toBe('assembly_failure');
+    expect(result.failureKind).toBe('schema');
+  });
+
+  it('blames the schema the model was aiming at, not the other one', async () => {
+    // The diagnosis cost twenty minutes because the message said
+    // "letter: Required; Unrecognized key(s): 'insufficientEvidence'", which
+    // describes a model that ignored the contract when it had followed it.
+    const result = await declineWith('E'.repeat(5000));
+    const detail = result.audit.find((entry) => entry.step === 'assembly_failed')?.detail ?? '';
+    expect(detail).toContain('reason');
+    expect(detail).not.toContain('letter: Required');
+  });
+});
+
 describe('the assembler refuses the model that wrote the holdout', () => {
   it('throws rather than quietly contaminating the OOD claim', () => {
     // Everything would still run. The numbers would still look fine. The claim

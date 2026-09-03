@@ -307,6 +307,21 @@ export const RUBRIC: Record<string, RubricEntry> = {
         'On the agentic rail the conversation trace is where consent is actually visible, and it cuts both ways: it is also the evidence that defeats a contest when consent is absent.',
         'supporting',
       ),
+      // Added 2026-09-03 by the P5.4 fact-check (FAILURES.md F-019). The
+      // published guidance for 128 has THREE clauses and this transcription
+      // carried two; hard rule #1 says a documented field is never omitted.
+      //
+      // `supporting`, not `required`, and that is our judgement rather than
+      // theirs (D-026). A fraud claim on an agent-initiated payment is answered
+      // by proving authorisation, not delivery: b1's whole point is that the
+      // goods arrived and the customer disputes having asked for them. Making
+      // delivery proof required here would abstain on cases the mandate record
+      // already settles -- which is a worse product for a more literal reading.
+      published(
+        'delivery_proof',
+        'Proof of service/goods delivery clearly mentioning customer name and address details',
+        'supporting',
+      ),
     ],
   },
 

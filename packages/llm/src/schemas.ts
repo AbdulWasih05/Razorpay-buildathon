@@ -56,11 +56,23 @@ export const refusalSchema = z
  * failure, manual review required" would file a correct judgement under a
  * broken-plumbing label and corrupt the abstention-reason breakdown that P4.1
  * reports. See FAILURES.md F-011.
+ *
+ * The cap on `reason` is 2000, not 500, and the difference is F-019. At 500 a
+ * correct judgement with a 532-character explanation was rejected here, fell
+ * through to the letter schema, and was reported as `assembly failure, manual
+ * review required` -- F-011's exact bug, thirty-two characters wide.
+ *
+ * `reason` is OUR free text, shown to the reviewer who picks the case up. It is
+ * not a Razorpay field, nothing downstream parses it, and no documented limit
+ * applies to it, so a tight bound bought nothing and cost a misfiled outcome.
+ * The bound is kept, generously, because an unbounded string from a model is
+ * still worth refusing -- but it is now far outside the range a real answer
+ * occupies rather than just inside it.
  */
 export const insufficientEvidenceSchema = z
   .object({
     insufficientEvidence: z.literal(true),
-    reason: z.string().min(1).max(500),
+    reason: z.string().min(1).max(2000),
   })
   .strict();
 

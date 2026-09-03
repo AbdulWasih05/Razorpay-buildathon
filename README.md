@@ -12,11 +12,20 @@ dispute.
 The thesis, scoped precisely: **agentic evidence has to be captured at
 transaction time, because by dispute time it is gone.** The agent identifier,
 the Reserve Pay mandate reference, the protocol metadata and the conversation
-trace live with the agent platform or the TPAP, not with the merchant. Ninety
-days later there is nothing to retrieve. So the transaction store *is* the
-capture layer, and `POST /evidence-pack` is that layer as a real endpoint rather
-than a box on a diagram — every one of the 100 seeded disputes was captured
-through it.
+trace live with the agent platform or the TPAP, not with the merchant. Weeks or
+months later, when the dispute arrives, there is nothing to retrieve. So the
+transaction store *is* the capture layer, and `POST /evidence-pack` is that
+layer as a real endpoint rather than a box on a diagram — every one of the 100
+seeded disputes was captured through it.
+
+The gap is visible in Razorpay's own announcement. [Razorpay and NPCI shipped
+agentic payments on UPI Reserve Pay](https://razorpay.com/blog/agentic-payments-and-npci/)
+in February 2026 — "users to give a one-time, consent-based authorization by
+setting spending limits for a merchant" — and that post is entirely about the
+consent going in. It says nothing about disputes, chargebacks, evidence or
+merchant recourse when one of those payments is later challenged. Praman is
+about the other end. (UPI Reserve Pay and UPI Circle are live today; NPCI's
+Unified Agent Protocol is announced, not shipped — see D-037.)
 
 ---
 

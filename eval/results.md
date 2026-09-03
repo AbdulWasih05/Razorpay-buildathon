@@ -97,8 +97,8 @@ Over-length letter drafts rejected by the 1000-character `summary` cap: **0 dev,
 | --------------------------------------- | ----- | -------- |
 | drafts produced                         | 31    | 8        |
 | drafts at full required coverage        | 31/31 | 8/8      |
-| mean Razorpay evidence fields populated | 2.19  | 2.38     |
-| mean letter length (cap 1000)           | 598   | 590      |
+| mean Razorpay evidence fields populated | 2.61  | 2.75     |
+| mean letter length (cap 1000)           | 562   | 603      |
 
 ## How often a model was called at all
 

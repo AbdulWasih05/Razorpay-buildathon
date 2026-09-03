@@ -489,3 +489,15 @@ Stated here before anyone has to ask.
     construction. The one real instance to date is F-002 — an empty HTTP 200
     from a reasoning model — which is the incident the schema path was written
     for.
+
+12. **Seven held-out mandates exceed the Reserve Pay cap.** Reserve Pay blocks
+    are reported as capped at ₹10,000 for up to 90 days. All 44 dev mandates sit
+    under that ceiling (max ₹8,947); **7 of the held-out set's 15 do not** (max
+    ₹19,389), because the OOD config deliberately shifts the order-value band up
+    to ₹24,000 — one of the seven axes that make it out-of-distribution. Not
+    fixed: regenerating the holdout would mean re-recording a corpus frozen
+    precisely so it cannot be tuned, and the cap is a *pilot parameter* rather
+    than a property of the protocol, so encoding ₹10,000 into ground truth would
+    bake today's rollout limit into an eval meant to outlast it. What those seven
+    cases test is the gate's arithmetic against the mandate it was handed, which
+    is correct whatever ceiling the scheme currently sets. See D-037.

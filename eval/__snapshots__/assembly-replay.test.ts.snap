@@ -25,6 +25,13 @@ exports[`one fixed dispute, assembled from the committed recording > matches the
       "field": "others",
       "othersType": "invoice_with_price_breakdown",
     },
+    {
+      "artifacts": [
+        "delivery_proof",
+      ],
+      "field": "shipping_proof",
+      "othersType": undefined,
+    },
   ],
   "auditSteps": [
     "evidence_collected",
@@ -34,6 +41,6 @@ exports[`one fixed dispute, assembled from the committed recording > matches the
   ],
   "confirmation": "explicit",
   "outcome": "assembled",
-  "summary": "Dispute: UPI 128. Transaction: Prescription refill, INR 41,900, charged 2026-06-01. Evidence: 1. authorisation_evidence shows active mandate, consent recorded at 12:08:00 UTC, and orchestration actions confirming payment initiation and capture. 2. invoice_breakdown confirms line item 'Prescription refill' for INR 41,900, matching the charged amount. 3. customer_communication (5 turns) shows customer requested refill, agent identified item, and customer explicitly approved the order. Mandate facts confirm amount is within the 225,567 cap and validity window, with consent recorded before payment. The evidence demonstrates explicit customer authorization for this specific transaction under an active mandate, addressing the dispute reason.",
+  "summary": "Dispute reason UPI 128 (unauthorised). Evidence supports authorisation. Invoice shows one prescription refill, INR 41,900. Authorisation log records customer consent at 2026-06-01T12:08:00Z, before payment. Mandate status is active. Amount charged (41,900) is within the 225,567 cap and validity window. Customer communication log (5 turns) shows the customer requested the refill, identified the item, and explicitly approved the order for that specific amount. Agent confirmed payment via the saved mandate. System log records customer confirmation against the mandate. Delivery proof (pod_ah2fyzYBwpMhI3) confirms delivery on 2026-06-18. The transaction was authorised, within mandate limits, and delivered.",
 }
 `;

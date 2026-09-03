@@ -206,18 +206,34 @@ export class AssemblyClient {
     // A documented alternate outcome (today: "insufficient evidence") is a
     // legitimate answer, checked before the failure paths so that a correct
     // judgement is never filed as a malformed response.
+    let alternateError: z.ZodError | undefined;
     if (alternate) {
       const alternateResult = alternate.safeParse(parsed);
       if (alternateResult.success) return alternateResult.data;
+      alternateError = alternateResult.error;
     }
 
     const result = schema.safeParse(parsed);
     if (!result.success) {
+      // Report the error for the shape the model was ACTUALLY aiming at.
+      //
+      // F-019: a valid `insufficientEvidence` payload whose reason ran past the
+      // cap failed the alternate, fell through to here, and was reported as
+      // `letter: Required; Unrecognized key(s): 'insufficientEvidence'` -- which
+      // describes a model that ignored the contract, when it had followed it
+      // exactly. The diagnosis cost twenty minutes because the message named the
+      // wrong schema.
+      const aimedAtAlternate =
+        alternateError !== undefined &&
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        !alternateError.issues.some((issue) => issue.code === 'unrecognized_keys');
+      const reported = aimedAtAlternate && alternateError ? alternateError : result.error;
       // PATH 4b: structurally wrong output. An over-length letter arrives here,
       // and it abstains rather than being truncated (D-003).
       throw new AssemblyFailure(
         'schema',
-        result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; '),
+        reported.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; '),
         prompt.id,
       );
     }

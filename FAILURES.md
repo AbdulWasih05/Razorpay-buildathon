@@ -775,3 +775,101 @@ with an inline notice. A modal blocks the page until dismissed, which makes the
 one action that matters the one thing a screenshot, a screen recording or an
 automated click-through cannot get past -- and it covers the state change it is
 announcing. It was found for the same reason: someone finally clicked the button.
+
+---
+
+### F-019 -- the fact-check found a dropped clause in the docs, and the fix uncovered a second bug behind it
+
+**When.** 2026-09-03, the P5.4 fact-check pass, re-reading every citation
+against its live source.
+
+**What broke, first.** The published evidence guidance for **UPI 128** has three
+clauses. This repository's transcription carried two:
+
+```
+have:  Internal logs to show authorisation was obtained,
+       Invoicing details along with detailed price breakdown
+docs:  ... , Proof of service/goods delivery clearly mentioning
+       customer name and address details
+```
+
+Hard rule #1 is explicit -- "never invent fields, and **never omit documented
+ones**" -- so this is a violation of the rule the project treats as
+non-negotiable, sitting in the reason code the entire agentic module runs on.
+
+**How diagnosed.** By reading the page again rather than trusting the copy. The
+first reading returned the third clause merged into the 128 row, which is
+exactly what a careless extraction looks like, so it was checked a second time
+with the rows forced apart -- 1064's evidence cell is worded differently
+("Terms & Conditions on refund & fulfilment policies"), so the delivery clause
+really does belong to 128 and is not bleeding across from its neighbour. Worth
+recording that the check was doubted before it was acted on: a schema change on
+the last day, on the strength of one summary of one page, is how a fact-check
+introduces the error it was meant to catch.
+
+**The fix, and the judgement inside it.** `delivery_proof` is added to 128 as
+**`supporting`, not `required`**, and that necessity is ours rather than
+Razorpay's (D-026). A fraud claim on an agent-initiated payment is answered by
+proving authorisation, not delivery -- b1's whole premise is that the goods
+arrived and the customer disputes having asked for them. Making delivery proof
+required would abstain on cases the mandate record already settles: a worse
+product for a more literal reading of the same page.
+
+Because it is supporting, the gate's required-coverage is unchanged, and
+`pnpm abstentions` produced byte-identical output before and after. That was
+checked **before** any recording was re-minted, because the alternative was
+discovering the blast radius after spending it.
+
+**What it cost, exactly.** Every UPI 128 prompt changed, so every 128 recording
+missed and was re-minted on the frozen model of record. Headline metrics did not
+move at all -- recall 31/38, precision 100%, 0 false positives, 69% abstention.
+The only number that moved is **evidence completeness: 2.19 -> 2.61 Razorpay
+fields populated per draft on dev, 2.38 -> 2.75 on the held-out set**, because
+`delivery_proof` now routes into the real `shipping_proof` field. Correcting the
+omission did not just restore fidelity; it made the contests materially
+stronger, and the snapshot shows a letter that now cites a delivery proof by id.
+
+**The second bug, which the first one exposed.** With 128 re-recorded, the batch
+reported something it never had before: **an assembly failure**, one, on the dev
+set, kind `schema`. The prediction in CLAUDE.md was that a real failure would
+surface during a batch run. One did. It was ours.
+
+`dsp_dev-v1_b1_66` returned a perfectly well-formed
+`{"insufficientEvidence": true, "reason": "..."}` -- the documented alternate
+contract, a correct judgement on the merits -- with a reason **532 characters**
+long against a `max(500)` bound. The alternate schema rejected it, the payload
+fell through to the letter schema, and a correct abstention was filed as
+`assembly failure, manual review required` **in a committed eval report**.
+
+That is F-011 exactly, thirty-two characters wide. F-011 was: the model made six
+correct judgements and the pipeline filed them all as broken plumbing. The fix
+then was to model declining as a legitimate outcome. The bound on the reason
+string was never revisited, so the same failure came back through the one part
+of the contract that had not been thought about.
+
+The diagnosis also cost twenty minutes to an unrelated cause: the error read
+`letter: Required; Unrecognized key(s) in object: 'insufficientEvidence'`, which
+describes a model that ignored the contract, when it had followed it exactly.
+When the alternate parse fails, the message came from the *other* schema.
+
+**Both fixed.** `reason` is capped at 2000 rather than 500 -- it is our own free
+text for a human reviewer, no Razorpay field, nothing downstream parses it, and
+no documented limit applies, so the tight bound bought nothing and cost a
+misfiled outcome; the guard is kept, generously, well outside the range a real
+answer occupies. And when a payload was clearly aimed at the alternate shape,
+the failure now reports the alternate's error. Three regression tests: a
+900-character decline is a judgement, a 5000-character one is still refused, and
+the message names the schema the model was aiming at.
+
+**What it taught.** Two things.
+
+A bound with no external source is a bound nobody will re-derive when it starts
+lying. `max(1000)` on the letter is Razorpay's number and belongs in the schema;
+`max(500)` on our own explanation was a number someone typed once, and the only
+thing it ever did was misfile a correct answer.
+
+And a fixed bug does not stay fixed by having been fixed. F-011's lesson was
+recorded in a docblock directly above the schema that caused F-019 -- the
+sentence was right there, and it did not extend to the field two lines below it.
+The lesson generalises further than the fix did, which is an argument for
+reading old FAILURES entries as constraints on new code rather than as history.

@@ -1443,3 +1443,205 @@ as an unlabelled simulated outcome, in a different place.
 **Consequence.** `nixpacks.toml` and `railway.json` are deleted rather than left
 beside `render.yaml`. Configuration for a host nobody deploys to is an invitation
 to ask which one is real.
+
+---
+
+### D-037 -- the fact-check pass, and what it changed
+
+**What this is.** TASKS.md P5.4: every checkable claim in the shipped docs
+verified against a live source on 2026-09-03, with unverifiable claims cut or
+scoped rather than softened. Logged here because "we fact-checked it" is itself
+a checkable claim.
+
+**Verified, unchanged.**
+
+- **The UPI reason codes are real and correctly mapped.** Re-read
+  https://razorpay.com/docs/payments/disputes/submit-evidence/. The page has an
+  explicit UPI section; 1061 Credit Not Processed, 1062 Goods/Services Not As
+  Described, 1064 Goods/Services Not Received, 128 Fraudulent Transaction, 1084
+  Duplicate Processing and 1085 Charge Amount Exceeds Authorisation Amount all
+  appear, and each maps to the scenario class that claims it. 1085 for the
+  mandate-limit breach is a particularly exact fit.
+- **The Disputes API exposes fetch, accept and contest only** (D-032), so a
+  dispute cannot be originated in test mode. Unchanged.
+- **The disputed amount is deducted if you lose** (D-034), which is why it is
+  excluded from false-positive cost. Unchanged.
+
+**Corrected: a documented evidence clause was missing.** The published guidance
+for UPI 128 has three clauses and this repository carried two. Fixed, re-recorded
+and written up as **F-019**, which also exposed a second bug behind it. Headline
+metrics unmoved; evidence completeness improved.
+
+**Scoped down: "India's UPI agentic stack" was stated as if it were all
+shipped.** It is not one thing at one stage, and the difference is checkable by
+anyone who follows it:
+
+- **UPI Reserve Pay is live and Razorpay is on it.** Razorpay's own engineering
+  blog, 2026-02-20, https://razorpay.com/blog/agentic-payments-and-npci/ :
+  "Built on UPI Reserve Pay, the system allows users to give a one-time,
+  consent-based authorization by setting spending limits for a merchant."
+- **UPI Circle is a live delegated-payments feature.**
+- **The Unified Agent Protocol (UAP) is announced, not shipped** -- reported as
+  expected to be unveiled at Global Fintech Fest 2026. The docs now say
+  "announced" where they said nothing, because a panelist who works there knows
+  precisely which of these three they can use today.
+
+**The best thing the pass found, and it is a positioning finding rather than a
+correction.** That Razorpay post announces agentic payments on UPI Reserve Pay
+and **says nothing about disputes, chargebacks, evidence or merchant recourse**.
+It is entirely about the consent model going in. The gap Praman addresses is
+therefore not asserted by us about someone else's roadmap -- it is visible in the
+judges' own announcement, and the README now says so with the link, in one
+sentence, without editorialising.
+
+**Recorded as a limitation rather than fixed: the held-out set exceeds the
+Reserve Pay cap.** Reserve Pay blocks are reported as capped at Rs 10,000 for up
+to 90 days. All 44 dev mandates sit under that ceiling (max Rs 8,947). **Seven
+of the held-out set's 15 mandates do not** (max Rs 19,389), because the OOD
+config deliberately shifts the order-value band upward to Rs 24,000 -- one of the
+seven axes that make it out-of-distribution.
+
+Not fixed, for two reasons. Regenerating the holdout on the last day would mean
+re-recording a corpus that is frozen precisely so it cannot be tuned, which is a
+worse trade than the inaccuracy. And the cap is a **pilot parameter**, not a
+property of the protocol: encoding Rs 10,000 into ground truth would bake
+today's rollout limit into an eval meant to outlast it. What those seven cases
+test is the gate's arithmetic against the mandate it was given, which is correct
+regardless of the ceiling the scheme currently sets. Stated in EVAL.md as
+weakness 12.
+
+**Claims that were never made, so nothing to check.** TASKS.md flagged two
+positioning claims as high-risk: an Agent Studio lineage claim ("already ships a
+chargeback evidence responder") and a "mirrors Razorpay's published eval
+philosophy" claim. Neither appears in README, EVAL, DECISIONS or FAILURES --
+they were positioning ideas that never made it into a shipped document. **They
+are not to be introduced into the form answers or the video script without being
+verified first**, which is the only reason they are mentioned here at all: the
+fact-check gates them in advance rather than catching them afterwards.
+
+**Cut: an unsourced number.** The README said the agentic trace is unrecoverable
+"ninety days later". Ninety was never sourced -- it was a plausible-sounding
+figure, and it collides confusingly with the 90-day Reserve Pay block window,
+which is a different thing entirely. Replaced with "weeks or months after the
+payment", which is what is actually known and is enough for the argument.
+
+---
+
+### D-038 -- Fastify over Express, written down late and honestly
+
+**Why this entry exists at all.** It was asked, and the honest first answer is
+uncomfortable: **it was not decided, it was inherited.** CLAUDE.md §4 named
+Fastify before any code existed, and D-001 "confirmed the default stack" in one
+clause without arguing the framework. Express is named nowhere as a rejected
+alternative, because it was never actually considered. Every other non-obvious
+choice in this repository has an entry; this one did not, and a panelist asking
+"why Fastify?" would have got "it was in the plan", which is not an answer.
+
+So the entry is written now, and it separates two things that are easy to blur:
+what the reason *was* (there wasn't one) and whether the choice is *defensible*
+(it is, and three things now depend on it).
+
+**What actually turned out to depend on it.**
+
+1. **`app.inject()`, which shaped the integration test.** FAILURES.md F-014 is
+   the bug where `cleanRow` let a null relation through into a `.strict()`
+   schema, 85 of 97 disputes failed ingest, and **all 203 tests stayed green**,
+   because every one of them was pure. The fix was one round-trip test that
+   pushes a real envelope through the real HTTP route into Postgres and reads it
+   back. Fastify's `inject` does that with no port, no listener and no teardown
+   race. On Express the equivalent is `supertest` -- another dependency, binding
+   an ephemeral port -- and the test that closes this project's worst blind spot
+   would have been marginally more annoying to write on the day I was least
+   inclined to write it. That is not a small difference; it is the difference
+   between the test existing and not.
+
+2. **Async error handling.** All fifteen route handlers are `async` and touch
+   Prisma. Fastify awaits handlers and routes a rejection to the error handler.
+   Express 4 does not: an unhandled rejection in a route is a request that hangs
+   until it times out, which on a money path is the worst failure shape
+   available -- no error, no response, no log line. Express 5 fixes this, so on
+   Express 5 the point is moot; on Express 4, which is what most people still
+   reach for, it is a real hazard this project never had to think about.
+
+3. **`rewriteUrl`.** The single-origin deploy (D-035) strips a leading `/api` at
+   the router so the browser sends identical URLs in development and production.
+   Fastify takes that as a constructor option. On Express it is middleware --
+   perfectly possible, and one more ordering-sensitive thing to get right.
+
+Structured logging is built in too, which is how `/health` reports assembly mode
+and pid after F-015, but that one is a convenience rather than a dependency.
+
+**What Express would have been better at.** Familiarity, and nothing else that
+matters here. It is the framework more reviewers can read without thinking, and
+for a project judged partly on whether a stranger can follow the code that is a
+real cost, not a nostalgic one. The plugin ecosystem is larger, though this
+service uses exactly one plugin (`@fastify/static`).
+
+**Rejected: switching now to make the entry moot.** Obviously. The point of
+writing this down late is not to relitigate the choice; it is that an
+undocumented choice is indistinguishable from an unconsidered one, and this one
+was genuinely unconsidered until it was questioned.
+
+**What it taught.** The discipline of "every non-obvious choice gets an entry"
+has a blind spot: **choices made before the log existed do not feel like
+choices.** They arrive as part of the furniture, and the entry never gets
+written because there was no moment that felt like deciding. The scaffold is
+exactly where that happens -- the framework, the ORM, the test runner -- and it
+is also where a panel's first questions land.
+
+---
+
+### D-039 -- same-day commits are folded to at most five, and the fold is not squash theater
+
+**Decided.** Work continues in small increments, and before pushing, a day's
+commits are folded down to at most five. Applied 2026-09-03: Sep 1 went from
+twelve to five, Sep 3 from nine to five. Aug 30 (two) and Aug 31 (four) were
+already inside the limit and were **not touched at all**, so those six commits
+keep their original hashes.
+
+**The objection, stated first, because it is the honest one.** CLAUDE.md §5 said
+"small commits, honest history. **No squash theater**", and this is, on its
+face, squashing. Git history is part of what a Razorpay panel reads, and a
+history that shows a tidy five commits a day when the work happened in twelve is
+a history that has been dressed up. Raised before doing it; the call was made to
+fold anyway, at five rather than the two first proposed.
+
+**Why it is defensible anyway, and what makes the difference.** "Squash theater"
+means a history that misrepresents how the work happened. Four rules keep this
+fold on the right side of that line, and all four are checkable by anyone
+reading the log:
+
+1. **Only adjacent commits are folded.** No reordering, ever. The sequence of
+   work is exactly what it was.
+2. **Every original message survives verbatim**, under its own original subject,
+   inside the folded commit. Nothing written at the time is lost or rewritten --
+   the messages carry the reasoning, and the reasoning is the part being judged.
+3. **Original author dates are kept**, taken from the last commit in each group.
+   Nothing is backdated and nothing moves between days.
+4. **The tree is byte-identical.** Verified: `34c12eba...` before and after, and
+   `git diff backup-before-squash HEAD` is empty. This changed how the work is
+   packaged, not what it is.
+
+The original history is on `backup-before-squash`, alongside
+`backup-before-trailer-strip` from the earlier rewrite, so the unfolded sequence
+remains recoverable rather than destroyed.
+
+**Rejected: folding to two a day**, which was the first request. Twelve commits
+into two would have put unrelated work in one blob -- the gate, the adapter, the
+UI, the eval decomposition and a capture repair -- and a commit that contains
+five unrelated things is genuinely less honest than five commits, whatever its
+message says. Five per day keeps each fold thematically coherent, which is the
+property that made rule 2 possible: the messages inside a folded commit read as
+one piece of work because they *are* one piece of work.
+
+**Rejected: leaving CLAUDE.md alone.** A rule in the project's own instructions
+that the visible history contradicts is worse than either policy on its own,
+because it is the kind of thing a panelist finds in thirty seconds and cannot
+un-see. §5 now states the amended policy and the four constraints, so the file
+and the log agree.
+
+**What it taught.** A rule written as a slogan -- "no squash theater" -- is hard
+to apply, because it names a vice rather than a property. Restating it as
+constraints (adjacent only, messages preserved, dates kept, tree identical)
+turned an argument about whether this counted as theater into four things that
+can just be checked.
