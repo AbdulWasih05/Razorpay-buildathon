@@ -613,3 +613,53 @@ first fix was to kill that PID; the lesson was recorded as an incident rather
 than as a class, so nothing changed and it recurred within a day. The
 countermeasure had to be one a tired person cannot skip, which is why it is in
 `/health` rather than in a note telling me to check `netstat` next time.
+
+---
+
+### F-016 -- I wrote a guard for an invariant that already had one, and broke the original
+
+**When.** 2026-09-03, building the P4.1 eval harness.
+
+**What broke.** `packages/adapter/src/adapter.test.ts` -- green since Day 3 --
+started failing, reporting `eval/harness.test.ts` as a file that reaches the
+submission adapter.
+
+**What actually happened.** Hard rule #2 says eval mode never touches the
+submission adapter and that a test enforces it. Building the harness, I wrote
+that test. I did not check whether it existed. It did, and it was better than
+mine: a static check over the whole `eval/` tree, comments stripped, covering
+both the package import and the client class names.
+
+My duplicate then failed the original in the most literal way available. The
+original searches stripped source for `@praman/adapter`. My version contained
+that string **in executable code** -- inside the regular expression it used to
+run the same search. A guard against naming the adapter, caught naming the
+adapter.
+
+**How diagnosed.** Immediately, and only because the whole suite was run rather
+than the new file alone. `vitest run eval/` was green; `vitest run` was not. The
+failing assertion named the offending file.
+
+**The fix.** Deleted the duplicate. The harness test now covers the two things
+nothing else owns -- byte-reproducibility of the committed report, and that the
+cost model still excludes the disputed amount -- and its docblock says in plain
+words that the one-door invariant lives in the adapter test, with a pointer to
+it.
+
+**Rejected: allowlisting my test file in the original guard.** That was the
+first thing I reached for and it is exactly backwards. The original guard has no
+exemptions, and adding the first one to accommodate a redundant test would trade
+a real invariant for a duplicate of itself.
+
+**What it taught.** Two things, and the second is the one worth keeping.
+
+First: before writing a test for a rule in CLAUDE.md, grep for the rule. The
+hard rules are the invariants most likely to be enforced already, precisely
+because they matter most.
+
+Second, and this is D-029's shape again: a static check that searches for a
+string cannot live in a file containing that string. The fix is not to exempt
+the file -- it is to search for what confers the capability rather than what
+names it. The check now matches an import statement rather than a mention, which
+is both self-consistent and more precise. A docblock explaining why we must not
+reach the adapter is not a way of reaching it.

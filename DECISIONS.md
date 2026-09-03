@@ -1228,3 +1228,103 @@ that has not been written down, and the cost of writing it down is one README
 sentence, which is now owed: payment ids are synthetic and shape-valid, no live
 Razorpay call is ever made, and the contest path is verified against documented
 examples rather than a live dispute.
+
+---
+
+### D-033 -- P4.0(b) is not done, and 31/38 is the number that ships
+
+**Context.** P4.0(b) captures a sibling payment for the a3 duplicate-charge
+class, so a duplicate is visible in the data instead of asserted in corpus
+metadata (F-010). It is worth five winnable disputes: recall 31/38 -> 36/38, or
+82% -> 95%. It was the highest-value item left on the board.
+
+**Decided: it does not happen. The eval freezes at 31/38 and the gap is named.**
+
+**Why, and why the reasoning is not new.** A cutoff for this was written down on
+2026-09-01, deliberately in advance: *if it is not green and re-verified against
+a pid-checked server by early afternoon, freeze at 31/38, record it as a known
+gap with the predicted gain, and move to batch. Deploy does not move. Thirty-one
+honest is worth more than thirty-six at 11pm with the live link untested.* It is
+now the afternoon of 2026-09-03, one day from submission, with the deploy still
+unshipped. The rule fires. The whole value of a pre-decided trim is that it is
+not re-litigated on the day it costs something, so it was not.
+
+**What doing it anyway would have cost.** Unlike P4.0(a), this repair consumes
+new random draws, so it perturbs the seeded stream. That means a full dev
+reseed, a holdout re-record against a model D-023 has since frozen, every
+assembly recording re-minted, `apps/ui/src/__fixtures__/` recaptured, and every
+pinned number in EVAL.md and in the tests re-derived -- with the deploy, the
+README, the form and the dry-run all still ahead. The failure mode is not "it
+does not work"; it is finishing at midnight with a bigger number and an untested
+live link, which is the trade the cutoff exists to refuse.
+
+**What is claimed about the five cases, precisely.** That they exist and are
+attributable is **measured**: the decomposition names them by artifact
+(`duplicate_payment_analysis` x5) and `eval/results.md` lists every one of them
+by dispute id. That closing the gap would move recall to 36/38 is a
+**prediction**, and it is labelled as one wherever it appears. The held-out set
+shows the same gap independently -- one a3 case, same artifact -- which is weak
+evidence that the estimate is not a dev-set artefact.
+
+**Consequence, recorded rather than absorbed.** D-024 called both recall holes
+"deferred repairs, not accepted limitations", and said explicitly that either
+one slipping past P4.0 "converts to an accepted limitation, is written up as one
+in EVAL.md's known weaknesses, and the recall cost is reported rather than
+hidden". That conversion is hereby made for a3. Half of D-024 was right --
+`refund_settlement_proof` was repaired and its before/after is in the eval. The
+other half was optimistic, and saying so is cheaper than a report that quietly
+never mentions it again.
+
+**Rejected: shipping without naming the predicted gain.** A reader who sees
+seven lost-recall cases with `duplicate_payment_analysis` against five of them
+can do the arithmetic. Making them do it buys nothing and costs the benefit of
+having named the number first.
+
+---
+
+### D-034 -- the false-positive cost is the handling, not the disputed amount
+
+**Context.** TASKS.md P4.1 specified false-positive cost as "dispute fee +
+amount + a fixed handling-time charge for each contested-unwinnable", and
+EVAL.md's "Metrics reported" section repeated it. That definition was written
+early, from intuition, and never checked against anything.
+
+**What the docs actually say.** Read 2026-09-03 at
+https://razorpay.com/docs/payments/disputes/: the disputed amount "would be
+deducted from your account and is sent to the customer" **if you lose the
+dispute**. No fee schedule appears anywhere in the public disputes
+documentation.
+
+**Decided.** The disputed amount is **excluded** from false-positive cost. What
+is counted is a representment fee plus reviewer handling, both declared as
+assumptions and both printed in `eval/results.md` beside the number they
+produce.
+
+**Why.** Losing a contest and never contesting end in the same place for the
+amount: it is deducted either way. Charging it to the decision attributes a loss
+the decision did not cause. On this corpus it would have inflated the figure by
+roughly two orders of magnitude -- one false positive would "cost" the full
+disputed value rather than the handling on a case that should never have been
+filed. The marginal cost of the wrong decision is the only thing the decision is
+answerable for, and it is the only thing a merchant would actually save.
+
+This is the third time the live docs have corrected this repository's own
+planning documents rather than the other way round (D-002, D-003, F-005), which
+is exactly what CLAUDE.md hard rule #1 says must happen. TASKS.md and EVAL.md
+are the files that get amended.
+
+**Why the assumptions are stated rather than sourced.** No published Razorpay
+fee figure was found. Rs 1,000 representment plus Rs 500 handling gives Rs 1,500
+per false positive. Both are named in the report, not buried in code, so a
+reader who disagrees can recompute rather than guess what was assumed.
+
+**Honest footnote, and it is in the report too.** False positives are zero on
+both the dev and the held-out set, so on today's numbers the cost is Rs 0 under
+any cost model and neither assumption is load-bearing. The metric still has to
+mean something before it happens to be zero -- otherwise the first non-zero run
+would be measured with a definition nobody had ever examined.
+
+**Rejected: reporting both a "gross" and a "marginal" figure as headlines.** Two
+headline numbers two orders of magnitude apart is an invitation to quote the
+bigger one. The gross figure is still in the report, on its own row, labelled as
+not counted and why.

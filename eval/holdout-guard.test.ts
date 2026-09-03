@@ -111,6 +111,13 @@ describe('no dev code path can reach the held-out config', () => {
     // This guard itself: it names OOD_CONFIG in the pattern it searches for.
     // It imports DEV_CONFIG only and never generates from the holdout config.
     'eval/holdout-guard.test.ts',
+    // The eval harness. This is the one thing licensed to score the holdout,
+    // and the licence is the whole reason the allowlist exists rather than a
+    // blanket ban: "never read during feature development" is a claim about
+    // development, and a held-out set that is never scored measures nothing.
+    // The harness reads it once, at eval time, and cannot regenerate it --
+    // `allowLive` is hard-coded false where the held-out language is replayed.
+    'eval/harness.ts',
   ];
 
   function sourceFiles(): string[] {

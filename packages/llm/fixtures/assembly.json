@@ -40,6 +40,19 @@
       "recordedAt": "2026-08-31T19:56:36.410Z"
     },
     {
+      "key": "1918af55060d76d2ea8e35e424243ead99cbdbca982a5ce8fe93695826afe38c",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute reason UPI 128 (unauthorised). Evidence supports contest. Invoice_breakdown shows charge of INR 648,300 for 2 domestic flight tickets. Authorisation_evidence confirms active mandate (agt_wayfinder_0018) with consent recorded at 2026-06-02T23:30:00Z, prior to payment. Mandate facts verify amount is within the 1,030,104 cap and validity window. Customer_communication (4 turns) shows customer explicitly requested a flight to Delhi, confirmed the specific option and price, and acknowledged the use of the saved UPI mandate. The transaction aligns with the customer's explicit instruction and pre-existing mandate terms.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-03T09:13:06.451Z"
+    },
+    {
       "key": "19539c6e19ec1abfd978ffd0215a2a9ba913abb5b6a63bde7ec85c14c7fc6460",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -170,6 +183,19 @@
       "recordedAt": "2026-08-31T20:15:25.704Z"
     },
     {
+      "key": "3cf509548850d2b9a119fcdd1634fb52b04028b57c00f6be875e96989feae9d8",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Order placed 2026-06-07 for INR 12,032.00. The order_record confirms the status is 'refunded'. A refund was initiated on 2026-06-13 and settled on 2026-06-16, as shown in the refund_settlement_proof (UTR: utr_PGZYxUDwrc3ONU). The refund_record verifies the full amount of INR 12,032.00 was returned. The customer has already received the refund for this transaction. The dispute reason (UPI 1061) is resolved by the completion of the refund process documented in the attached settlement and order records.\"\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-03T09:12:04.784Z"
+    },
+    {
       "key": "3e4002b1bb9d7487f69db76f154e1e2ad93d0fe9ff4cfd5fc94eca6ab8c97bd9",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -222,6 +248,45 @@
       "recordedAt": "2026-08-31T20:13:25.774Z"
     },
     {
+      "key": "58d36710d01ffffe395a522f7b30a3f0caeea810c0e378a59ad852fb5151520b",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 1064. Customer purchased goods delivered on 2026-06-09. Shipment record (trk_KL4XQL0FwbU9yJ) shows status 'delivered' via Ekart, shipped 2026-06-07. Delivery proof (pod_adwBcTCZ8jw5qJ) confirms receipt at 2026-06-09T21:12:00.000Z. Evidence supports that the order was fulfilled and received as per the transaction.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-03T09:11:48.599Z"
+    },
+    {
+      "key": "5f026012353cf40214a1477de09b308b8a1a5e00f26015da71302c57ed33999c",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 128 (unauthorised). Customer purchased 2 domestic flight tickets for INR 1,212,800 on 2026-06-02. Invoice breakdown confirms the charged amount matches the order total. Authorisation evidence shows an active mandate with consent recorded at 14:38:00 UTC, prior to payment initiation. The orchestration log confirms the sequence: intent received, item selected, mandate checked, payment initiated, and captured. Mandate facts verify the charge was within the limit and validity window. Customer communication from 2026-06-08 shows the customer explicitly confirmed the purchase and instructed the agent to proceed with payment using the saved UPI mandate. The evidence demonstrates explicit customer consent and a valid mandate, directly addressing the unauthorised transaction claim.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-03T09:12:37.635Z"
+    },
+    {
+      "key": "6a3e31a2ed1e15b0acafceefcffd2d5395b861ce18224ddfa7caf2fc464c5556",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a deep cleaning visit and was quoted Rs 1,958. The customer explicitly confirmed the purchase of this specific service for the stated amount. The agent processed the payment via a saved UPI mandate, and the customer acknowledged the payment completion.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-03T09:12:43.730Z"
+    },
+    {
       "key": "6d3211ce0a159825df358178d17a46eaa5d28bad386a5df1cc48da25e50ebd25",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -246,6 +311,19 @@
         "attempts": 2
       },
       "recordedAt": "2026-08-31T20:14:32.589Z"
+    },
+    {
+      "key": "70063be190294f79f245607a4e1b91925bc562cb357ce6c588152f437ac6992b",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute reason UPI 1064. Goods were shipped on 2026-06-22 via Bluedart (tracking trk_Fizs9UrC1E5qnK). The shipment record confirms status 'delivered'. Delivery proof (pod_hUZU7WngZqdK1O) records delivery completion at 2026-06-25T03:15:00.000Z. The evidence demonstrates the order was fulfilled and received by the customer. No customer communication is attached, as standard checkout does not capture such logs. The provided delivery and shipment records satisfy the requirement to prove goods were delivered.\"\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-03T09:11:45.888Z"
     },
     {
       "key": "74bad37aa6ce1d58ea76b0116bbcf3c59393e6625951562aa7bb557857d9abf1",
@@ -285,6 +363,19 @@
         "attempts": 1
       },
       "recordedAt": "2026-08-31T19:56:38.846Z"
+    },
+    {
+      "key": "7bb9af5f8d8c1947b8506295f18824e858633c082a42dffaf2a71d5b668c6dc0",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 1064. Customer purchased goods shipped on 2026-06-22 via Ekart (tracking trk_V6VOL4tGBE7MFi). Shipment record confirms status 'delivered'. Delivery proof (pod_pON6XC1aNMZI3i) records delivery at 2026-06-24T15:03:00.000Z. Evidence demonstrates the order was fulfilled and received by the customer. No customer communication is attached, as standard checkout does not capture such logs. The provided delivery and shipment records satisfy the requirement to prove goods were delivered.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-03T09:11:46.659Z"
     },
     {
       "key": "7c7b39c4473e665ec3c3242cb85b7358915d8e8591cfb1b9eb198f9a6f6ab42e",
@@ -365,6 +456,19 @@
       "recordedAt": "2026-08-31T20:13:18.620Z"
     },
     {
+      "key": "8f5a602e6451a2b535d39cf2dc46246b6961786585f78d145a861c13c918d2fc",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 1064. Customer purchased goods shipped on 2026-06-20 via Delhivery (tracking trk_0zoxUNcbEnG3qL). Shipment record confirms status 'delivered'. Delivery proof (pod_4Z6ZWLMf2Pwl0v) records successful delivery on 2026-06-21 at 19:44 UTC. Evidence demonstrates the order was fulfilled and received as per the transaction timeline. No customer communication is attached, as standard checkout does not capture such logs.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-03T09:12:03.900Z"
+    },
+    {
       "key": "911cd757683b5f93d71e8a9691f5c8e368a893a5d87327b29c4fdf660bdf42e4",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -376,6 +480,19 @@
         "attempts": 2
       },
       "recordedAt": "2026-08-31T20:16:28.775Z"
+    },
+    {
+      "key": "92804231c8be189523e504fbbec197d659da03a5541c2ccb1cf13834f50d7ad6",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested the agent to handle an annual studio membership purchase. The agent confirmed the amount (Rs 11,526) and the payment method (saved UPI mandate), and the customer instructed the agent to proceed without further confirmation. The payment was processed and completed.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-03T09:12:15.520Z"
     },
     {
       "key": "95687cba026cb7de9b191f1cbeb7929e4caf90b6b56871558b0613f6233b99df",
@@ -402,6 +519,19 @@
         "attempts": 2
       },
       "recordedAt": "2026-08-31T20:15:00.503Z"
+    },
+    {
+      "key": "a4b2f9cef805d6112246ba62bb2d669f5b362edc659b3fae2c1131c9c9876cf1",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute reason UPI 1064. Customer purchased goods delivered on 2026-06-08. Shipment record (trk_ApO9wjYjKhWpcB) shows status 'delivered' via Ekart, shipped 2026-06-08T00:07:00Z. Delivery proof (pod_0LWdgHeT0xMTCz) confirms receipt at 2026-06-08T18:24:00Z. Evidence demonstrates the order was fulfilled and delivered to the customer. No customer communication is attached as none was captured during checkout.\"\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-03T09:11:43.541Z"
     },
     {
       "key": "a6629d403b764cf768413c19105754cde31357dd693b14169af5c2b532d3a292",
@@ -469,6 +599,19 @@
       "recordedAt": "2026-09-01T11:06:14.282Z"
     },
     {
+      "key": "b59c05c6a9905a64b92055cfaf7c7d77ba187399031eaca11b4636877f92ed9f",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 1064. Customer purchased goods shipped on 2026-06-20 via Bluedart (tracking trk_7QtWZYj43apCl2). Shipment record confirms status 'delivered'. Delivery proof (pod_RipAlgrOFiH8d2) records successful delivery at 2026-06-21T08:38:00.000Z. Evidence demonstrates the order was fulfilled and received by the customer. No customer communication is attached as none was captured during checkout.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-03T09:11:47.963Z"
+    },
+    {
       "key": "b79301c82c3591fcee2353ee554babb4885b9f01ec5cc5b40f62e4593ac118a5",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -480,6 +623,19 @@
         "attempts": 1
       },
       "recordedAt": "2026-09-01T11:06:12.215Z"
+    },
+    {
+      "key": "badf5dd0157366e2ecb28e7447457e20e673408eb4471c215eb59343921f85f2",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 1064. Customer purchased goods shipped on 2026-06-18 via Delhivery (tracking trk_1cbmpG9i9mHY3M). Shipment record confirms status 'delivered'. Delivery proof (pod_LuXQ1OH2PujQvM) records successful delivery on 2026-06-21 at 15:36 UTC. Evidence demonstrates the order was fulfilled and received as per the transaction. No customer communication is attached, but physical delivery is confirmed by carrier and POD.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-03T09:11:49.222Z"
     },
     {
       "key": "bb17f7da3fbfe0ea50b67b66c7edbda1827f39434a9a1e34cabfb06c30bc5f9a",
@@ -545,6 +701,32 @@
         "attempts": 2
       },
       "recordedAt": "2026-08-31T20:16:42.269Z"
+    },
+    {
+      "key": "cf9c0147ae9b88a6688032b937e5fefd02431dca541c74b0b1b052ef54427bee",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested the booking of a specific domestic flight for Rs 12,128. The agent confirmed the price and asked for authorization to use a saved UPI mandate. The customer explicitly confirmed the purchase and instructed the agent to proceed with payment, which was subsequently completed.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-03T09:12:29.649Z"
+    },
+    {
+      "key": "cfb51c5c92cc0d37f119c15c4ff4b346c23bfb61da36e81265627cee1296da23",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Order placed 2026-06-05 for INR 19,220.00. Dispute reason UPI 1061 indicates a refund was not received. Evidence shows the refund was processed. order_record confirms status 'refunded'. refund_record confirms orderStatus 'refunded' for INR 19,220.00. refund_settlement_proof confirms settlement of INR 19,220.00 on 2026-06-14 (UTR: utr_noh6lONsLyl4Ta). The full amount was refunded and settled. This directly addresses the dispute reason.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-03T09:12:08.982Z"
     },
     {
       "key": "d0083be86b7316a8bb05db67d3d2247bb09b951d4319e2e8ec9f1099f6b0cbc2",
@@ -625,6 +807,58 @@
       "recordedAt": "2026-08-31T20:16:00.128Z"
     },
     {
+      "key": "e16fcdaa805379293ddc042122e1ed78b8cfa2624092b5b578715b75a7738db0",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 1064. Item shipped via Bluedart on 2026-06-23 (shipment_record). Delivered on 2026-06-24 at 22:12 UTC (delivery_proof). Evidence confirms physical delivery to the customer. No customer communication logs exist for this transaction.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-03T09:11:44.193Z"
+    },
+    {
+      "key": "e51d3237f76f1bd57853c24dfd98272e7d40f57336854fc54842c1176c4f7676",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested a flight to Delhi at 2pm and the agent identified a specific option for Rs 6,483. The customer explicitly confirmed the booking and the specific price. The agent then stated that the saved UPI mandate would be used to pay.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": []\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-03T09:12:58.238Z"
+    },
+    {
+      "key": "e6a17a589e9c68b101dc0a7c7dddbd38d54f4cbb94a253b0ca45a1d3f36f7fbb",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 1064. Customer purchased goods shipped on 2026-06-15 via Delhivery (tracking trk_teZw9y3Cbal6Lo). Shipment record confirms status 'delivered'. Delivery proof (pod_DwVaL6FWreH2Do) records successful delivery on 2026-06-18 at 08:23 UTC. Evidence demonstrates the order was fulfilled and received by the customer. No customer communication logs are attached as none were captured during checkout.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-03T09:11:47.344Z"
+    },
+    {
+      "key": "e79a55b68d31e6a42bfbd14c2b5106292c3504b7cce6db65124fbe14f68f55d2",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Order placed 2026-06-05 for INR 698,600. Dispute reason UPI 1061 (Refund not received). Evidence shows the refund was processed. order_record confirms status 'refunded'. refund_record shows amount 698,600 refunded. refund_settlement_proof provides UTR utr_iz2JYZ4TeRCzIR, initiated 2026-06-11, settled 2026-06-14. The refund was settled to the customer's account on 2026-06-14. This directly addresses the claim that the refund was not received.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-03T09:12:05.716Z"
+    },
+    {
       "key": "e7a7b61434b1d74918a71eccf6061e2666ae77e8ce94ef9091b8423216485720",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -649,6 +883,19 @@
         "attempts": 2
       },
       "recordedAt": "2026-08-31T20:16:14.845Z"
+    },
+    {
+      "key": "e8e27639d805e1b3f8bf71bdc2558eabd0a617b63057be49633483d9022f652e",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 128 (unauthorised/mandate). Customer purchased an annual studio membership for INR 1,152,600 on 2026-06-02. Evidence supports the charge. Authorisation log shows active mandate, consent recorded at 16:05:00Z, and orchestration actions confirming intent, selection, and payment capture. Mandate facts confirm the amount is within the 1,396,975 cap and validity window. Invoice breakdown matches the charged amount. Customer communication log (5 turns) shows the customer requested the purchase, the agent confirmed the amount and saved UPI mandate, and the customer instructed the agent to proceed. The evidence demonstrates explicit consent and valid mandate usage, directly addressing the dispute reason.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-03T09:12:23.327Z"
     },
     {
       "key": "ec6c867b4cfed227d433cdfd5d086150e10737b4956a354ed128dc672c18e413",
@@ -677,6 +924,19 @@
       "recordedAt": "2026-08-31T20:12:27.944Z"
     },
     {
+      "key": "f13149dfb42f4ec958896d5eee31ef246823c2bf48a58c9229d9192ad820fd6a",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 1064. Customer purchased goods delivered on 2026-06-23. Shipment record (trk_YRSdkZmjo3EViH) shows status 'delivered' via Delhivery, shipped 2026-06-22. Delivery proof (pod_0D2FibiDMfmzwP) confirms receipt at 2026-06-23T00:07:00Z. Evidence supports that goods were delivered to the customer as per the transaction.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-03T09:11:44.934Z"
+    },
+    {
       "key": "f159710275a2a3ec6eb463804c942cb0e122b3b7301e5f564ea45f4ae0905c4e",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -688,6 +948,19 @@
         "attempts": 2
       },
       "recordedAt": "2026-08-31T20:15:53.977Z"
+    },
+    {
+      "key": "f610f7b5821c8831e6c6a0ef67bb08a6aafeb76f6c77063d969a8538b985ebd7",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 128. Customer purchased one deep cleaning visit for INR 195,800 on 2026-06-02. Evidence supports the transaction. invoice_breakdown confirms the line item and total charged. authorisation_evidence shows an active mandate, consent recorded at 15:40:00 UTC, and orchestration steps including item selection and payment capture. Mandate facts confirm the charge is within the 560,733 INR cap and validity window, with consent preceding payment. customer_communication logs a 5-turn interaction starting 2026-06-11 where the customer requested the service, confirmed the quote, and acknowledged payment completion. The evidence demonstrates explicit customer consent and valid mandate usage, directly addressing the dispute reason.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-03T09:12:55.689Z"
     },
     {
       "key": "f896cb073edff86c7c0c99c97b05b86a1884ba06bbdedf133bc3cf577e53406f",
