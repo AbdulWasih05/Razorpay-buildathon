@@ -45,3 +45,17 @@ pre { white-space: pre-wrap; word-break: break-word; font-size: 12px;
 .approve button { font: inherit; padding: 9px 14px; cursor: pointer;
   border: 1px solid currentColor; background: transparent; color: #16a34a; font-weight: 700; }
 .approve button:disabled { color: var(--muted); cursor: not-allowed; }
+
+/* The eval results page. Reading-width prose with tables that can overflow
+   sideways rather than squeezing a column into one character per line. */
+.report { max-width: 68rem; }
+.report h2 { margin: 28px 0 8px; font-size: 17px; border-bottom: 1px solid var(--line);
+  padding-bottom: 4px; }
+.report h3 { margin: 20px 0 6px; font-size: 14px; }
+.report p { line-height: 1.55; max-width: 46rem; }
+.report ul { line-height: 1.55; max-width: 46rem; }
+.report table { display: block; overflow-x: auto; width: auto; margin: 10px 0 16px; }
+.report th, .report td { border-bottom: 1px solid var(--line); padding: 5px 12px 5px 0;
+  text-align: left; white-space: nowrap; vertical-align: top; }
+.report th { font-weight: 700; }
+.report code { font-size: 12px; }

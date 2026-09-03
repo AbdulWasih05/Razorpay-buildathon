@@ -1,3 +1,6 @@
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+
 import Fastify, { type FastifyInstance } from 'fastify';
 import { Prisma, PrismaClient } from '@prisma/client';
 import {
@@ -22,6 +25,9 @@ import { approveAndSubmit, listQueue, readDispute, runPipeline } from './review.
  * freshly started server from a stale one still holding the port (F-015).
  */
 const STARTED_AT = new Date().toISOString();
+
+/** The committed eval report, served by `GET /eval/report`. */
+const EVAL_REPORT_PATH = fileURLToPath(new URL('../../../eval/results.md', import.meta.url));
 
 const asJsonValue = (value: unknown): Prisma.InputJsonValue => value as Prisma.InputJsonValue;
 
@@ -88,6 +94,33 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
     startedAt: STARTED_AT,
     pid: process.pid,
   }));
+
+  /**
+   * The eval report, served verbatim.
+   *
+   * TASKS.md P4.2 asks for a metrics page whose acceptance criterion is that it
+   * "matches `eval/results.md` numbers exactly". The cheapest way to guarantee
+   * that is not to recompute the numbers carefully -- it is to have no second
+   * computation at all. This hands over the committed report as bytes and the
+   * UI renders it, so the dashboard and the report cannot drift apart, because
+   * they are the same artifact.
+   *
+   * It also means every caveat travels with every number for free: the ₹0
+   * false-positive cost arrives with the paragraph explaining what zero does
+   * and does not show, which is exactly what hard rule #6 asks for and exactly
+   * what a hand-built dashboard would have quietly dropped.
+   */
+  app.get('/eval/report', async (_request, reply) => {
+    try {
+      const report = await readFile(EVAL_REPORT_PATH, 'utf8');
+      return reply.type('text/markdown; charset=utf-8').send(report);
+    } catch {
+      return reply.code(404).send({
+        error: 'no eval report on disk',
+        detail: `expected ${EVAL_REPORT_PATH}. Run: pnpm eval`,
+      });
+    }
+  });
 
   // -------------------------------------------------------------------------
   // Capture

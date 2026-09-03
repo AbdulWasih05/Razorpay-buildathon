@@ -9,6 +9,7 @@ import {
   type DisputeDetail,
   type QueueItem,
 } from './api.js';
+import { Report } from './Report.js';
 import './styles.css';
 
 /**
@@ -37,6 +38,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<'all' | 'drafted' | 'abstained' | 'submitted'>('all');
+  const [view, setView] = useState<'queue' | 'metrics'>('queue');
 
   const reload = useCallback(async () => {
     try {
@@ -85,6 +87,26 @@ export function App() {
     return acc;
   }, {});
 
+  if (view === 'metrics') {
+    return (
+      <main>
+        <header>
+          <h1>Praman — eval results</h1>
+          <p className="sub">
+            This page renders <code>eval/results.md</code> verbatim and computes nothing of its
+            own, so it cannot disagree with the report (P4.2).
+          </p>
+        </header>
+        <nav className="toolbar">
+          <button className="chip" onClick={() => setView('queue')}>
+            ← back to the review queue
+          </button>
+        </nav>
+        <Report />
+      </main>
+    );
+  }
+
   return (
     <main>
       <header>
@@ -108,6 +130,9 @@ export function App() {
             ))}
           </select>
         </label>
+        <button className="chip" onClick={() => setView('metrics')}>
+          eval results
+        </button>
         <span className="counts">
           {(['all', 'drafted', 'abstained', 'submitted'] as const).map((key) => (
             <button

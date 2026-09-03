@@ -97,6 +97,22 @@ export async function approve(
   return json(response);
 }
 
+/**
+ * The eval report, as markdown.
+ *
+ * Not JSON, and not a metrics object: the metrics page renders the committed
+ * `eval/results.md` verbatim so it cannot drift from the report it claims to
+ * match (P4.2). Parsing it into numbers here would reintroduce the second
+ * computation the design exists to avoid.
+ */
+export async function fetchEvalReport(): Promise<string> {
+  const response = await fetch('/api/eval/report');
+  if (!response.ok) {
+    throw new Error(`the API returned ${response.status} for the eval report`);
+  }
+  return response.text();
+}
+
 export function formatRupees(subunits: number): string {
   return `₹${(subunits / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 }
