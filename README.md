@@ -1,6 +1,6 @@
 # Praman
 
-**Live demo: https://PRAMAN-DEPLOY-URL-PENDING** · [DECISIONS](DECISIONS.md) · [FAILURES](FAILURES.md) · [EVAL](EVAL.md) · [eval/results.md](eval/results.md)
+**Live demo: https://PRAMAN-DEPLOY-URL-PENDING** — hosted free, so it sleeps after 15 minutes idle and the first request takes about a minute to wake it. · [DECISIONS](DECISIONS.md) · [FAILURES](FAILURES.md) · [EVAL](EVAL.md) · [eval/results.md](eval/results.md)
 
 A **defense-only** dispute evidence responder for India's UPI agentic stack. It
 reads a dispute in Razorpay's documented Disputes API schema, assembles the
@@ -203,6 +203,11 @@ pnpm api:dev                  # API on :3000
 pnpm seed                     # 100 disputes, through the capture endpoint
 pnpm ui:dev                   # review queue on :5173
 ```
+
+Deploying it is one file: [`render.yaml`](render.yaml) declares the web service
+and the database, `pnpm start` applies migrations before booting, and
+`SEED_ON_BOOT` fills an empty store through the capture endpoint. See D-035 for
+why the UI ships from the API process and D-036 for what the free plan costs.
 
 Then, with no database and no API key at all:
 

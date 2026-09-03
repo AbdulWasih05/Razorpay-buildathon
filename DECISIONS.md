@@ -1382,3 +1382,64 @@ product. If this were real, the split comes back.
 **Rejected: keeping the plan because it was the plan.** The plan was written to
 be executed, not obeyed. What it was actually protecting -- a live link in the
 first line of the README -- is better served by this.
+
+---
+
+### D-036 -- Render, not Railway, and the cold start is stated rather than hidden
+
+**Context.** D-035 settled the shape of the deploy -- one origin, one service --
+and named Railway because TASKS.md did. Railway's free tier is now trial credit
+rather than a standing free allowance, so the host was reconsidered on cost.
+Three candidates, all checked against their own documentation on 2026-09-03
+rather than from memory.
+
+**Rejected: InsForge.** It is a backend-as-a-service -- Postgres, auth, storage,
+Deno edge functions, a model gateway -- not a host for an arbitrary Node
+process. Praman is a Fastify server with a Prisma client and a pnpm workspace;
+running it there means rewriting the API as edge functions the day before
+submission. Ruled out on fit, not on quality.
+
+**Rejected: AWS, despite having credits.** App Runner plus RDS, or an EC2 box
+running the same compose file, both work and both avoid every free-tier
+limitation below. They also cost an afternoon: a VPC, a security group, a
+managed database, and TLS, which App Runner gives free and a bare EC2 instance
+does not. This is D-035's argument applied a second time -- the question the day
+before a deadline is not which is better designed but which has fewer ways to be
+broken at 9pm -- and it points the same way. **If the demo has to outlive the
+judging window, this is the migration**, and it is a `render.yaml` swapped for a
+task definition, not a rewrite.
+
+**Decided: Render, on the free plan, declared in a committed `render.yaml`.**
+One web service and one Postgres, in one blueprint, in the repository. A
+reviewer can read how it is deployed instead of taking a screenshot of a
+dashboard on trust, and a redeploy is not a sequence of clicks anybody has to
+remember.
+
+**What the free plan actually costs us, from Render's own docs (read
+2026-09-03).**
+
+- **The service spins down after 15 minutes without traffic, and takes about a
+  minute to wake.** This is the real cost and it lands on the worst possible
+  reader: the README's first line is a live link and the first person to follow
+  it is plausibly an automated screener with a timeout. Three responses, in
+  order: the link is labelled with the wake-up delay so a slow first load reads
+  as documented rather than broken; the free plan includes 750 instance-hours a
+  month against 744 in the longest month, so keeping the one service warm is
+  inside the published allowance rather than a trick played on it; and if the
+  cold start ever costs us a reader, the fix is $7, not an architecture change.
+- **A free Postgres expires 30 days after creation**, with a 14-day grace
+  period. Judging is inside that window and the database is seeded from a
+  deterministic corpus on boot, so expiry costs one command, not any data. It is
+  written down here so that in October it reads as a known end-date rather than
+  as an outage.
+- 1 GB of storage, which the corpus does not approach.
+
+**Why say all of this out loud.** The honesty taxonomy applies to the deploy as
+much as to the metrics. "Live demo" on a plan that sleeps is a claim with a
+condition attached, and a reader who waits sixty seconds for a blank page and
+was told nothing has been misled by omission -- which is the same failure mode
+as an unlabelled simulated outcome, in a different place.
+
+**Consequence.** `nixpacks.toml` and `railway.json` are deleted rather than left
+beside `render.yaml`. Configuration for a host nobody deploys to is an invitation
+to ask which one is real.

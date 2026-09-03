@@ -1,0 +1,49 @@
+# Render blueprint (TASKS.md P4.3, DECISIONS.md D-035, D-036).
+#
+# One web service and one database. The Fastify process serves the API, the
+# Prisma client and the built review UI from a single origin -- there is no
+# separate front-end deploy, no CORS allowlist and no rewrite rule holding a
+# hostname that only exists after the other half has shipped.
+#
+# There is no TypeScript build step anywhere in this repository (D-001):
+# packages export `src/index.ts` and run under `tsx`. The build phase generates
+# the Prisma client and the Vite bundle, and nothing else.
+#
+# `pnpm start` runs `prisma migrate deploy` before booting, so the schema is
+# applied by the same command that starts the process and cannot be forgotten.
+
+services:
+  - type: web
+    name: praman
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm db:generate && pnpm ui:build
+    startCommand: pnpm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: '20'
+      - key: DATABASE_URL
+        fromDatabase:
+          name: praman-db
+          property: connectionString
+      # Marks this instance as a public demo: the "simulated data" banner and
+      # the rate-limited release/reset triggers.
+      - key: DEMO_MODE
+        value: 'true'
+      # Seeds the 100-dispute corpus through POST /evidence-pack on first boot,
+      # and only when the store is empty (D-012, D-035).
+      - key: SEED_ON_BOOT
+        value: 'true'
+      # ASSEMBLY_MODE is deliberately unset. Replay is the default, and the
+      # deployed demo must never make a live model call: the drafts it shows are
+      # the recorded ones the eval scored, which is what makes the demo and the
+      # numbers the same system. No API key is needed, or wanted, here.
+
+databases:
+  - name: praman-db
+    plan: free
+    region: singapore
+    databaseName: praman
+    user: praman

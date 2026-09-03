@@ -44,6 +44,7 @@ export function App() {
   const [filter, setFilter] = useState<'all' | 'drafted' | 'abstained' | 'submitted'>('all');
   const [view, setView] = useState<'queue' | 'metrics'>('queue');
   const [health, setHealth] = useState<Health | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -95,13 +96,19 @@ export function App() {
   async function onApprove(): Promise<void> {
     if (!detail) return;
     setBusy(true);
+    setNotice(null);
     try {
       const result = await approve(detail.externalId, reviewer);
       setError(null);
       await reload();
       setDetail(await fetchDispute(detail.externalId));
-      window.alert(
-        `Submitted via ${result.adapter}${result.simulated ? ' (simulated)' : ''} with ${result.documentCount} documents.`,
+      // Inline, not `window.alert`. A modal dialog blocks the page until it is
+      // dismissed, which makes the one action that matters the one thing a
+      // screenshot, a screen recording or an automated click-through cannot get
+      // past -- and it hides the state change it is announcing behind itself.
+      setNotice(
+        `Submitted via ${result.adapter}${result.simulated ? ' (simulated outcome)' : ''} ` +
+          `with ${result.documentCount} document${result.documentCount === 1 ? '' : 's'}.`,
       );
     } catch (caught) {
       setError((caught as Error).message);
@@ -151,6 +158,7 @@ export function App() {
       ) : null}
 
       {error ? <p className="error">{error}</p> : null}
+      {notice ? <p className="notice">{notice}</p> : null}
 
       <section className="toolbar">
         <label>

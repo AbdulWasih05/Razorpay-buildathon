@@ -663,3 +663,115 @@ the file -- it is to search for what confers the capability rather than what
 names it. The check now matches an import statement rather than a mention, which
 is both self-consistent and more precise. A docblock explaining why we must not
 reach the adapter is not a way of reaching it.
+
+---
+
+### F-017 -- the demo broke on exactly the case worth demonstrating
+
+**When.** 2026-09-03, first end-to-end run of the deploy path against a live
+database.
+
+**What broke.** `POST /demo/release-dispute` twice, then the pipeline over the
+two released disputes:
+
+```
+demo-dsp_dev-v1_b3_501 -> abstained
+demo-dsp_dev-v1_b1_500 -> error
+```
+
+The b3 worked. The b1 -- the winnable one, the one the demo exists to show --
+threw `ReplayMissError`.
+
+**How diagnosed.** Immediately, because the failure is loud by design. Replay
+mode refuses to fall back to a live call, so a missing recording stops the run
+instead of quietly producing a different answer. The error named the prompt and
+the key.
+
+**The cause is a consequence of a decision that was right.** Released disputes
+are generated at indices far above the seeded corpus so a visitor pressing the
+button cannot disturb the 100 disputes the eval measures. That isolation is
+correct and stays. What nobody followed through is that those indices therefore
+have **no recorded model responses**, and the deployed instance runs in replay
+mode with no API key.
+
+The asymmetry in which half worked is the whole lesson. b3's mandate is expired,
+so the gate declines it and **no model is called at all** (D-025) -- it was
+offline-safe for free. b1 clears the gate, so it needs a letter drafted, so it
+needs a recording. Every dispute the product would actually contest was the
+broken half, and every dispute it declines worked perfectly. A smoke test that
+only checked "does the button do something" would have passed.
+
+**The fix.** `scripts/record-demo.ts` walks the release pool on the same
+generator, collector, gate and assembler the API uses, and records what the gate
+clears -- 9 of 20; the other 11 are gate abstentions that need nothing. Run with
+no flag it is a dry run that exits non-zero if any release would miss, so this
+cannot silently regress. Recording is additive and on the frozen model of record
+(D-023): no scored dispute's key is touched.
+
+That last claim is checked rather than asserted. `eval/results.md` regenerated
+after the 13 new recordings is byte-identical -- **except** that the header had
+been reporting the fixture file's total size, which is incidental to the run and
+made the report change whenever an unrelated recording was added. That number is
+now gone from the header, which is the right fix in its own right: a report
+should not vary with something none of its numbers depend on.
+
+**What it taught.** The isolation boundary and the replay boundary were each
+correct and were designed by different pieces of reasoning, and the bug lived in
+the space between them -- which is where F-014 lived too, and F-013. Neither
+boundary is wrong; nothing that tests either one in isolation can see it.
+
+The practical rule: when a feature deliberately generates data outside the range
+everything else covers, ask what else is indexed by that range. Recordings were.
+
+---
+
+### F-018 -- a blank white page, an empty console, and every check passing
+
+**When.** 2026-09-03, the click-through of the deployed UI -- the first time
+anyone had opened the review panel in a browser rather than asserting about it.
+
+**What broke.** The page rendered nothing. White, no error banner, and the
+console had **not one message in it**. `curl /` returned the index page with a
+200. `curl /health` was fine. The queue endpoint returned 100 disputes. Every
+test was green, including the twelve that render the panel to static markup.
+
+**How diagnosed.** By asking what the page asks for that a `curl /` does not.
+The index it served referenced `/assets/index-Ee_RABDo.js`; that file was on
+disk; requesting it returned **404**.
+
+`@fastify/static` had been registered with `wildcard: false`, which makes it
+enumerate the directory and register one route per file **at boot**. The route
+table is therefore a snapshot of the directory as it was when the process
+started. The UI had been rebuilt after the server started, Vite hashes its
+filenames, and the new names were in no route table.
+
+Nothing misbehaved. The SPA fallback did exactly what it was written to do:
+refuse to serve HTML for a path with a file extension, because returning a page
+where a script was requested is the classic version of this bug and produces
+`Unexpected token '<'` from somewhere unrelated. It correctly 404'd. The result
+of every component behaving correctly was a blank screen.
+
+**The fix.** Drop `wildcard: false` and let the plugin resolve each request
+against the disk. A wildcard cannot go stale. Six behaviours re-verified after
+the change: index, a real asset, a missing asset, an SPA route, an API route,
+and an unknown API route -- 200, 200, 404, 200, 200, 404, with the right content
+types.
+
+**Why it did not bite in production, and why that is not a defence.** The build
+phase runs before the start phase on any host, so a deployed instance never has
+a stale snapshot. The bug was reachable only by rebuilding the UI against a
+running API -- which is exactly what a person preparing a demo does, at the worst
+possible moment, having changed one line of copy.
+
+**What it taught.** This is the entry that justifies the click-through being a
+task rather than a formality. The suite renders the panel to markup against real
+captured payloads and it is a good suite -- it simply cannot see whether the
+browser ever receives the bundle. There was no console message to find, no
+failing test to chase, and no server error: the only signal this bug produced
+anywhere in the system was pixels, and the only way to read pixels is to look.
+
+Second, smaller: the same session replaced a `window.alert` on the approve path
+with an inline notice. A modal blocks the page until dismissed, which makes the
+one action that matters the one thing a screenshot, a screen recording or an
+automated click-through cannot get past -- and it covers the state change it is
+announcing. It was found for the same reason: someone finally clicked the button.

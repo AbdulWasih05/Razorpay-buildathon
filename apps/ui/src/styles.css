@@ -67,3 +67,5 @@ pre { white-space: pre-wrap; word-break: break-word; font-size: 12px;
 .demo code { color: inherit; }
 .demo-actions { display: block; margin-top: 8px; }
 .demo-actions .chip { margin-right: 8px; }
+.notice { border: 1px solid #16a34a; color: #16a34a; padding: 8px 10px; margin: 0 0 12px;
+  font-size: 13px; }

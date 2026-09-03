@@ -483,7 +483,13 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
    * are the product.
    */
   if (existsSync(UI_DIST)) {
-    void app.register(fastifyStatic, { root: UI_DIST, prefix: '/', wildcard: false });
+    // `wildcard: false` would register one route per file **at boot**, which
+    // makes the route table a snapshot of the directory as it was when the
+    // process started. Rebuild the UI without restarting and every hashed asset
+    // 404s while `index.html` still serves, so the page goes blank with nothing
+    // in the console -- which is exactly how it was found. A wildcard resolves
+    // each request against the disk instead, and cannot go stale.
+    void app.register(fastifyStatic, { root: UI_DIST, prefix: '/' });
 
     app.setNotFoundHandler((request, reply) => {
       const asked = (request.raw as { originalUrl?: string }).originalUrl ?? request.url;

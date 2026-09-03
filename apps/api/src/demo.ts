@@ -28,7 +28,7 @@ import { captureEvidencePack } from './capture.js';
  */
 
 /** Demo disputes start here: far above the 100 seeded corpus indices. */
-const DEMO_INDEX_BASE = 500;
+export const DEMO_INDEX_BASE = 500;
 
 /** Even with unlimited patience, the queue cannot grow past this. */
 export const DEMO_RELEASE_CAP = 20;
@@ -116,7 +116,7 @@ export interface ReleasedDispute {
  * getting a contest and an abstention. That is the demo beat -- same code, the
  * gate read the mandate -- and it is worth more than a random draw.
  */
-const DEMO_SEQUENCE = ['b1', 'b3', 'a4', 'a1', 'b2'] as const;
+export const DEMO_SEQUENCE = ['b1', 'b3', 'a4', 'a1', 'b2'] as const;
 
 export async function countDemoDisputes(prisma: PrismaClient): Promise<number> {
   return prisma.dispute.count({ where: { externalId: { startsWith: DEMO_PREFIX } } });

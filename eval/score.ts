@@ -210,7 +210,6 @@ export interface ReportInput {
   holdoutCases: EvalCase[];
   provider: string;
   model: string;
-  recordings: number;
 }
 
 const CAUSE_LABELS: Record<AbstentionCause, string> = {
@@ -229,7 +228,7 @@ export function renderReport(input: ReportInput): string {
   out.push('');
   out.push(
     `Model of record: **\`${input.model}\`** via ${input.provider}, replayed from ` +
-      `${input.recordings} committed recordings (DECISIONS.md D-023). ` +
+      'committed recordings (DECISIONS.md D-023). ' +
       'Reproduce with `pnpm eval` — replay mode, no network, no API key required.',
   );
   out.push('');

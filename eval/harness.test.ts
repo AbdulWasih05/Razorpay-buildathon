@@ -45,7 +45,7 @@ describe('the false-positive cost means what D-034 says it means', () => {
 
 describe('a replay run reproduces the committed report', () => {
   it('produces eval/results.md byte for byte', { timeout: 120_000 }, async () => {
-    const { client, provider, cache } = buildClient(false, {});
+    const { client, provider } = buildClient(false, {});
     const devCases = await runSet({ spec: EVAL_SETS.dev, client });
     const holdoutCases = await runSet({ spec: EVAL_SETS.holdout, client });
 
@@ -56,7 +56,6 @@ describe('a replay run reproduces the committed report', () => {
       holdoutCases,
       provider: provider.name,
       model: provider.model,
-      recordings: cache.size,
     });
 
     // Newlines only: the file is written with \n and git may hand back \r\n.

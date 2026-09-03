@@ -90,7 +90,6 @@ async function main(): Promise<void> {
     holdoutCases,
     provider: provider.name,
     model: provider.model,
-    recordings: cache.size,
   });
 
   if (write) {
