@@ -1,0 +1,435 @@
+/**
+ * The overview page at `/`.
+ *
+ * A different rhythm from the console, on purpose: the console is a tool and is
+ * dense, this is a document and is airy. What the two share is the type scale,
+ * the spacing scale, the accent and the mark -- so moving between them reads as
+ * one product rather than a site with an app bolted onto it.
+ *
+ * Tokens come from `styles.css`, which is imported by the router root before
+ * this file. Nothing here redefines a token; if a value is not on the scale, it
+ * is a mistake rather than an exception.
+ */
+
+.landing {
+  background: var(--surface);
+  color: var(--ink);
+  min-height: 100%;
+}
+
+.landing .wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 var(--s5);
+}
+
+/* ---------------------------------------------------------------- hero -- */
+
+.hero {
+  padding: var(--s7) 0 var(--s8);
+  border-bottom: 1px solid var(--line);
+  /* One very soft wash, not a gradient banner: enough to lift the hero off the
+     page without becoming decoration. */
+  background:
+    radial-gradient(58rem 26rem at 10% -14%, var(--accent-soft) 0%, transparent 62%),
+    var(--surface);
+}
+
+.brand-lg {
+  font-size: var(--t-lead);
+  margin-bottom: var(--s7);
+  text-decoration: none;
+}
+
+.eyebrow {
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 var(--s4);
+}
+
+.hero h1 {
+  font-size: var(--t-hero);
+  line-height: 1.07;
+  letter-spacing: -0.034em;
+  font-weight: 620;
+  margin: 0 0 var(--s5);
+  max-width: 21ch;
+  text-wrap: balance;
+}
+
+/* The turn in the sentence gets the colour, because the second clause is the
+   entire thesis. Not italic: Inter's italic is a separate file we do not ship. */
+.hero h1 em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+.lede {
+  font-size: var(--t-lead);
+  line-height: 1.62;
+  color: var(--ink-2);
+  max-width: 62ch;
+  margin: 0 0 var(--s6);
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  margin-bottom: var(--s4);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--sans);
+  font-size: var(--t-base);
+  font-weight: 550;
+  padding: 11px var(--s5);
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: var(--ink-4);
+  background: var(--raised);
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn.primary:hover {
+  background: var(--accent-deep);
+  border-color: var(--accent-deep);
+}
+
+.cta-note {
+  font-size: var(--t-small);
+  color: var(--ink-3);
+  margin: 0;
+  max-width: 64ch;
+}
+
+/* --------------------------------------------------------------- bands -- */
+
+.band {
+  padding: var(--s8) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.band.alt {
+  background: var(--sunken);
+}
+
+.band-head {
+  max-width: 64ch;
+  margin-bottom: var(--s6);
+}
+
+.band-head .label {
+  display: block;
+  margin-bottom: var(--s3);
+  color: var(--accent);
+}
+
+.band-head h2,
+.thesis h2 {
+  font-size: var(--t-title);
+  line-height: 1.36;
+  letter-spacing: -0.019em;
+  font-weight: 560;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.provenance {
+  font-size: var(--t-small);
+  line-height: 1.7;
+  color: var(--ink-3);
+  max-width: 84ch;
+  margin: var(--s5) 0 0;
+}
+
+.provenance code {
+  color: var(--ink-2);
+}
+
+.landing .hint {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------- metrics -- */
+
+.metrics-scroll {
+  overflow-x: auto;
+}
+
+.metrics {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 620px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metrics th {
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: 0.085em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: left;
+  padding: 0 var(--s5) var(--s3) 0;
+  border-bottom: 1px solid var(--ink);
+  white-space: nowrap;
+}
+
+.metrics th.num {
+  text-align: right;
+}
+
+.metrics td {
+  padding: var(--s3) var(--s5) var(--s3) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t-lead);
+  white-space: nowrap;
+}
+
+/* The number is the thing being read here, so it is the thing set largest and
+   in the mono -- the metric's name is the caption, not the headline. */
+.metrics td.num {
+  font-family: var(--mono);
+  text-align: right;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.metrics td.metric-name {
+  font-family: var(--sans);
+  font-size: var(--t-body);
+  color: var(--ink-2);
+  width: 44%;
+  white-space: normal;
+}
+
+/* -------------------------------------------------------------- thesis -- */
+
+.thesis {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr);
+  gap: var(--s8);
+  align-items: start;
+}
+
+.thesis .label {
+  display: block;
+  margin-bottom: var(--s3);
+  color: var(--accent);
+}
+
+.thesis p {
+  font-size: var(--t-base);
+  line-height: 1.7;
+  color: var(--ink-2);
+  max-width: 58ch;
+  margin: var(--s4) 0 0;
+}
+
+.thesis a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+.capture {
+  margin: 0;
+  padding: var(--s5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.capture .label {
+  display: block;
+  margin-bottom: var(--s3);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.chip-ev {
+  font-family: var(--mono);
+  font-size: var(--t-small);
+  padding: var(--s1) var(--s3);
+  border-radius: var(--radius);
+}
+
+.chip-ev.held {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Hollow, in the mark's own vocabulary: the shape is still there and the
+   content is not. That is what an uncaptured artifact looks like at dispute
+   time -- you know exactly what you needed, and you do not have it. */
+.chip-ev.gone {
+  background: transparent;
+  color: var(--ink-4);
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-4);
+}
+
+.capture-arrow {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin: var(--s5) 0;
+  color: var(--ink-4);
+  font-size: var(--t-label);
+  letter-spacing: 0.085em;
+  text-transform: uppercase;
+}
+
+.capture-arrow::before,
+.capture-arrow::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.capture figcaption {
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--line);
+  font-size: var(--t-small);
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+/* ---------------------------------------------------------- properties -- */
+
+.props {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+  gap: var(--s6) var(--s7);
+}
+
+.prop h3 {
+  font-size: var(--t-base);
+  font-weight: 620;
+  letter-spacing: -0.012em;
+  margin: 0 0 var(--s2);
+  padding-top: var(--s3);
+  border-top: 2px solid var(--accent);
+  color: var(--ink);
+}
+
+.prop p {
+  font-size: var(--t-body);
+  line-height: 1.68;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+/* ------------------------------------------------------------ boundary -- */
+
+.boundary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--s5);
+}
+
+.side {
+  padding: var(--s5);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.side .label {
+  display: block;
+  margin-bottom: var(--s4);
+}
+
+.side ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.side li {
+  font-size: var(--t-body);
+  line-height: 1.5;
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-2);
+}
+
+.side li:last-child {
+  border-bottom: 0;
+}
+
+.llm-side {
+  border-color: #e9d5ff;
+}
+
+.llm-side .label {
+  color: #7e22ce;
+}
+
+.det-side .label {
+  color: var(--ink-2);
+}
+
+/* ---------------------------------------------------------------- foot -- */
+
+.foot {
+  padding: var(--s8) 0;
+}
+
+.foot-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  margin-bottom: var(--s5);
+}
+
+.foot p {
+  font-size: var(--t-small);
+  line-height: 1.7;
+  color: var(--ink-3);
+  max-width: 74ch;
+  margin: 0;
+}
+
+/* ------------------------------------------------------------- narrow -- */
+
+@media (max-width: 900px) {
+  .thesis {
+    grid-template-columns: 1fr;
+    gap: var(--s6);
+  }
+
+  .hero {
+    padding: var(--s6) 0 var(--s7);
+  }
+
+  .band,
+  .foot {
+    padding: var(--s7) 0;
+  }
+}

@@ -1,71 +1,1418 @@
-/* Plain, legible, no framework. CLAUDE.md §4: clarity over polish. */
-:root { color-scheme: light dark; --line: #d4d4d8; --muted: #71717a; --bg: #fff; --fg: #18181b; }
-@media (prefers-color-scheme: dark) { :root { --line: #3f3f46; --muted: #a1a1aa; --bg: #18181b; --fg: #fafafa; } }
+/**
+ * Praman review console.
+ *
+ * The design brief, and the reason it is not the default hackathon dashboard:
+ * this is an internal risk-ops console, not a product landing page. It is dense,
+ * it does not animate, and colour is never decoration -- every coloured thing on
+ * screen is encoding a state (present / absent / unrecoverable / urgent), so a
+ * reviewer can read the screen at a glance without reading the words.
+ *
+ * Three rules hold the whole thing together:
+ *   1. Sans for language, mono for identity. Ids, amounts, reason codes, field
+ *      names and timestamps are mono because they are things you compare
+ *      character by character. Everything a person reads as prose is sans.
+ *   2. Hairlines and background steps, never shadows. Shadows imply floating
+ *      cards; this is one surface with regions on it.
+ *   3. Tabular numerals everywhere a number sits above another number.
+ *
+ * Committed to light, deliberately: `color-scheme: light` and no dark block.
+ * The previous stylesheet straddled both via `prefers-color-scheme` and so read
+ * as unstyled in each. One register, chosen, is worth more than two, defaulted.
+ */
 
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg);
-  font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-main { padding: 16px 20px; max-width: 1500px; margin: 0 auto; }
-h1 { font-size: 18px; margin: 0; }
-h2 { font-size: 15px; margin: 0 0 4px; }
-h3 { font-size: 13px; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-.sub { margin: 4px 0 14px; color: var(--muted); }
-.muted { color: var(--muted); }
-.error { border: 1px solid #dc2626; color: #dc2626; padding: 8px 10px; }
+/**
+ * Two variable faces, self-hosted from `src/fonts/`, latin subset only, 88KB
+ * for the pair. Both SIL OFL 1.1; the licences sit beside the files.
+ *
+ * Served from our own origin rather than a CDN on purpose: the demo runs on a
+ * free Render instance that cold-starts, and a third-party font request is one
+ * more thing that can be slow or blocked while a judge is looking at the page.
+ * `swap` means the fallback stack paints immediately and the real face replaces
+ * it, so the page is never invisible while a font loads.
+ */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./fonts/inter-latin-variable.woff2') format('woff2-variations');
+}
 
-.toolbar { display: flex; gap: 16px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
-.chip { border: 1px solid var(--line); background: transparent; color: inherit;
-  padding: 3px 9px; cursor: pointer; font: inherit; margin-right: 4px; }
-.chip.on { border-color: currentColor; font-weight: 700; }
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('./fonts/jetbrains-mono-latin-variable.woff2') format('woff2-variations');
+}
 
-.split { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-@media (max-width: 1100px) { .split { grid-template-columns: 1fr; } }
+:root {
+  color-scheme: light;
 
-table { border-collapse: collapse; width: 100%; }
-th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-.num { text-align: right; }
-.urgent { color: #dc2626; font-weight: 700; }
-.row { cursor: pointer; }
-.row:hover { background: rgba(128,128,128,.10); }
-.row.on { background: rgba(128,128,128,.18); }
-table.inner td { border-bottom: 1px dotted var(--line); padding: 4px 6px; }
+  --sans: 'Inter Variable', ui-sans-serif, -apple-system, BlinkMacSystemFont,
+    'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, 'SF Mono', 'Cascadia Mono',
+    Menlo, Consolas, monospace;
 
-.badge { font-size: 11px; padding: 1px 6px; border: 1px solid var(--line); }
-.badge.drafted, .badge.present { border-color: #16a34a; color: #16a34a; }
-.badge.abstained, .badge.absent { border-color: #ca8a04; color: #ca8a04; }
-.badge.not_capturable { border-color: #dc2626; color: #dc2626; }
-.badge.submitted { border-color: #2563eb; color: #2563eb; }
+  /**
+   * One spacing scale, and everything is a step on it.
+   *
+   * The first pass set padding ad hoc -- 16px here, 9px there, 6px somewhere
+   * else -- and the result read as cramped even where it was not, because
+   * nothing lined up with anything. A four-step scale with a consistent
+   * vertical rhythm is most of what "clean spacing" actually is.
+   */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 72px;
 
-blockquote { margin: 0; padding: 10px 12px; border-left: 3px solid var(--line); white-space: pre-wrap; }
-pre { white-space: pre-wrap; word-break: break-word; font-size: 12px;
-  border: 1px solid var(--line); padding: 10px; overflow-x: auto; }
-.reason { color: var(--muted); }
-.approve { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
-.approve button { font: inherit; padding: 9px 14px; cursor: pointer;
-  border: 1px solid currentColor; background: transparent; color: #16a34a; font-weight: 700; }
-.approve button:disabled { color: var(--muted); cursor: not-allowed; }
+  /**
+   * One type scale. Sizes are chosen so that a label, a body line and a number
+   * sitting in the same row share a baseline rather than nearly sharing one.
+   */
+  --t-micro: 10.5px;
+  --t-label: 11px;
+  --t-small: 12px;
+  --t-body: 13px;
+  --t-base: 14px;
+  --t-lead: 16px;
+  --t-title: 20px;
+  --t-display: 30px;
+  --t-hero: clamp(34px, 4.4vw, 56px);
 
-/* The eval results page. Reading-width prose with tables that can overflow
-   sideways rather than squeezing a column into one character per line. */
-.report { max-width: 68rem; }
-.report h2 { margin: 28px 0 8px; font-size: 17px; border-bottom: 1px solid var(--line);
-  padding-bottom: 4px; }
-.report h3 { margin: 20px 0 6px; font-size: 14px; }
-.report p { line-height: 1.55; max-width: 46rem; }
-.report ul { line-height: 1.55; max-width: 46rem; }
-.report table { display: block; overflow-x: auto; width: auto; margin: 10px 0 16px; }
-.report th, .report td { border-bottom: 1px solid var(--line); padding: 5px 12px 5px 0;
-  text-align: left; white-space: nowrap; vertical-align: top; }
-.report th { font-weight: 700; }
-.report code { font-size: 12px; }
+  /* Ground and surfaces. A warm neutral, not pure white: paper, not a screen. */
+  --bg: #f7f7f6;
+  --surface: #ffffff;
+  --sunken: #fbfaf9;
+  --raised: #f5f4f2;
 
-/* The demo banner. Deliberately loud: a simulated dispute that looks like a
-   real one is the failure hard rule #6 exists to prevent. */
-.demo { border: 1px solid #ca8a04; color: #a16207; padding: 10px 12px; margin: 0 0 14px;
-  line-height: 1.5; font-size: 13px; }
-.demo code { color: inherit; }
-.demo-actions { display: block; margin-top: 8px; }
-.demo-actions .chip { margin-right: 8px; }
-.notice { border: 1px solid #16a34a; color: #16a34a; padding: 8px 10px; margin: 0 0 12px;
-  font-size: 13px; }
+  /* Hairlines. Two weights only. */
+  --line: #e9e6e3;
+  --line-strong: #d6d3d1;
+
+  /* Ink. Four steps, and no more -- more steps is how hierarchy gets muddy. */
+  --ink: #1a1714;
+  --ink-2: #44403c;
+  --ink-3: #78716c;
+  --ink-4: #a8a29e;
+
+  /**
+   * The identity colour.
+   *
+   * An ink-indigo rather than Razorpay's own blue: borrowing their brand blue
+   * for a tool that submits to their API reads as either confusion or flattery,
+   * and neither is a good look in front of the people who own it.
+   */
+  --accent: #3538cd;
+  --accent-deep: #262a9e;
+  --accent-soft: #eef0ff;
+  --accent-line: #c9cdfa;
+
+  /* Semantic. Each pairs a text/border colour with the tint behind it. */
+  --ok: #15803d;
+  --ok-soft: #f0fdf4;
+  --warn: #a16207;
+  --warn-soft: #fefce8;
+  --bad: #b91c1c;
+  --bad-soft: #fef2f2;
+  --info: #1d4ed8;
+  --info-soft: #eff6ff;
+
+  --radius: 5px;
+  --radius-lg: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: var(--t-base);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Inter's defaults; `cv05` gives a lowercase l with a tail, which matters in
+     a UI full of ids where l, 1 and I sit next to each other. */
+  font-feature-settings: 'cv05' 1, 'ss03' 1;
+}
+
+code,
+kbd,
+.mono {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  font-variant-ligatures: none;
+}
+
+/**
+ * The label. Used for every section heading and column head in the console.
+ *
+ * Small, spaced, and set in the sans rather than the mono: these are words you
+ * read, not values you compare. Letter-spacing does the work that size would
+ * otherwise have to, which keeps headings quiet without making them illegible.
+ */
+.label {
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: 0.085em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* Anything numeric that stacks. Small detail, and the whole table reads
+   straighter for it. */
+.num,
+.amount,
+.meter-label,
+td.num,
+.trail time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- shell -- */
+
+/**
+ * One viewport, no page scroll. The queue and the workspace scroll
+ * independently, which is what keeps the decision bar in view without
+ * `position: sticky` and without a scroll listener.
+ *
+ * A column flex rather than a fixed-row grid, deliberately. The number of
+ * children varies -- the simulated strip appears only in demo mode, the
+ * decision bar and the flash only on the queue view -- and a
+ * `grid-template-rows` with a counted number of rows silently hands the growing
+ * row to whichever child happens to land on it. It did exactly that: the
+ * decision bar took the `1fr` row and pushed the workspace off the bottom of
+ * the screen. Flex sizes by role rather than by position, so every fixed region
+ * stays `0 0 auto` and only the scrolling region grows.
+ */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.strip,
+.viewbar,
+.decision,
+.flash {
+  flex: 0 0 auto;
+}
+
+/* ------------------------------------------------------- simulated strip -- */
+
+/**
+ * Hard rule #6, made structural.
+ *
+ * It is a permanent thin strip rather than a loud amber block: a block that
+ * shouts reads as an error state and gets dismissed, while a strip is present in
+ * every screenshot, every frame of the video and every scroll position, which is
+ * what "labelled wherever it is rendered" actually asks for.
+ */
+/* Two columns rather than a wrapping flex row: the text reflows inside its own
+   column and the triggers stay put on the right, so the strip is two lines at
+   any width instead of growing to three and stealing the workspace. */
+.strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 7px 16px;
+  background: #422006;
+  color: #fef3c7;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.strip p {
+  margin: 0;
+}
+
+.strip-actions {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.strip b {
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.strip code {
+  color: #fde68a;
+}
+
+.strip .spacer {
+  flex: 1 1 auto;
+}
+
+.strip button {
+  font: inherit;
+  font-family: var(--sans);
+  color: #fef3c7;
+  background: transparent;
+  border: 1px solid #92400e;
+  border-radius: var(--radius);
+  padding: 2px 9px;
+  cursor: pointer;
+}
+
+.strip button:hover:not(:disabled) {
+  background: #57320a;
+}
+
+.strip button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* -------------------------------------------------------- decision bar -- */
+
+/**
+ * The single most important region on screen, and the reason for this layout.
+ *
+ * Hard rule #2 says the submit path has exactly one door. In the previous UI
+ * that door was a button at the bottom of a long scroll, so the product's
+ * central claim was visually its least prominent element. Here the identity of
+ * the dispute, the verdict, and the door sit together in a bar that never
+ * scrolls away -- you cannot be looking at evidence without also seeing what
+ * approving it would authorise.
+ */
+.decision {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s5);
+  align-items: center;
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--surface);
+  min-height: 78px;
+}
+
+.decision.empty {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.identity {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  margin-bottom: var(--s2);
+}
+
+.identity .id {
+  font-family: var(--mono);
+  font-size: var(--t-lead);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.identity .amount {
+  font-family: var(--mono);
+  font-size: var(--t-lead);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.identity .dot {
+  color: var(--ink-4);
+}
+
+.identity .meta {
+  font-size: var(--t-small);
+  color: var(--ink-3);
+}
+
+.identity .meta code {
+  color: var(--ink-2);
+}
+
+/* The verdict line. The word itself carries the weight; the clause after it
+   explains, and is deliberately quieter. */
+.verdict {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  flex-wrap: wrap;
+  font-size: var(--t-body);
+}
+
+.verdict .word {
+  font-size: var(--t-small);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.verdict .word.contest {
+  color: var(--ok);
+}
+
+.verdict .word.abstain {
+  color: var(--warn);
+}
+
+.verdict .word.none {
+  color: var(--ink-3);
+}
+
+.verdict .clause {
+  color: var(--ink-2);
+}
+
+/* ------------------------------------------------------- deadline meter -- */
+
+.deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.meter {
+  width: 54px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.meter i {
+  display: block;
+  height: 100%;
+  width: var(--fill, 0%);
+  background: var(--ink-3);
+}
+
+.deadline.urgent .meter i,
+.deadline.passed .meter i {
+  background: var(--bad);
+}
+
+.meter-label {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.deadline.urgent .meter-label,
+.deadline.passed .meter-label {
+  color: var(--bad);
+  font-weight: 650;
+}
+
+/* --------------------------------------------------------------- door -- */
+
+/**
+ * The note sits beside the button, not under it. Stacked, it wrapped to three
+ * lines and pushed the bar to 116px -- and the bar is fixed furniture on every
+ * screen, so every pixel it takes is taken from the evidence for the whole
+ * session.
+ */
+.door {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 12px;
+  text-align: right;
+}
+
+.door button {
+  font: inherit;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  border: 1px solid #166534;
+  background: var(--ok);
+  color: #fff;
+  cursor: pointer;
+}
+
+.door button:hover:not(:disabled) {
+  background: #166534;
+}
+
+.door button:disabled {
+  background: var(--ink-4);
+  border-color: var(--ink-4);
+  cursor: not-allowed;
+}
+
+.door .note {
+  font-size: 11px;
+  color: var(--ink-3);
+  max-width: 25ch;
+  line-height: 1.4;
+}
+
+.door .settled {
+  font-size: 12px;
+  color: var(--ink-3);
+  max-width: 34ch;
+  line-height: 1.4;
+}
+
+/* ---------------------------------------------------------- workspace -- */
+
+.workspace {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+  background: var(--surface);
+}
+
+/* ---------------------------------------------------------------- queue -- */
+
+.queue {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line-strong);
+  background: var(--sunken);
+}
+
+.queue-head {
+  padding: var(--s4) var(--s4) var(--s3);
+  border-bottom: 1px solid var(--line);
+}
+
+.queue-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--s3);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  font: inherit;
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  border-color: var(--ink-4);
+}
+
+.chip.on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+  font-weight: 600;
+}
+
+.chip .n {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-4);
+  margin-left: 3px;
+}
+
+.chip.on .n {
+  color: #d6d3d1;
+}
+
+.queue-list {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+/**
+ * A queue row, not a table row.
+ *
+ * Two lines: what it is, then what the system decided. The old table put six
+ * columns at equal weight and made the reviewer scan sideways; here the
+ * identifier leads, the decision closes, and the whole row is one target.
+ */
+.qrow {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-left: 2px solid transparent;
+  padding: var(--s3) var(--s4);
+  cursor: pointer;
+}
+
+.qrow:hover {
+  background: #f5f5f4;
+}
+
+.qrow.on {
+  background: var(--surface);
+  border-left-color: var(--accent);
+}
+
+.qrow-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.qrow-id {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qrow.on .qrow-id {
+  font-weight: 600;
+}
+
+.qrow-amount {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.qrow-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.qrow-what {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-empty {
+  padding: 16px 12px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* ---------------------------------------------------------------- rail -- */
+
+/**
+ * The rail tag. `agentic` is the differentiated half of the product, so it is
+ * the one that gets ink; `ordinary` stays quiet. That asymmetry is intentional
+ * and it is the fastest way to read what the corpus is made of.
+ */
+.rail {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.rail.agentic {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid #c7d2fe;
+}
+
+.rail.ordinary {
+  background: var(--sunken);
+  color: var(--ink-3);
+  border: 1px solid var(--line);
+}
+
+/* -------------------------------------------------------------- badges -- */
+
+.badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--line-strong);
+  background: var(--sunken);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.badge.drafted,
+.badge.present,
+.badge.contest {
+  border-color: #bbf7d0;
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.badge.abstained,
+.badge.absent,
+.badge.abstain {
+  border-color: #fde68a;
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.badge.not_capturable {
+  border-color: #fecaca;
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.badge.submitted,
+.badge.approved {
+  border-color: #bfdbfe;
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+/* --------------------------------------------------------- provenance -- */
+
+/**
+ * Hard rule #4, on screen instead of only in the docs.
+ *
+ * Every panel that a model touched says so, and every panel decided by code
+ * says that. A judge should be able to point at any region and know which side
+ * of the LLM boundary it came from without opening DECISIONS.md.
+ */
+.prov {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.prov.det {
+  background: var(--sunken);
+  color: var(--ink-3);
+  border: 1px solid var(--line-strong);
+}
+
+.prov.llm {
+  background: #faf5ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+/* ----------------------------------------------------------- workbench -- */
+
+.work {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 0 0 56px;
+}
+
+.work-empty {
+  padding: 40px 24px;
+  color: var(--ink-3);
+  max-width: 52ch;
+}
+
+.work-empty h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin: 0 0 6px;
+}
+
+.work-empty p {
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0 0 10px;
+}
+
+/* A section. The rule and the label form the divider; there is no card. */
+section.block {
+  padding: var(--s5) var(--s5) var(--s4);
+  border-top: 1px solid var(--line);
+}
+
+section.block:first-child {
+  border-top: 0;
+}
+
+.block-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-wrap: wrap;
+  margin-bottom: var(--s3);
+}
+
+.block-head .label {
+  color: var(--ink-2);
+}
+
+.block-head .count {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+.hint {
+  font-size: var(--t-small);
+  color: var(--ink-3);
+  line-height: 1.6;
+  max-width: 76ch;
+  margin: 0 0 var(--s4);
+}
+
+/* --------------------------------------------------------------- table -- */
+
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.grid th {
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: 0.085em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  text-align: left;
+  padding: 0 var(--s4) var(--s2) 0;
+  border-bottom: 1px solid var(--line-strong);
+  white-space: nowrap;
+}
+
+table.grid td {
+  padding: var(--s3) var(--s4) var(--s3) 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  font-size: var(--t-body);
+}
+
+table.grid tr:last-child td {
+  border-bottom: 0;
+}
+
+table.grid td.artifact {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+table.grid td.why {
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* References break between ids, not inside them. `break-all` split
+   `log_dev-v1_b1_64_2` across two lines, which is the one thing a column of
+   identifiers must never do -- you cannot compare an id you cannot read. */
+table.grid td.refs {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-4);
+  overflow-wrap: break-word;
+  word-break: normal;
+  min-width: 14rem;
+}
+
+/* Required rows carry the weight; supporting rows are visibly secondary,
+   because the gate only ever blocks on a required one. */
+tr.supporting td.artifact {
+  color: var(--ink-3);
+}
+
+/* The thesis row. A required artifact that could never have been held is not a
+   gap in the evidence -- it is the argument for capturing at transaction time,
+   and it is the only row on the page allowed to state its own case. */
+tr.unrecoverable td {
+  background: var(--bad-soft);
+}
+
+.unrecoverable-note {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--bad);
+  white-space: normal;
+}
+
+/* --------------------------------------------------------- rule trace -- */
+
+.rules {
+  display: grid;
+  gap: 0;
+}
+
+.rule {
+  display: grid;
+  grid-template-columns: 16px 190px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t-body);
+}
+
+.rule:last-child {
+  border-bottom: 0;
+}
+
+.rule .mark {
+  font-family: var(--mono);
+  font-weight: 700;
+  text-align: center;
+}
+
+.rule.pass .mark {
+  color: var(--ok);
+}
+
+.rule.fail .mark {
+  color: var(--bad);
+}
+
+.rule .rid {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.rule.fail .rid {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.rule .detail {
+  color: var(--ink-3);
+  line-height: 1.45;
+}
+
+/* ----------------------------------------------------- mandate arithmetic -- */
+
+/**
+ * The agentic rail's whole argument, shown as arithmetic rather than a verdict.
+ *
+ * `withinLimit: true` is a claim. `₹1,654.00 charged against a ₹2,456.35 limit`
+ * is a check the reviewer can redo in their head, which is the difference
+ * between a system you read and a system you trust.
+ */
+.mandate {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.check {
+  background: var(--surface);
+  padding: 9px 12px;
+}
+
+.check .label {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.check .value {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.check .value .op {
+  color: var(--ink-4);
+  padding: 0 3px;
+}
+
+.check.pass {
+  box-shadow: inset 2px 0 0 var(--ok);
+}
+
+.check.fail {
+  background: var(--bad-soft);
+  box-shadow: inset 2px 0 0 var(--bad);
+}
+
+/* --------------------------------------------------------------- draft -- */
+
+.letter {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  border-left: 3px solid #d8b4fe;
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre-wrap;
+  max-width: 84ch;
+}
+
+.cap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.cap .bar {
+  width: 120px;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.cap .bar i {
+  display: block;
+  height: 100%;
+  width: var(--fill, 0%);
+  background: var(--ink-3);
+}
+
+.cap .count {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------ field mapping -- */
+
+/**
+ * The typed Razorpay evidence fields, and what was put in each.
+ *
+ * This is the schema-fidelity panel. The judges wrote these field names; seeing
+ * `access_activity_log` and `others` + `othersType` populated from named
+ * artifacts is the fastest way to show the mapping is real and not prose.
+ */
+.map-row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--s5);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.map-row:last-child {
+  border-bottom: 0;
+}
+
+.map-field {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink);
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.map-field .others {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+
+.map-from {
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+.map-from code {
+  color: var(--ink-2);
+}
+
+/* --------------------------------------------------------- audit trail -- */
+
+/**
+ * A timeline, not a `<pre>`. Same rows, same order, same append-only trail --
+ * but a reviewer reads down the actor column to see that a human appears
+ * exactly once, at `approved`, which is the claim the whole product makes.
+ */
+.trail {
+  display: grid;
+  gap: 0;
+}
+
+.tstep {
+  display: grid;
+  grid-template-columns: 168px 92px minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t-body);
+}
+
+.tstep:last-child {
+  border-bottom: 0;
+}
+
+.tstep time {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-4);
+}
+
+.tstep .actor {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+/* The one human in the trail. */
+.tstep .actor.human {
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.tstep .move {
+  color: var(--ink-2);
+}
+
+.tstep .move .to {
+  font-family: var(--mono);
+  color: var(--ink);
+}
+
+.tstep .move .reason {
+  color: var(--ink-3);
+}
+
+pre.raw {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+/* ------------------------------------------------------------- notices -- */
+
+.error,
+.notice,
+.warnbox {
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.error {
+  border: 1px solid #fecaca;
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.notice {
+  border: 1px solid #bbf7d0;
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.warnbox {
+  border: 1px solid #fde68a;
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.flash {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+/* ---------------------------------------------------------- nav / view -- */
+
+.viewbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s5);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+/**
+ * The wordmark.
+ *
+ * The identity is one mark and one colour, and it is built from the product's
+ * own idea rather than bolted on: a filled square for evidence that was
+ * captured, an outlined one for evidence that was not. That is the entire
+ * thesis in eleven pixels, and it reappears on the landing page at size.
+ */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-lead);
+  font-weight: 640;
+  letter-spacing: -0.021em;
+  color: var(--ink);
+  /* It is a link back to the overview, but it is a wordmark first -- an
+     underlined logotype reads as a mistake, not as an affordance. */
+  text-decoration: none;
+}
+
+.brand:hover .mark i {
+  background: var(--accent-deep);
+}
+
+.brand:hover .mark i.hollow {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.mark {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.mark i {
+  width: 7px;
+  height: 7px;
+  border-radius: 1.5px;
+  background: var(--accent);
+}
+
+.mark i.hollow {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--accent-line);
+}
+
+.brand .thin {
+  font-size: var(--t-small);
+  font-weight: 450;
+  letter-spacing: 0;
+  color: var(--ink-3);
+  margin-left: var(--s2);
+  padding-left: var(--s3);
+  border-left: 1px solid var(--line);
+}
+
+.viewbar .spacer {
+  flex: 1 1 auto;
+}
+
+.viewbar select {
+  font: inherit;
+  font-size: 12px;
+  font-family: var(--mono);
+  padding: 2px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.viewbar label {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ----------------------------------------------------------- report -- */
+
+/**
+ * The eval page. Still `eval/results.md` rendered verbatim -- P4.2's whole
+ * point is that this page computes nothing, so it cannot disagree with the
+ * committed report. What changed is only how it is set: reading measure for
+ * prose, real table rules, tabular figures, and every caveat kept next to the
+ * number it qualifies.
+ */
+.reportwrap {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  background: var(--surface);
+}
+
+.report {
+  max-width: 72rem;
+  padding: 24px 28px 72px;
+}
+
+.report h2 {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 32px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.report h2:first-child {
+  margin-top: 0;
+}
+
+.report h3 {
+  font-size: 13.5px;
+  font-weight: 650;
+  margin: 22px 0 6px;
+  color: var(--ink-2);
+}
+
+.report p,
+.report ul {
+  font-size: 13.5px;
+  line-height: 1.62;
+  max-width: 68ch;
+  color: var(--ink-2);
+}
+
+.report li {
+  margin-bottom: 3px;
+}
+
+.report strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.report code {
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0 3px;
+  color: var(--ink);
+}
+
+.report table {
+  display: block;
+  overflow-x: auto;
+  width: auto;
+  max-width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.report th,
+.report td {
+  text-align: left;
+  white-space: nowrap;
+  vertical-align: top;
+  padding: 6px 18px 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+}
+
+.report th {
+  font-weight: 650;
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+/* ------------------------------------------------------------ narrow -- */
+
+/**
+ * Below 900px the console stops being a console. The queue moves above the
+ * workspace and both scroll with the page; the decision bar goes sticky so the
+ * door still cannot scroll away, which is the one property that must survive.
+ */
+@media (max-width: 900px) {
+  .app {
+    height: auto;
+    min-height: 100dvh;
+    /* The desktop shell owns the scroll; here the page does, so the shell must
+       stop clipping or everything below the fold is simply gone. */
+    overflow: visible;
+  }
+
+  .work {
+    overflow-y: visible;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .queue {
+    border-right: 0;
+    border-bottom: 1px solid var(--line-strong);
+    max-height: 44vh;
+  }
+
+  .decision {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .door {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .rule,
+  .tstep,
+  .map-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+/* Keyboard focus stays visible everywhere. An approval is a money action; the
+   control that performs it must never be focusable-but-invisible. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}

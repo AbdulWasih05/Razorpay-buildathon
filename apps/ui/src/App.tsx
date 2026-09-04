@@ -2,47 +2,69 @@ import { useCallback, useEffect, useState } from 'react';
 
 import {
   approve,
+  fetchDispute,
   fetchHealth,
+  fetchQueue,
   releaseDispute,
   resetDemo,
-  type Health,
-  daysUntil,
-  fetchDispute,
-  fetchQueue,
-  formatRupees,
   type DisputeDetail,
+  type Health,
   type QueueItem,
 } from './api.js';
+import { DecisionBar } from './DecisionBar.js';
+import { Detail } from './Detail.js';
+import { Queue, type Filter } from './Queue.js';
 import { Report } from './Report.js';
-import './styles.css';
+import { linkTo } from './router.js';
+import { Mark, readableDate } from './ui.js';
 
 /**
- * The review UI (TASKS.md P3.3).
+ * The review console (TASKS.md P3.3, redesigned).
  *
- * Plain functional table, per CLAUDE.md §4: clarity over polish. A reviewer
- * needs to see what the system decided, why, and what evidence it is standing
- * on -- and then approve or leave it. Anything else is decoration on a screen
- * whose whole job is making a money decision legible.
+ * The layout is the argument. One viewport, three regions, no page scroll:
  *
- * Three deliberate omissions:
+ *   the simulated-data strip, which is never dismissible;
+ *   the decision bar, which holds the dispute's identity, the gate's verdict
+ *     and the single door that can submit -- and which cannot scroll away;
+ *   the workspace, where a narrow queue spine sits beside the evidence the
+ *     decision rests on.
+ *
+ * Three deliberate omissions, unchanged from the first build:
  *   - No ground truth. It exists in the corpus and would tell the reviewer the
  *     answer, which would make the review theatre.
  *   - No bulk approve. An approval authorises one dispute; a "select all"
  *     button is how one click becomes fifty submissions.
- *   - No simulated won/lost anywhere (hard rule #6).
+ *   - No simulated outcome anywhere (hard rule #6). The UI has nowhere to put
+ *     one, which is the cheapest way to keep that true.
  */
 
 const REVIEWERS = ['human:wasih', 'human:usman'];
 
-export function App() {
+/**
+ * The console.
+ *
+ * `view` is a prop rather than state, and that is a bug fix rather than a style
+ * preference. It was `useState(initialView)`, which seeds once and then ignores
+ * the prop, so pressing back from `/eval` left the address bar saying `/app`
+ * while the page still showed the eval report (FAILURES.md F-022).
+ *
+ * The route IS the view. There is now one place that knows which page is open,
+ * and it is the URL.
+ */
+export function App({
+  view,
+  onView,
+}: {
+  view: 'queue' | 'metrics';
+  onView: (next: 'queue' | 'metrics') => void;
+}) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<DisputeDetail | null>(null);
   const [reviewer, setReviewer] = useState(REVIEWERS[0] as string);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'drafted' | 'abstained' | 'submitted'>('all');
-  const [view, setView] = useState<'queue' | 'metrics'>('queue');
+  const [filter, setFilter] = useState<Filter>('all');
   const [health, setHealth] = useState<Health | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -68,21 +90,6 @@ export function App() {
       .catch(() => setHealth(null));
   }, []);
 
-  async function onDemo(action: 'release' | 'reset'): Promise<void> {
-    setBusy(true);
-    try {
-      if (action === 'release') await releaseDispute();
-      else await resetDemo();
-      setSelected(null);
-      await reload();
-      setError(null);
-    } catch (caught) {
-      setError((caught as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   useEffect(() => {
     if (!selected) {
       setDetail(null);
@@ -92,6 +99,22 @@ export function App() {
       .then(setDetail)
       .catch((caught: Error) => setError(caught.message));
   }, [selected]);
+
+  async function onDemo(action: 'release' | 'reset'): Promise<void> {
+    setBusy(true);
+    try {
+      if (action === 'release') await releaseDispute();
+      else await resetDemo();
+      setSelected(null);
+      setNotice(null);
+      await reload();
+      setError(null);
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function onApprove(): Promise<void> {
     if (!detail) return;
@@ -123,135 +146,167 @@ export function App() {
     return acc;
   }, {});
 
-  if (view === 'metrics') {
-    return (
-      <main>
-        <header>
-          <h1>Praman — eval results</h1>
-          <p className="sub">
-            This page renders <code>eval/results.md</code> verbatim and computes nothing of its
-            own, so it cannot disagree with the report (P4.2).
-          </p>
-        </header>
-        <nav className="toolbar">
-          <button className="chip" onClick={() => setView('queue')}>
-            ← back to the review queue
-          </button>
-        </nav>
-        <Report />
-      </main>
-    );
-  }
-
   return (
-    <main>
-      <header>
-        <h1>Praman — dispute review</h1>
-        <p className="sub">
-          Defense-only. Nothing is submitted without a named reviewer approving this specific
-          dispute.
-        </p>
-      </header>
-
+    <div className="app">
       {health?.demoMode ? (
-        <DemoBanner busy={busy} onRelease={() => void onDemo('release')} onReset={() => void onDemo('reset')} />
+        <DemoStrip busy={busy} onRelease={() => void onDemo('release')} onReset={() => void onDemo('reset')} />
       ) : null}
 
-      {error ? <p className="error">{error}</p> : null}
-      {notice ? <p className="notice">{notice}</p> : null}
+      <ViewBar
+        view={view}
+        reviewer={reviewer}
+        onView={onView}
+        onReviewer={setReviewer}
+        assemblyMode={health?.assemblyMode ?? null}
+        simulatedNow={health?.simulatedNow ?? null}
+      />
 
-      <section className="toolbar">
-        <label>
-          Reviewer{' '}
-          <select value={reviewer} onChange={(event) => setReviewer(event.target.value)}>
-            {REVIEWERS.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="chip" onClick={() => setView('metrics')}>
-          eval results
-        </button>
-        <span className="counts">
-          {(['all', 'drafted', 'abstained', 'submitted'] as const).map((key) => (
-            <button
-              key={key}
-              className={filter === key ? 'chip on' : 'chip'}
-              onClick={() => setFilter(key)}
-            >
-              {key} {key === 'all' ? queue.length : (counts[key] ?? 0)}
-            </button>
-          ))}
-        </span>
-      </section>
+      {view === 'metrics' ? (
+        <div className="reportwrap">
+          <Report />
+        </div>
+      ) : (
+        <>
+          <DecisionBar
+            detail={detail}
+            busy={busy}
+            reviewer={reviewer}
+            now={health?.simulatedNow ?? null}
+            onApprove={() => void onApprove()}
+          />
 
-      <div className="split">
-        <table>
-          <thead>
-            <tr>
-              <th>dispute</th>
-              <th>rail</th>
-              <th>code</th>
-              <th className="num">amount</th>
-              <th className="num">respond by</th>
-              <th>decision</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((item) => {
-              const days = daysUntil(item.respondBy);
-              return (
-                <tr
-                  key={item.externalId}
-                  className={selected === item.externalId ? 'row on' : 'row'}
-                  onClick={() => setSelected(item.externalId)}
-                >
-                  <td>
-                    <code>{item.razorpayDisputeId}</code>
-                    <div className="muted">{item.reasonDescription}</div>
-                  </td>
-                  <td>{item.rail}</td>
-                  <td>{item.reasonCode}</td>
-                  <td className="num">{formatRupees(item.amount)}</td>
-                  <td className={days < 3 ? 'num urgent' : 'num'}>{days}d</td>
-                  <td>
-                    <StateBadge state={item.state} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+          {error || notice ? (
+            <div className="flash">
+              {error ? <p className="error">{error}</p> : null}
+              {notice ? <p className="notice">{notice}</p> : null}
+            </div>
+          ) : null}
 
-        <aside>
-          {!detail ? (
-            <p className="muted">Select a dispute.</p>
-          ) : (
-            <Detail
-              detail={detail}
-              busy={busy}
-              reviewer={reviewer}
-              onApprove={() => void onApprove()}
+          <div className="workspace">
+            <Queue
+              items={visible}
+              counts={counts}
+              total={queue.length}
+              filter={filter}
+              selected={selected}
+              now={health?.simulatedNow ?? null}
+              onFilter={setFilter}
+              onSelect={setSelected}
             />
-          )}
-        </aside>
-      </div>
-    </main>
+            {detail ? (
+              <Detail detail={detail} />
+            ) : (
+              <div className="work-empty">
+                <h2>Nothing selected</h2>
+                <p>
+                  Pick a dispute from the queue to see the evidence it stands on, the rules the
+                  gate evaluated, and — where one exists — the drafted contest.
+                </p>
+                <p>
+                  Disputes are ordered by <code>respond_by</code>, soonest first. That ordering
+                  is a property of the queue, not a view preference, so there is nothing here to
+                  sort it away.
+                </p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
 /**
- * The demo banner.
+ * The top bar: what this is, which page, and who is reviewing.
  *
- * It says three things a visitor needs and would otherwise assume wrongly: this
- * data is simulated, the trigger writes to a shared instance, and there is a
- * reset. Hard rule #6 says a simulated thing is labelled wherever it is
- * rendered, and a public demo whose disputes look like real disputes is the
- * loudest possible place to get that wrong.
+ * The reviewer selector lives here rather than beside the approve button on
+ * purpose. Choosing who you are is a session-level act; doing it inches from the
+ * control that submits invites choosing it in the same motion as approving.
  */
-export function DemoBanner({
+export function ViewBar({
+  view,
+  reviewer,
+  onView,
+  onReviewer,
+  assemblyMode,
+  simulatedNow,
+}: {
+  view: 'queue' | 'metrics';
+  reviewer: string;
+  onView: (next: 'queue' | 'metrics') => void;
+  onReviewer: (next: string) => void;
+  assemblyMode: 'live' | 'replay' | null;
+  simulatedNow: string | null;
+}) {
+  return (
+    <div className="viewbar">
+      <a className="brand" {...linkTo('landing')} title="Back to the overview">
+        <Mark />
+        Praman
+        <span className="thin">dispute evidence responder · defense only</span>
+      </a>
+
+      <button className={view === 'queue' ? 'chip on' : 'chip'} onClick={() => onView('queue')}>
+        review queue
+      </button>
+      <button
+        className={view === 'metrics' ? 'chip on' : 'chip'}
+        onClick={() => onView('metrics')}
+      >
+        eval results
+      </button>
+
+      <span className="spacer" />
+
+      {assemblyMode ? (
+        <span className="label" title="Whether model calls are live or replayed from committed fixtures.">
+          assembly: {assemblyMode}
+        </span>
+      ) : null}
+
+      {/*
+        The clock is part of the simulation, so it is labelled like the rest of
+        it (hard rule #6). Every deadline on screen counts from this instant
+        rather than from now, because every `respond_by` in the corpus is a fixed
+        offset from a seeded epoch and reading them against real time measures
+        the corpus's age instead of a reviewer's urgency (F-024).
+      */}
+      {simulatedNow ? (
+        <span
+          className="label"
+          title={`Deadlines count from ${readableDate(simulatedNow)}, not from now. The corpus is seeded from a fixed epoch, so its clock is simulated too.`}
+        >
+          clock: simulated
+        </span>
+      ) : null}
+
+      <label>
+        reviewer
+        <select value={reviewer} onChange={(event) => onReviewer(event.target.value)}>
+          {REVIEWERS.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
+/**
+ * The simulated-data strip (hard rule #6).
+ *
+ * It replaced a loud amber block, and the change is not cosmetic. A block that
+ * shouts reads as an error state and gets dismissed by the eye after the first
+ * screen; a permanent strip is in every screenshot, every frame of the demo
+ * video and every scroll position. "Labelled wherever it is rendered" is a
+ * property of the layout now, not of the reader's attention.
+ *
+ * It says three things a visitor would otherwise assume wrongly: this data is
+ * simulated, the trigger writes to a shared instance, and there is a reset.
+ */
+export function DemoStrip({
   busy,
   onRelease,
   onReset,
@@ -261,114 +316,21 @@ export function DemoBanner({
   onReset: () => void;
 }) {
   return (
-    <div className="demo">
-      <strong>Simulated data.</strong> Every dispute, payment and mandate here is generated by
-      the seeded simulator — Razorpay-namespace ids carry a <code>SIM</code> marker
-      (<code>pay_SIM…</code>) and no live Razorpay call is ever made. This instance is shared:
-      what you release, the next visitor sees.
-      <span className="demo-actions">
-        <button className="chip" disabled={busy} onClick={onRelease}>
+    <div className="strip">
+      <p>
+        <b>SIMULATED DATA</b> Every dispute, payment and mandate here is generated by the
+        seeded simulator. Razorpay-namespace ids carry a <code>SIM</code> marker (
+        <code>pay_SIM…</code>) and no live Razorpay call is ever made. This instance is shared:
+        what you release, the next visitor sees.
+      </p>
+      <span className="strip-actions">
+        <button disabled={busy} onClick={onRelease}>
           release next dispute
         </button>
-        <button className="chip" disabled={busy} onClick={onReset}>
-          reset the demo
+        <button disabled={busy} onClick={onReset}>
+          reset
         </button>
       </span>
-    </div>
-  );
-}
-
-export function StateBadge({ state }: { state: string }) {
-  return <span className={`badge ${state}`}>{state}</span>;
-}
-
-export function Detail({
-  detail,
-  busy,
-  reviewer,
-  onApprove,
-}: {
-  detail: DisputeDetail;
-  busy: boolean;
-  reviewer: string;
-  onApprove: () => void;
-}) {
-  return (
-    <div>
-      <h2>
-        <code>{detail.disputeId}</code> <StateBadge state={detail.state} />
-      </h2>
-      <p className="muted">
-        {detail.scenarioLabel} · {detail.rail} · reason {detail.reasonCode} · {detail.phase} ·{' '}
-        {formatRupees(detail.amount)}
-      </p>
-
-      <h3>Gate</h3>
-      <p>
-        <strong>{detail.gateDecision ?? 'not run'}</strong>
-        {detail.gateReason ? <span className="reason"> — {detail.gateReason}</span> : null}
-      </p>
-      {detail.abstentionClass ? (
-        <p className="muted">
-          abstention class: <code>{detail.abstentionClass}</code>
-        </p>
-      ) : null}
-
-      <h3>Evidence</h3>
-      {detail.collected ? (
-        <table className="inner">
-          <tbody>
-            {detail.collected.findings.map((finding) => (
-              <tr key={finding.artifact}>
-                <td>
-                  <code>{finding.artifact}</code>
-                  {finding.necessity === 'supporting' ? (
-                    <span className="muted"> (supporting)</span>
-                  ) : null}
-                </td>
-                <td>
-                  <span className={`badge ${finding.state}`}>{finding.state}</span>
-                </td>
-                <td className="muted">{finding.reason ?? finding.references.join(', ')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p className="muted">not collected</p>
-      )}
-
-      {detail.draft ? (
-        <>
-          <h3>Drafted explanation ({detail.draft.summary.length}/1000 chars)</h3>
-          <blockquote>{detail.draft.summary}</blockquote>
-          <p className="muted">
-            fields:{' '}
-            {detail.draft.assignments.map((assignment) => assignment.field).join(', ')}
-          </p>
-        </>
-      ) : null}
-
-      <h3>Audit trail</h3>
-      <pre>{detail.timeline.join('\n')}</pre>
-
-      {detail.state === 'drafted' ? (
-        <div className="approve">
-          <button disabled={busy} onClick={onApprove}>
-            {busy ? 'Submitting…' : `Approve and submit as ${reviewer}`}
-          </button>
-          <p className="muted">
-            This is the only action in the product that submits. It authorises this dispute
-            only.
-          </p>
-        </div>
-      ) : detail.state === 'submitted' ? (
-        <p className="muted">
-          Submitted. Approved by <code>{detail.approvedBy}</code>.
-        </p>
-      ) : (
-        <p className="muted">Nothing to approve: this dispute was not contested.</p>
-      )}
     </div>
   );
 }

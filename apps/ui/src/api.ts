@@ -40,6 +40,62 @@ export interface GateRule {
   detail: string;
 }
 
+/** One artifact the reason-code rubric asks for, in Razorpay's own wording. */
+export interface RubricRequirement {
+  artifact: string;
+  necessity: 'required' | 'supporting';
+  provenance: string;
+  sourcePhrase: string;
+}
+
+/**
+ * The mandate arithmetic, agentic rail only.
+ *
+ * Every field here is a term in a check the gate ran. Rendering them lets a
+ * reviewer redo the arithmetic rather than take `withinLimit: true` on faith.
+ */
+export interface MandateChecks {
+  present: boolean;
+  status?: string;
+  maxAmount?: number;
+  chargedAmount?: number;
+  validFrom?: string;
+  validUntil?: string;
+  paymentAt?: string;
+  withinLimit?: boolean;
+  withinValidityWindow?: boolean;
+  consentBeforePayment?: boolean;
+}
+
+export interface Collected {
+  findings: Finding[];
+  coverage: { present: number; required: number; ratio: number };
+  rubric: { code: string; network: string; category: string; requires: RubricRequirement[] };
+  mandate: MandateChecks;
+  missingRequired: string[];
+  /** Required artifacts we could never have held. The thesis, as a field. */
+  structurallyUnavailable: string[];
+  anomalySignals: string[];
+  rail: string;
+}
+
+/** One typed Razorpay evidence field, and what was mapped into it. */
+export interface FieldAssignment {
+  field: string;
+  artifacts: string[];
+  references?: string[];
+  othersType?: string;
+}
+
+export interface AuditEntry {
+  seq: number;
+  fromState: string | null;
+  toState: string;
+  actor: string;
+  reason: string | null;
+  occurredAt: string;
+}
+
 export interface DisputeDetail {
   externalId: string;
   disputeId: string;
@@ -56,11 +112,20 @@ export interface DisputeDetail {
   gateDecision: string | null;
   gateReason: string | null;
   abstentionClass: string | null;
-  collected: { findings: Finding[]; coverage: { present: number; required: number } } | null;
-  draft: { summary: string; assignments: { field: string; artifacts: string[] }[] } | null;
+  collected: Collected | null;
+  draft: { summary: string; references: string[]; assignments: FieldAssignment[] } | null;
   submittedRequest: Record<string, unknown> | null;
   approvedBy: string | null;
   timeline: string[];
+  auditLogs?: AuditEntry[];
+  /**
+   * The gate's rule-by-rule trace, replayed from stored evidence by the API.
+   *
+   * `agrees` false means the replay disagreed with the decision recorded at
+   * pipeline time. That is a real inconsistency and the UI says so rather than
+   * rendering a trace for a verdict it does not explain.
+   */
+  gateRules?: { rules: GateRule[]; agrees: boolean } | null;
 }
 
 async function json<T>(response: Response): Promise<T> {
@@ -104,6 +169,14 @@ export interface Health {
   recordings: number;
   startedAt: string;
   pid: number;
+  /**
+   * The instant deadlines are read against, or null for wall-clock time.
+   *
+   * The server decides this, like `demoMode`, because the UI cannot know whether
+   * the rows it was handed are seeded. Today it is always set: the schema has no
+   * column shape a real dispute could occupy (F-024).
+   */
+  simulatedNow: string | null;
 }
 
 /**
@@ -154,7 +227,20 @@ export function formatRupees(subunits: number): string {
   return `₹${(subunits / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 }
 
-/** Days until the deadline. Negative means it has passed. */
-export function daysUntil(iso: string): number {
-  return Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000);
+/**
+ * Days until the deadline. Negative means it has passed.
+ *
+ * `now` is required rather than defaulted, and that is the fix for F-024. This
+ * function used to read `Date.now()`, which is correct for real disputes and
+ * meaningless for seeded ones: every `respond_by` in the corpus is a fixed
+ * offset from a hard-coded epoch, so against a real clock the whole queue drifts
+ * into the past together and the meter stops measuring urgency and starts
+ * measuring the corpus's age. A parameter with a wall-clock default would have
+ * let every existing call site keep the bug, so there is no default -- the
+ * server says which instant to read against (`/health`, `simulatedNow`), and
+ * passing `null` to mean "real time" has to be written out on purpose.
+ */
+export function daysUntil(iso: string, now: string | null): number {
+  const reference = now === null ? Date.now() : new Date(now).getTime();
+  return Math.round((new Date(iso).getTime() - reference) / 86_400_000);
 }
