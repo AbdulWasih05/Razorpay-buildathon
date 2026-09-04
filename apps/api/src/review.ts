@@ -2,11 +2,14 @@ import { Prisma, type PrismaClient } from '@prisma/client';
 import {
   AuditTrail,
   SCENARIOS,
+  evaluateGate,
   evidencePackIngestSchema,
   renderTimeline,
   type Actor,
+  type CollectedEvidence,
   type DisputeState,
   type ContestDraft,
+  type GateRule,
   type ScenarioClass,
 } from '@praman/core';
 import { ApprovalToken, type DisputeAdapter } from '@praman/adapter';
@@ -257,6 +260,7 @@ export async function readDispute(prisma: PrismaClient, externalId: string) {
     gateReason: dispute.gateReason,
     abstentionClass: dispute.abstentionClass,
     collected: dispute.collectedJson,
+    gateRules: replayGate(dispute.collectedJson, dispute.gateDecision),
     draft: dispute.contestDraftJson,
     submittedRequest: dispute.submittedRequestJson,
     approvedBy: dispute.approvedBy,
@@ -272,6 +276,44 @@ export async function readDispute(prisma: PrismaClient, externalId: string) {
       occurredAt: row.occurredAt.toISOString(),
     })),
   };
+}
+
+/**
+ * The gate's rule-by-rule trace, for the reviewer.
+ *
+ * `runPipeline` persists the gate's DECISION and its reason, but not the trace
+ * of individual rules behind them -- so a reviewer could see that the system
+ * abstained without seeing which of the eight checks said so. That trace is the
+ * most reviewable artifact the deterministic core produces, and it was being
+ * computed and discarded.
+ *
+ * It is recomputed here rather than migrated into a column, because
+ * `evaluateGate` is pure and takes only `collected`, which IS persisted. Same
+ * input, same code, same output -- there is no second implementation to drift.
+ *
+ * The persisted decision stays authoritative and is what the UI renders as the
+ * verdict; this only explains it. `agrees` is the cross-check: if a replay ever
+ * disagrees with what was recorded at pipeline time, something changed
+ * underneath a decision that has already been acted on, and the reviewer is
+ * told rather than shown a tidy trace for a verdict it does not match.
+ */
+export function replayGate(
+  collectedJson: unknown,
+  persistedDecision: string | null,
+): { rules: GateRule[]; agrees: boolean } | null {
+  if (!collectedJson || typeof collectedJson !== 'object') return null;
+  try {
+    const replayed = evaluateGate(collectedJson as unknown as CollectedEvidence);
+    return {
+      rules: replayed.rules,
+      agrees: persistedDecision === null || replayed.decision === persistedDecision,
+    };
+  } catch {
+    // A trace is an explanation, not the decision. If the stored evidence can
+    // no longer be replayed, the reviewer loses the explanation and keeps the
+    // verdict -- they must never lose the dispute itself over a display aid.
+    return null;
+  }
 }
 
 /**
