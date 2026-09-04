@@ -1423,10 +1423,25 @@ remember.
   reader: the README's first line is a live link and the first person to follow
   it is plausibly an automated screener with a timeout. Three responses, in
   order: the link is labelled with the wake-up delay so a slow first load reads
-  as documented rather than broken; the free plan includes 750 instance-hours a
-  month against 744 in the longest month, so keeping the one service warm is
-  inside the published allowance rather than a trick played on it; and if the
-  cold start ever costs us a reader, the fix is $7, not an architecture change.
+  as documented rather than broken; a scheduled ping keeps the instance awake
+  through the judging window, with the arithmetic that makes that defensible
+  written out in **D-042** rather than waved at here; and if the cold start ever
+  costs us a reader anyway, the fix is $7, not an architecture change.
+
+  **This bullet said something false until 2026-09-04**, and the correction is
+  left visible rather than quietly overwritten. It read: *"the free plan
+  includes 750 instance-hours a month against 744 in the longest month, so
+  keeping the one service warm is inside the published allowance rather than a
+  trick played on it."* The arithmetic is right and the inference is backwards.
+  An hours allowance is a budget for running, not a mechanism for staying awake;
+  Render's own free-plan page says spun-down services do not consume Free
+  instance hours at all, so the allowance is never what wakes anything. Written
+  that way, the sentence implied a mitigation that did not exist and left the
+  one dishonest-by-mechanism claim in this log sitting under the link a screener
+  hits first -- which is the failure mode hard rule #6 exists to prevent, in the
+  worst available location. **D-042** supplies the mechanism the sentence
+  assumed; **F-023** logs how two verified facts and a "so" manufactured a claim
+  that P5.4's fact-check walked straight past.
 - **A free Postgres expires 30 days after creation**, with a 14-day grace
   period. Judging is inside that window and the database is seeded from a
   deterministic corpus on boot, so expiry costs one command, not any data. It is
@@ -1645,3 +1660,269 @@ to apply, because it names a vice rather than a property. Restating it as
 constraints (adjacent only, messages preserved, dates kept, tree identical)
 turned an argument about whether this counted as theater into four things that
 can just be checked.
+
+### D-040 -- the review UI is redesigned as an ops console, and §4 changes to say so
+
+**Decided.** The review UI is rebuilt as a dense, single-viewport risk-ops
+console: a permanent simulated-data strip, a decision bar carrying the dispute's
+identity, the gate verdict and the one door that submits, and below it a narrow
+queue spine beside a six-panel evidence workbench. Committed to a light register
+(`color-scheme: light`, no dark block). CLAUDE.md §4 is amended in the same
+change, from "plain functional table UI -- clarity over polish" to the rule the
+new UI actually follows.
+
+**The objection, stated first.** §4 said plain, and `App.tsx` said in its own
+doc comment that anything beyond a plain table is "decoration on a screen whose
+whole job is making a money decision legible". Redesigning it the day before
+submission is exactly the kind of late polish that discipline existed to
+prevent, and a panelist who reads CLAUDE.md and then looks at the screen would
+find the file and the product disagreeing -- which is the same failure D-039
+fixed for the commit log.
+
+**Why it was worth doing anyway.** The plain table was not neutral; it was
+actively hiding the work. Three things were on the screen at the same visual
+weight as the page header, and two things were not on the screen at all:
+
+- **`GateRule[]` was computed and thrown away.** `evaluateGate` returns a
+  rule-by-rule trace and `runPipeline` persisted only the decision and the
+  reason. The most reviewable artifact the deterministic core produces was
+  never shown. It is now replayed by `readDispute` -- not migrated into a
+  column, because `evaluateGate` is pure and takes only `collected`, which is
+  already persisted, so there is no second implementation to drift.
+- **The mandate arithmetic was a boolean.** `withinLimit: true` is a claim;
+  `₹1,654 ≤ ₹2,456.35` is a check a reviewer can redo. The capture store held
+  every term and the UI rendered none of them.
+- **The approve button was at the bottom of a scroll.** Hard rule #2 says the
+  submit path has exactly one door, and the door was the least prominent
+  element in the product. It is now in a bar that cannot scroll away.
+- **`structurallyUnavailable` was an unstyled table row.** A required artifact
+  that could never have been held is the entire argument for capturing at
+  transaction time, and it looked like any other gap.
+- **The LLM boundary was prose-only.** Every panel now carries a `deterministic`
+  or `llm` mark. Five of six are deterministic, and that ratio is the AI-judgment
+  claim made visible instead of asserted.
+
+**What the amended §4 rule is.** Dense ops console, not a product page. Colour
+encodes state and is never decoration. Hairlines and background steps, never
+shadows. Sans for language, mono for identity. No motion. The point of the
+original rule -- that nothing on this screen exists to look impressive -- is
+kept; what changed is that "plain" was being read as "unstyled", and unstyled
+was costing legibility rather than buying honesty.
+
+**Rejected: charts on the eval page.** P4.2 renders `eval/results.md` verbatim
+so the page cannot disagree with the committed report, and every caveat travels
+next to its number. The page got a typography pass and nothing else: no parsing,
+no stat tiles, no computation. A chart would have reintroduced exactly the
+second computation that design exists to avoid.
+
+**Rejected: a dark register, and rejected `prefers-color-scheme`.** The old
+stylesheet defined both and committed to neither, which is why it read as
+unstyled in each. Dark is also the crowded lane at a hackathon; a light console
+reads as an internal financial tool rather than a demo.
+
+**Three bugs the redesign surfaced, all logged.** The shell's fixed-row grid
+silently handed its growing row to whichever child landed on it (FAILURES.md
+F-020), the committed UI fixtures carry `approvedBy: "human:system"` -- a
+capture taken before F-013 was fixed (FAILURES.md F-021), and the console held its own copy of which page was open (FAILURES.md F-022).
+
+**What it taught.** "Clarity over polish" was the right instinct written as the
+wrong rule. Stated as a preference for plainness it licensed leaving computed
+evidence unrendered, which is not clarity -- it is the same information loss the
+rule was trying to prevent, arriving from the other direction.
+
+### D-041 -- a landing page at `/`, and the console moves to `/app`
+
+**Decided.** `/` is an overview page, `/app` is the review console, `/eval` is
+the console opened on its eval page. Hand-rolled routing, about twenty lines, no
+router dependency. Two variable typefaces (Inter, JetBrains Mono) are vendored
+into `apps/ui/src/fonts/` as latin-subset woff2, 88KB for the pair, both SIL
+OFL 1.1.
+
+**The objection, stated first.** The definition of done says the README's first
+line is a live link because a responding link is the cheapest strong signal to
+an AI screener — and this change means that link no longer opens the working
+product. A screener that bounces off a marketing page has been given *less*
+evidence than one dropped straight into a queue of real disputes.
+
+**Why it is worth it anyway, and what pays the objection off.** The console
+alone proves the thing runs and says nothing about what it is or why the problem
+matters — a reviewer landing cold on a dispute table has to reverse-engineer the
+thesis from a UI. The overview states it in about fifteen seconds and puts
+"Open the review console" as the first and most prominent control on the page,
+above the fold, in the accent colour. The bounce risk is mitigated by never
+making the reader hunt for the product.
+
+**The rule that makes the page honest: no number on it is written by hand.** The
+metrics table is the `Headline` section of the committed `eval/results.md`,
+located by heading and rendered verbatim by the same parser the eval page uses.
+Selecting a section is not computing one, so P4.2's invariant holds — there is
+still exactly one place a number can be wrong, and it is the report. A test
+asserts the landing source contains no `%` and no `₹`, which are the units every
+headline metric is reported in; either character appearing there means someone
+typed a number.
+
+**Rejected: a hero band above the live console on one page.** It would have
+proved the pitch and the product at one URL, but the console is a fixed-viewport
+tool whose whole layout depends on owning the screen, and a hero above it either
+pushes the workspace below the fold or collapses on selection into a jump.
+
+**Rejected: `react-router`.** Three routes, no parameters, no nesting. The
+server side already works — the API's SPA fallback returns `index.html` for any
+extensionless GET that is not under `/api/`, so `/app` and `/eval` needed no
+server change at all.
+
+**Rejected: Google Fonts.** The demo runs on a free Render instance that cold
+starts; a third-party font request is one more thing that can be slow or blocked
+while a judge is looking. Self-hosted means the page depends on nothing but the
+origin already serving it. Rejected the `@fontsource` packages too, after
+installing them: they ship every subset, and an explicit `@font-face` block over
+two vendored files is both smaller and easier to defend line by line.
+
+**Rejected: Razorpay's own brand blue** as the accent, in favour of an
+ink-indigo. Borrowing the brand colour of the API you submit to reads as either
+confusion or flattery in front of the people who own it.
+
+**What it taught.** The bug this shook out (F-022) was not in the routing but in
+the console: `useState(initialView)` copies a prop once and then ignores it, so
+the URL and the page could disagree. Adding a second address for an existing
+screen is a good way to discover that the screen was holding state the address
+should have owned.
+
+---
+
+### D-042 -- the free instance is kept awake by a scheduled ping, and the arithmetic is stated
+
+**Context.** D-036 accepted a documented cost -- Render spins a free web service
+down after 15 minutes without inbound traffic and takes about a minute to wake
+it -- and then claimed a mitigation it did not have. The claim is corrected in
+place there; this entry is the mitigation.
+
+The cost is not evenly distributed. It lands entirely on the *first* request
+after a quiet period, and the README's first line is a live link whose first
+follower is plausibly an automated screener with a timeout. Every later visitor
+gets a warm instance. So the whole problem is one request, and one request is a
+cheap thing to spend.
+
+**Decided: a GitHub Actions schedule pings `/health` every five minutes,
+committed at `.github/workflows/keep-warm.yml`.** A ping is inbound traffic and
+inbound traffic is exactly what the idle timer measures, so the mechanism is the
+documented one rather than a workaround of it.
+
+**The interval is chosen for headroom, not for frequency.** GitHub states that
+scheduled workflows are best-effort and can be delayed during periods of high
+load, and five minutes is the shortest interval its cron syntax accepts. At five
+minutes against a fifteen-minute threshold, two consecutive runs can be dropped
+and the service still never goes idle. Choosing fourteen minutes would have been
+arithmetically sufficient and operationally fragile, because it assumes a
+scheduler whose own documentation says not to.
+
+**Why this is defensible rather than free-tier abuse, said precisely.** Render's
+free-plan page (read 2026-09-04) says nothing about pinging in either direction
+-- it neither blesses nor forbids it -- so no endorsement is claimed. What it
+does state is the budget: **750 Free instance hours per workspace per calendar
+month**, and that spun-down services do not consume them. A service kept awake
+continuously consumes 744 hours in the longest month. That fits inside 750, and
+it fits *only* because this workspace runs exactly one service; a second free
+service in the same workspace would put the pair over the allowance well before
+month end. The arithmetic is the whole argument, so it is written down with its
+precondition attached rather than asserted as a general fact about the plan.
+
+**Why `/health` and not `/`.** It is an in-memory handler -- no Prisma call, no
+render -- so waking the process costs one cheap request rather than a database
+round trip every five minutes for a month. It also answers a more useful
+question than "is it up". The job asserts the JSON body rather than the status
+code, because a platform loading page or a proxy error page arrives with a 200
+and would otherwise be logged as a healthy service; and it fails if the
+deployed instance reports `assemblyMode: live`, since the demo must replay the
+committed recordings the eval scored. F-015 was a stale process answering on the
+right port in the wrong mode, and a check that only asserts `ok` cannot see
+that. This makes the run log a standing uptime-and-configuration record for the
+judging window at no extra cost.
+
+**Rejected: an external uptime service** (UptimeRobot, cron-job.org). They are
+free, more reliable schedulers than GitHub Actions, and invisible. D-036 chose a
+committed `render.yaml` over a dashboard screenshot precisely so a reviewer can
+read how this is deployed instead of taking it on trust; keeping the instance
+alive from an account nobody can see would reintroduce the thing that argument
+rejected. The less reliable scheduler that ships in the repository is worth more
+than the better one that does not, at a five-minute interval where reliability
+has three-fold slack anyway.
+
+**Rejected: Render Cron Jobs.** Not available on the free plan, and a service
+pinging itself from the same host does not survive the moment it is asleep.
+
+**Known limits, because a mitigation with unstated failure modes is the thing
+this entry is correcting.** The workflow only runs once the repository is pushed
+to GitHub, which is still open (P5.3 flagged that this repo has no remote);
+scheduled workflows run from the default branch only; and GitHub disables them
+automatically after 60 days of repository inactivity, which is after the judging
+window and after the free Postgres expires anyway. The README's first line
+therefore keeps its cold-start note. The ping makes a slow first load unlikely,
+not impossible, and the labelled claim stays true either way -- which is the
+point of having labelled it rather than promised uptime.
+
+**Consequence.** The deploy URL now appears in three files -- `README.md`,
+`SUBMISSION.md` and this workflow -- as the same placeholder token,
+`PRAMAN-DEPLOY-URL-PENDING`, so a single grep finds every place P4.3 has to
+fill in. The workflow fails with an explicit message while the placeholder is
+still there rather than emitting a DNS error that would read as a flaky network.
+
+---
+
+### D-043 -- the demo clock is part of the simulation, and the server owns it
+
+**Context.** F-024: the console rendered every seeded `respond_by` against
+`Date.now()` and showed 102 expired deadlines. Two fixes were available and only
+one of them is honest.
+
+**Rejected: move the corpus epoch forward, or make it relative to now.** This is
+the obvious fix and it is the wrong one. `CORPUS_EPOCH` being a hard-coded
+`2026-06-01` is what makes the corpus reproducible: every timestamp is an offset
+from it, timestamps reach prompts, prompts are hashed, and the hash is the replay
+key for the committed LLM fixtures (D-007). A wall-clock base means every reseed
+produces different prompts, every fixture misses, and `pnpm eval` silently goes
+live -- trading a cosmetic defect for the loss of the property the eval rests on.
+A guard test already forbids it. Rebasing the epoch to a later fixed date would
+work today and rot again on exactly the same schedule.
+
+**Decided: the clock is simulated, like the data.** The corpus has no now, so one
+is defined for it -- `CORPUS_NOW`, exported beside `CORPUS_EPOCH`, at epoch + 50
+days. Deadlines are read against that instead of against real time. This is not a
+workaround for the epoch; it is the same decision applied to the other end of the
+subtraction. A seeded corpus read against a real clock is a mixed frame of
+reference, and mixing them is what produced the bug.
+
+**Why fifty.** `respond_by` across the dev corpus runs from 35 to 147 days after
+the epoch. Fifty puts the reader inside that spread: 14 of 102 disputes overdue,
+7 inside the three-day urgent window, 81 with room. A queue with nothing overdue
+would be a demo with the urgency removed; one where everything is overdue is what
+we had. The number is a constant rather than a percentile computed from the
+store, because a clock derived from the rows would shift whenever a dispute is
+released or approved -- and a demo clock that jumps when you use the demo is
+worse than one that is merely fixed. Three tests in `corpus.test.ts` assert the
+*shape* rather than the number, so the constant fails loudly if the generator's
+timeline ever moves.
+
+**Why the server reports it rather than the UI assuming it.** `/health` already
+carries `demoMode` for exactly this reason: the front end cannot know whether the
+rows it was handed are seeded, and a label the client switches on for itself is a
+label that can be wrong. `simulatedNow` joins it. Today it is always set --
+`seed`, `corpus`, `scenarioClass` and `groundTruth` are non-nullable columns on
+`Dispute`, so the schema has no shape a real dispute could occupy. The field is
+typed `string | null` and the UI falls back to wall-clock time on null, which is
+the seam a real rail would arrive through; no branch was built for a mode that
+does not exist.
+
+**Why `daysUntil(iso, now)` has no default.** A defaulted parameter would have
+compiled every existing call site unchanged and kept the bug in both of them. The
+required argument is the mechanism: `null` still means real time, but it has to
+be typed on purpose. This is the same lesson as F-013 -- the fix that holds is
+the one that makes the wrong thing impossible to write by accident, not the one
+that corrects the current caller.
+
+**Consequence for the honesty taxonomy.** The clock is now a labelled part of the
+simulation: `clock: simulated` sits beside `assembly: replay` in the console's top
+bar, and every deadline's tooltip names the instant it counted from, so a reviewer
+can check the arithmetic rather than trust the badge. A simulated corpus shown
+against a real clock was, strictly, unlabelled simulated data -- the rule was
+being applied to the rows and not to the axis they were measured on.

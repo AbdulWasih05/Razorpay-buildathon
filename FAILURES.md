@@ -873,3 +873,239 @@ recorded in a docblock directly above the schema that caused F-019 -- the
 sentence was right there, and it did not extend to the field two lines below it.
 The lesson generalises further than the fix did, which is an argument for
 reading old FAILURES entries as constraints on new code rather than as history.
+
+### F-020 -- a fixed-row grid handed its growing row to the wrong child
+
+**When.** 2026-09-03, first browser check of the redesigned console (D-040).
+
+**What broke.** The decision bar -- the region that carries the approve door --
+did not appear at all, and the evidence workbench started immediately under the
+top bar. Every test passed, `typecheck` and `lint` were clean, and the
+components each rendered correctly in isolation.
+
+**How it was diagnosed.** Looking at the screenshot rather than the DOM first,
+I misread it as horizontal clipping and nearly went hunting for an overflowing
+child. Measuring instead of guessing settled it in one call:
+`document.documentElement.scrollWidth === window.innerWidth`, no element with a
+`right` beyond the viewport, and `devicePixelRatio: 1.25` -- Windows display
+scaling, not browser zoom. Nothing was clipped. The bar was being sized wrong.
+
+The shell was `display: grid` with `grid-template-rows: auto auto minmax(0, 1fr)`
+-- three rows, written when the queue view had three children. It has four: the
+simulated strip, the top bar, the decision bar and the workspace. React
+fragments do not create a box, so the fragment's children became grid items in
+their own right. The decision bar landed on row three and took the `1fr`, and
+the workspace fell into an implicit auto row below the fold, where
+`overflow: hidden` on the shell removed it from view.
+
+**The fix.** A column flex, with every fixed region `flex: 0 0 auto` and only
+the scrolling region `flex: 1 1 auto`. Flex sizes by role; a counted
+`grid-template-rows` sizes by position, and position is exactly what varies here
+-- the strip is present only in demo mode and the decision bar only on the queue
+view, so the same template describes four different child counts.
+
+**What it taught.** Row counts in a grid template are an assumption about how
+many children there are, and nothing in the type system, the tests or the linter
+knows that assumption exists. I had three tests asserting the decision bar
+renders its contents, and all three passed while it was invisible on screen --
+they render the component, and the bug was in the parent that sizes it. A
+component test cannot see a layout bug, and I should stop treating a green suite
+as evidence that a page looks right.
+
+### F-021 -- the demo's one submitted dispute is approved by `human:system`
+
+**When.** 2026-09-03, reading the redesigned audit trail in the browser.
+
+**What broke.** Nothing in the running product -- this is a stale test fixture,
+but it is a stale test fixture that renders in the demo.
+
+`apps/ui/src/__fixtures__/disputes.json` and `queue.json` carry
+`approvedBy: "human:system"`, and the audit trail's `approved` row names the
+same actor. These are captured API responses, taken on 2026-08-31 -- **before
+F-013 was fixed**. F-013 is the failure where `approveAndSubmit` prefixed
+whatever it was handed, so `approvedBy: "system"` became `human:system` and
+passed every downstream check. The fixture is a recording of that bug.
+
+**Why the redesign surfaced it.** The old UI rendered the trail into a `<pre>`
+and the actor was one column of text in a blob. The new trail gives the actor
+its own column and marks the single human in it with the accent colour --
+specifically so a reviewer can read down and confirm a human appears exactly
+once. That change made the one value that should never appear there the most
+prominent thing in the panel.
+
+**Status: open, and deliberately not hand-edited.** Editing a captured response
+by hand would make it a hand-written fixture that claims to be a capture, and
+`render.test.ts` rests on that provenance -- the fixtures are trusted precisely
+because nobody typed them. The honest fix is a recapture against a running API
+with a real reviewer identity, which needs Postgres up. Logged here rather than
+quietly patched, and flagged for the demo: **the submitted sample dispute shows
+an approver that the current code would reject.**
+
+**What it taught.** A fixture captured before a fix keeps the bug alive
+somewhere the tests do not look. F-013 was closed in the product and stayed open
+in the demo data for three days, and it took a redesign that made the actor
+prominent for anyone to notice.
+
+### F-022 -- the address bar and the page disagreed after a back button
+
+**When.** 2026-09-03, first navigation test of the new `/` landing page and the
+`/app` and `/eval` routes.
+
+**What broke.** Pressing back from `/eval` put `/app` in the address bar and
+left the eval report on screen. Pressing back again did not reach `/` at all.
+Both symptoms, one cause.
+
+**How it was diagnosed.** Not by looking -- the page still rendered something
+plausible, which is why this class of bug survives a visual check. It was found
+by scripting the navigation and asserting on three things at once at each step:
+the path, the document title, and which of the three pages had actually
+rendered. The row that gave it away read `path: "/app"` with `queue: false` and
+`report: true`.
+
+The console took `initialView` as a prop and did `useState(initialView)`.
+`useState` uses its argument only on the first render, so once mounted the
+component ignored every later value. React does not remount `App` when the route
+changes from `eval` to `console` -- it is the same component in the same
+position -- so the prop changed, the state did not, and the two sources of truth
+for "which page is open" drifted apart. The second symptom followed from the
+first: with the view stuck, the eval tab stayed visually active and the next
+interaction pushed another history entry.
+
+**The fix.** Delete the state. `view` is a prop and `onView` calls `navigate`;
+`Root` derives the view from the route and hands it down. There is now exactly
+one thing that knows which page is open, and it is the URL. Five tests pin the
+route mapping as total and reversible.
+
+**What it taught.** `useState(someProp)` is a copy, not a binding, and it is
+worth reading as "seed once, then ignore" every time it appears. The real lesson
+is about how I checked: I had clicked through these routes by hand and they
+looked fine, because a page that renders the wrong thing still renders. Asserting
+the URL and the rendered page together in one script found in seconds what
+looking had missed twice.
+
+---
+
+### F-023 -- the honesty rule was broken in the decision log, under the first link a reader follows
+
+**When.** 2026-09-04, reviewing what was left before the deploy.
+
+**What broke.** D-036, the entry that argues for stating the free plan's costs
+out loud, contained a claim that was itself false. It said the free plan
+"includes 750 instance-hours a month against 744 in the longest month, so
+keeping the one service warm is inside the published allowance rather than a
+trick played on it." No mechanism existed for keeping anything warm. The
+sentence described a mitigation that had never been built.
+
+This is a hard-rule-#6 violation, and its location is what makes it worth an
+entry rather than a quiet edit. It sat two paragraphs below a bullet explaining
+that a reader who waits sixty seconds for a blank page and was told nothing has
+been misled by omission -- inside the entry governing the link the README opens
+with, which is the first thing a screener follows.
+
+**How it was diagnosed.** By re-reading Render's own free-plan page instead of
+the note taken from it a day earlier. The arithmetic was right and the inference
+was backwards: the page states that spun-down services do not consume Free
+instance hours at all, so an hours allowance can never be what keeps a service
+awake. It is a budget for running, not a mechanism for staying up. Two correct
+facts had been joined by a "so" that did not hold, and the join is the part that
+made a claim out of them.
+
+**The fix.** Build the mechanism the sentence assumed, then rewrite the sentence
+to point at it. `.github/workflows/keep-warm.yml` pings `/health` every five
+minutes against a fifteen-minute idle threshold, so two consecutive scheduled
+runs can be dropped and the service still never goes idle -- GitHub documents
+its schedules as best-effort, so the interval is chosen for slack rather than
+frequency. D-042 states the arithmetic that makes running continuously
+defensible, including its precondition: 744 hours fits inside 750 only because
+this workspace runs exactly one service. The old sentence is quoted verbatim in
+D-036 above its correction rather than overwritten, because a decision log that
+edits its own mistakes out is worth less than one that shows them. The README's
+first line and SUBMISSION.md now say a ping keeps it awake *and* that a missed
+ping still costs about a minute, since the mitigation is best-effort and a
+promise of uptime would be the same error again in a better disguise.
+
+**What it taught.** The dishonest sentence was not written to deceive; it was
+written to close a bullet that felt unfinished. Two verified facts and a
+connective are enough to manufacture a claim nobody checked, because the facts
+survive fact-checking individually and the "so" between them is not a fact and
+does not get checked at all. P5.4's pass verified every citation in this
+repository and walked straight past this, which says the pass was aimed at
+sources rather than at inferences. The other half: the claim was in the entry
+about being honest concerning deploy costs. The document most likely to be read
+as already handled is the one that argues it has handled it.
+
+---
+
+### F-024 -- every deadline in the console read as months overdue, and 266 tests agreed
+
+**When.** 2026-09-04, running the console locally to look at the redesign.
+
+**What broke.** All 102 disputes in the review queue showed a red expired
+deadline -- `57d over`, `60d over`, `61d over`. Not one row had time left. The
+deadline meter, which exists so a reviewer can see which dispute to answer
+first, was a solid column of red that said nothing about any of them.
+
+Deadline-awareness is in the product's own one-line description. The queue is
+sorted by `respond_by` ascending specifically so the most urgent dispute is
+first, and there is a comment in `Queue.tsx` explaining that this ordering is a
+property of the queue rather than a view preference. Sorting 102 equally blown
+deadlines ranks nothing.
+
+**How it was diagnosed.** By reading the two ends of the subtraction. `respondBy`
+came from `generateDispute`, which offsets from `CORPUS_EPOCH` -- a hard-coded
+`2026-06-01`, deliberately fixed so the corpus is reproducible, with a test
+asserting no generated instant comes from `Date.now()`. The other end came from
+`daysUntil`, which read `Date.now()`. The corpus's clock stopped and the real one
+did not, so the gap between them widened by one day per day. On 2026-09-04 the
+whole corpus had aged 25 to 100 days past its response windows.
+
+Both halves are individually correct, which is why this survived. The fixed epoch
+is load-bearing for eval reproducibility -- a wall-clock base would change every
+prompt hash and silently invalidate the committed replay fixtures (D-007), and a
+test guards it. `Date.now()` is the right clock for a real dispute. The defect is
+only visible where they meet, and nothing looked there.
+
+**The tests were no help, and that is the interesting part.** 266 of them passed
+while this was on screen. The deadline test computed its own fixtures with
+`Date.now() + 2 days` and asserted `daysUntil` returned 2 -- true, and true no
+matter how stale the corpus got, because the test never used corpus data. It
+tested the subtraction and not the pairing. This is the same shape as F-022: a
+component that renders the wrong thing still renders, and an assertion that
+manufactures both of its inputs can only confirm arithmetic.
+
+**The fix.** The data is simulated, so the clock it is read against is simulated
+too, and labelled the same way (hard rule #6).
+
+- `CORPUS_NOW` sits beside `CORPUS_EPOCH` in the simulator: epoch + 50 days,
+  which lands inside the corpus's own `respond_by` spread of 35 to 147 days.
+  Fourteen disputes are genuinely overdue, seven sit inside the urgent window,
+  eighty-one have room. That is the shape of a real response queue.
+- The server reports it on `/health` as `simulatedNow`, for the same reason it
+  reports `demoMode` rather than letting the UI infer it: the front end cannot
+  know whether the rows it was handed are seeded, and a banner the client
+  switches on for itself is a banner that can be wrong.
+- `daysUntil(iso, now)` takes the instant as a **required** parameter. A default
+  would have let every existing call site keep the bug; `null` still means real
+  time, but it has to be written out on purpose.
+- The console labels the clock in the top bar next to `assembly: replay`, and
+  every deadline's tooltip names the instant it counted from.
+
+**Four tests, aimed at the pairing rather than the arithmetic.** Three in
+`corpus.test.ts` assert the shape of the queue a reviewer sees -- that both
+overdue and open disputes exist, that the clear majority are still answerable,
+and that at least one sits in the urgent window the meter colours. They fail if
+the generator's timeline moves, which is exactly when `CORPUS_NOW` needs
+re-deriving. One in `render.test.ts` renders a real corpus dispute and asserts
+the bar says `d left` and not `d over`.
+
+**What it taught.** Two correct decisions can produce a broken screen at the
+seam between them, and the seam is where nobody writes tests, because each side
+already has its own. The specific trap: a test that constructs its inputs from
+the same clock it is checking cannot fail. `Date.now() + 2 days` was always going
+to be two days away.
+
+And the reason it went unnoticed for a week is that it never looked broken. Red
+overdue badges look like urgent work, not like a bug -- there is no error, no
+blank space, nothing missing. It took someone opening the console to *look
+around* rather than to check something specific. That is an argument for the P5.6
+dry-run, not against the test suite.
