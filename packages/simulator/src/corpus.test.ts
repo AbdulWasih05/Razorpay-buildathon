@@ -13,6 +13,7 @@ import {
 import { DEV_CONFIG, OOD_CONFIG } from './configs.js';
 import { allocate, generateCorpus, summarise } from './corpus.js';
 import { isSimulatedId } from './ids.js';
+import { CORPUS_EPOCH, CORPUS_NOW } from './rng.js';
 import { generateTransaction } from './transaction.js';
 
 const CORPUS_SIZE = 100;
@@ -51,6 +52,48 @@ describe('determinism -- same seed, logically identical output', () => {
       // of them can land within a few seconds of "now" on a repeat run.
       expect(Math.abs(dispute.raisedAt.getTime() - now)).toBeGreaterThan(60_000);
     }
+  });
+});
+
+describe('the demo clock sits inside the corpus deadline spread', () => {
+  /**
+   * The guard for F-024. The fixed epoch above is what makes the corpus
+   * reproducible, and it is also what made every dispute render as months
+   * overdue: `respond_by` stopped moving and real time did not. `CORPUS_NOW` is
+   * the reading instant that fixes it, and it is a hand-picked constant, so the
+   * thing that can rot is its position in the distribution.
+   *
+   * These assertions are about the *shape of the queue a reviewer sees*, not
+   * about the number 50. If the generator's timeline changes, this fails and
+   * `CORPUS_NOW` gets re-derived -- which is the whole point, because the
+   * original bug survived 260 passing tests by being a property nothing
+   * asserted.
+   */
+  const corpus = generateCorpus(DEV_CONFIG, CORPUS_SIZE);
+  const overdue = corpus.disputes.filter((d) => d.respondBy.getTime() < CORPUS_NOW.getTime());
+  const open = corpus.disputes.filter((d) => d.respondBy.getTime() >= CORPUS_NOW.getTime());
+
+  it('shows both overdue and open disputes, so the deadline ordering means something', () => {
+    expect(overdue.length).toBeGreaterThan(0);
+    expect(open.length).toBeGreaterThan(0);
+  });
+
+  it('leaves the clear majority still answerable', () => {
+    // A queue that is mostly late reads as a broken demo rather than an urgent
+    // one, and it is the exact symptom F-024 was reported for.
+    expect(overdue.length / corpus.disputes.length).toBeLessThan(0.35);
+  });
+
+  it('puts at least one dispute inside the urgent window, which the meter colours', () => {
+    const urgent = open.filter(
+      (d) => d.respondBy.getTime() - CORPUS_NOW.getTime() < 3 * 24 * 60 * 60_000,
+    );
+    expect(urgent.length).toBeGreaterThan(0);
+  });
+
+  it('is a fixed instant, not a wall clock', () => {
+    expect(Math.abs(CORPUS_NOW.getTime() - Date.now())).toBeGreaterThan(60_000);
+    expect(CORPUS_NOW.getTime()).toBeGreaterThan(CORPUS_EPOCH.getTime());
   });
 });
 

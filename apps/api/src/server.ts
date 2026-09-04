@@ -13,7 +13,7 @@ import {
   evidencePackIngestSchema,
   toPromptInput,
 } from '@praman/core';
-import { DEV_CONFIG, generateTransaction } from '@praman/simulator';
+import { CORPUS_NOW, DEV_CONFIG, generateTransaction } from '@praman/simulator';
 import { z } from 'zod';
 
 import { adapterFromEnv } from '@praman/adapter';
@@ -139,6 +139,18 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
     recordings: assemblyCache.size,
     startedAt: STARTED_AT,
     pid: process.pid,
+    /**
+     * The instant deadlines are read against (F-024).
+     *
+     * Every dispute this server can hold is seeded: `seed`, `corpus`,
+     * `scenarioClass` and `groundTruth` are non-nullable columns, so there is
+     * no path by which a real dispute reaches the store. The rows are simulated
+     * and so is the clock, which is stated here rather than assumed by the UI
+     * -- the same reason `demoMode` is served rather than inferred. If a real
+     * rail is ever added, this is the field that goes null and the console
+     * falls back to wall-clock time.
+     */
+    simulatedNow: CORPUS_NOW.toISOString(),
   }));
 
   /**

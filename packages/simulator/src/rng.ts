@@ -75,6 +75,33 @@ export function createRng(seed: string): Rng {
  */
 export const CORPUS_EPOCH = new Date('2026-06-01T00:00:00.000Z');
 
+/**
+ * The instant the corpus is *read* from, as opposed to generated at.
+ *
+ * A deadline only means something relative to a now, and the corpus has no now:
+ * every `respond_by` is a fixed offset from the epoch above, and real time keeps
+ * walking away from it. Rendering a seeded corpus against `Date.now()` therefore
+ * does not display urgency, it displays how long ago the corpus was generated --
+ * which is why every dispute in the console read as months overdue (FAILURES.md
+ * F-024). The data is simulated, so the clock it is read against has to be
+ * simulated too, and labelled the same way (hard rule #6).
+ *
+ * **Why fifty days.** `respond_by` across the dev corpus runs from 35 to 147
+ * days after the epoch. Fifty puts the reader inside that spread rather than
+ * past the end of it: roughly one dispute in six is genuinely overdue, a handful
+ * sit inside three days, and the rest have room. That is the shape of a real
+ * response queue, and it is what makes the deadline ordering worth having --
+ * a queue where every row is equally, hopelessly late is sorted by nothing.
+ *
+ * It is a constant rather than a percentile computed from the store, because a
+ * clock derived from the rows would move whenever a dispute is released or
+ * approved, and a demo clock that jumps backwards when you use the demo is
+ * worse than one that is merely fixed. `CORPUS_NOW` is re-derived by hand if
+ * the generator's timeline ever changes; `corpus.test.ts` fails if it drifts
+ * out of the distribution.
+ */
+export const CORPUS_NOW = new Date(CORPUS_EPOCH.getTime() + 50 * 24 * 60 * 60_000);
+
 /** An instant offset from the fixed corpus epoch. */
 export function atOffset(minutes: number): Date {
   return new Date(CORPUS_EPOCH.getTime() + minutes * 60_000);
