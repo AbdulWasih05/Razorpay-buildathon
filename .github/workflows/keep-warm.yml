@@ -1,0 +1,116 @@
+# Keep the free Render instance warm (DECISIONS.md D-036, D-042).
+#
+# Render spins a free web service down after 15 minutes without inbound traffic
+# and takes about a minute to wake it. The README's first line is a live link
+# and the first reader is plausibly an automated screener with a timeout, so a
+# cold start lands on the worst possible visitor. This pings `/health` every
+# five minutes, which is inbound traffic, which resets that timer.
+#
+# Why five and not fourteen. GitHub's scheduled workflows are explicitly
+# best-effort -- runs are delayed under load and five minutes is the shortest
+# interval the syntax allows -- so the interval is chosen for headroom rather
+# than for frequency. At five minutes, two consecutive runs can be dropped
+# entirely and the service still never reaches the 15-minute idle threshold.
+#
+# Why `/health` and not `/`. It is an in-memory handler: it touches no database
+# and renders no page, so keeping the process awake costs one cheap request
+# rather than a Prisma round trip every five minutes for a month. It also
+# reports `assemblyMode` and `pid`, which is what makes the run log worth
+# reading -- F-015 was a stale process answering on the right port in the wrong
+# mode, and a check that only asserts "ok" cannot see that.
+#
+# This is not free-tier abuse and it is not blessed either: Render's free-plan
+# documentation says nothing about pinging in either direction. What it does
+# say is that the allowance is 750 instance hours per workspace per calendar
+# month and that spun-down services do not consume them. A service kept awake
+# continuously therefore consumes 744 hours in the longest month, which fits --
+# but only because this workspace runs exactly one service. That arithmetic is
+# the reason this is defensible, so it is written down rather than assumed.
+
+name: Keep warm
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  # So the deploy can be checked by hand the moment it exists, without waiting
+  # up to five minutes to find out whether the URL below was filled in.
+  workflow_dispatch:
+
+# Two runs pinging the same URL is pointless rather than harmful, but a backlog
+# of queued schedule runs after a GitHub outage is noise in the Actions log.
+concurrency:
+  group: keep-warm
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # The URL lives here as a literal rather than in a repository variable so
+      # that it is readable in the repository, like `render.yaml` -- D-036's
+      # argument that a reviewer should not have to take a dashboard on trust.
+      # It carries the same placeholder token as README.md and SUBMISSION.md, so
+      # one grep finds every place the deploy URL has to land (P4.3).
+      - name: Ping the health endpoint
+        env:
+          URL: https://PRAMAN-DEPLOY-URL-PENDING
+        run: |
+          set -euo pipefail
+
+          # A job that pings a placeholder host would fail with a DNS error and
+          # read as a flaky network, which is exactly the wrong diagnosis. Say
+          # what is actually wrong instead.
+          case "$URL" in
+            *PRAMAN-DEPLOY-URL-PENDING*)
+              echo "::error::The deploy URL is still a placeholder. Fill it in here, in README.md and in SUBMISSION.md (TASKS.md P4.3)."
+              exit 1
+              ;;
+          esac
+
+          # --max-time is generous on purpose: if the ping is the request that
+          # happens to wake a spun-down instance, it pays the ~1 minute cold
+          # start, and treating that as a failure would report an outage every
+          # time the mechanism worked.
+          body=$(curl --silent --show-error --fail --max-time 90 "$URL/health")
+          echo "$body"
+
+          # Assert the payload, not just the status code. A Render loading page
+          # or a proxy error page can arrive with a 200 and would otherwise be
+          # recorded as a healthy service.
+          # Failures are emitted as ::error:: annotations rather than stack
+          # traces. This job runs unattended for days; the reader of a red run
+          # is someone glancing at a notification, and a raw SyntaxError from
+          # JSON.parse does not tell them the demo served a loading page.
+          node -e '
+            const raw = process.argv[1];
+            const fail = (message) => {
+              console.log("::error::" + message);
+              process.exit(1);
+            };
+
+            let health;
+            try {
+              health = JSON.parse(raw);
+            } catch {
+              fail("/health did not return JSON. First 200 characters: " + raw.slice(0, 200));
+            }
+
+            if (health.status !== "ok") fail("/health reports status: " + health.status);
+
+            console.log(
+              "assembly=" + health.assemblyMode +
+              " demo=" + health.demoMode +
+              " pid=" + health.pid +
+              " up-since=" + health.startedAt,
+            );
+
+            // Not a liveness check -- a configuration one. The deployed demo
+            // must show the drafts the eval scored, which means replaying the
+            // committed recordings and never making a live model call (D-036,
+            // render.yaml). If this ever flips, the demo and the numbers have
+            // stopped being the same system.
+            if (health.assemblyMode !== "replay") {
+              fail("the deployed instance is in live assembly mode; the demo must replay committed recordings");
+            }
+          ' "$body"
