@@ -123,11 +123,15 @@ export async function runPipeline(
   //
   // The fix treats a second-or-later cycle as its own recorded event rather
   // than a silent extension of the first. If the dispute is not already at
-  // `received`, an explicit rewind row is appended first -- same shape as
-  // `resetDemo`'s own `demo_reset` row, because "this dispute is starting a
-  // new cycle" is exactly what that row already means, and a demo reset
-  // followed by a reprocess is now two honestly-recorded events instead of
-  // one recorded event and one silently-dropped one. Every subsequent step
+  // `received`, an explicit rewind row is appended first, because "this
+  // dispute is starting a new cycle" deserves its own recorded fact rather
+  // than a silently-dropped one. (F-028, the same session: a demo reset is no
+  // longer one of the ways a SEEDED dispute reaches this path at all --
+  // `resetDemo` now only ever deletes `demo-`-prefixed rows outright, never
+  // rewinds a seeded one. The remaining, legitimate way a seeded dispute gets
+  // a second cycle is P4.0(a)'s own `?states=drafted,abstained`
+  // reprocessing, which this fix still has to handle correctly on its own.)
+  // Every subsequent step
   // from the fresh trail (skipping its own redundant first `received` entry)
   // is then re-applied on top, seq numbers continuing from wherever the
   // persisted trail actually left off -- never restarting at 0.

@@ -462,10 +462,11 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   /**
    * Restore a clean demo.
    *
-   * Rewinds every seeded dispute to `received` and deletes the ones the demo
-   * released. It does NOT truncate the audit trail: that table's contract is
-   * append-only, so a rewind appends a `demo_reset` entry recording what it
-   * undid rather than erasing it.
+   * Deletes every `demo-`-prefixed dispute the release trigger created, and
+   * touches nothing else. FAILURES.md F-028: this used to also rewind every
+   * seeded dispute back to `received`, regardless of prefix -- which is not a
+   * clean demo, it is the eval corpus's processed state wiped out from under
+   * it. `resetDemo` is now scoped to exactly what this route can create.
    */
   app.post('/demo/reset', async (request, reply) => {
     const gate = resetLimiter.take(request.ip);

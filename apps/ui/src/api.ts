@@ -203,7 +203,7 @@ export async function releaseDispute(): Promise<ReleasedDispute> {
   return json<ReleasedDispute>(await fetch('/api/demo/release-dispute', { method: 'POST' }));
 }
 
-export async function resetDemo(): Promise<{ rewound: number; demoDisputesRemoved: number }> {
+export async function resetDemo(): Promise<{ demoDisputesRemoved: number }> {
   return json(await fetch('/api/demo/reset', { method: 'POST' }));
 }
 

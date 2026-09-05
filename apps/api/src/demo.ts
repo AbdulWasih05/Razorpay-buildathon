@@ -18,13 +18,21 @@ import { captureEvidencePack } from './capture.js';
  *   - it is rate limited, so hammering it cannot fill the queue with a thousand
  *     disputes and make the demo incoherent for the next visitor;
  *   - it is bounded, so even a patient attacker gets 20 and then nothing;
- *   - there is a reset, so whatever anyone does, one call restores a clean
- *     state.
+ *   - there is a reset, scoped to exactly what the demo itself created, so
+ *     whatever a screener does to the demo, one call restores a clean state
+ *     -- without touching the 100 disputes the eval actually measures.
  *
  * Demo disputes are generated at indices far above the seeded corpus and
  * carry their own `demo-` external-id prefix, so they can never collide with,
  * overwrite or be confused for the 100 disputes the eval measures. Nothing here
  * touches the eval corpus, and nothing here can reach the held-out set.
+ *
+ * That last sentence was false for `resetDemo` until FAILURES.md F-028: the
+ * reset scanned every dispute in the database, not just `demo-`-prefixed
+ * ones, and rewound the whole seeded corpus to `received` -- precisely
+ * because a screener poked the reset button this docblock invited them to
+ * poke. `demo.test.ts` now asserts the scope directly rather than leaving it
+ * as a claim in a comment above code that did not enforce it.
  */
 
 /** Demo disputes start here: far above the 100 seeded corpus indices. */
@@ -189,25 +197,35 @@ export async function releaseNextDispute(
 // ---------------------------------------------------------------------------
 
 export interface ResetSummary {
-  rewound: number;
   demoDisputesRemoved: number;
 }
 
 /**
- * Restore a clean demo, without erasing an audit trail.
+ * Restore a clean demo, touching only what the demo itself created.
  *
- * The AuditLog table's contract is that it is append-only -- "nothing in this
- * table is ever updated or deleted" -- and a reset that quietly truncated it
- * would make that sentence false in the one place someone would check. So the
- * reset **rewinds state and appends a record that it did**: every seeded
- * dispute goes back to `received` with its pipeline output cleared, and the
- * trail gains a `demo_reset` entry saying so. The history of the demo remains
- * legible after the demo has been reset, which is the whole point of having a
- * trail rather than a status column.
+ * FAILURES.md F-028: this used to also rewind every dispute in the database
+ * that was not `received` -- not scoped to `demo-`-prefixed rows at all. That
+ * is not "restore a clean demo", it is "wipe the seeded eval corpus's
+ * processed state", and it is exactly what happened live: a screener hitting
+ * this endpoint (precisely the thing this module's own docblock says to
+ * expect) rewound all 100 seeded disputes back to `received`, and nothing
+ * reprocesses them automatically (`SEED_ON_BOOT` only runs when the store is
+ * empty, D-035), so every dispute in the queue was left drafted-looking in
+ * `dispute.state` but stuck at `received` in its own audit trail the moment
+ * anyone reprocessed it -- the exact desync F-026 fixed the symptom of.
+ * `rewindToReceived` heals a trail that has already been desynced this way;
+ * this function is what must stop causing the desync in the first place.
  *
- * Disputes the demo itself released are a different case and are deleted
- * outright. They were never part of the corpus, their trail is evidence of
- * nothing, and leaving them would mean "reset" did not.
+ * The scope is now identical to the query above it: `demo-`-prefixed rows,
+ * and nothing else. A demo-released dispute is deleted outright -- its trail
+ * is evidence of nothing, since it was never part of the corpus the eval
+ * measures, and there is no "rewind" state for something with no legitimate
+ * history to preserve. The AuditLog table's append-only contract therefore
+ * never actually applies here: there is nothing left to append to, because
+ * there is nothing left to preserve a history of. A seeded dispute is never
+ * touched by this function, in any state, including `approved` or
+ * `submitted` -- a judge who actually approves a real dispute during a
+ * demo keeps that decision; `/demo/reset` does not undo it.
  */
 export async function resetDemo(prisma: PrismaClient): Promise<ResetSummary> {
   const demoDisputes = await prisma.dispute.findMany({
@@ -221,40 +239,5 @@ export async function resetDemo(prisma: PrismaClient): Promise<ResetSummary> {
     await prisma.dispute.deleteMany({ where: { id: { in: demoIds } } });
   }
 
-  const dirty = await prisma.dispute.findMany({
-    where: { state: { not: 'received' } },
-    select: { id: true, state: true },
-  });
-
-  const now = new Date();
-  for (const dispute of dirty) {
-    const seq = await prisma.auditLog.count({ where: { disputeId: dispute.id } });
-    await prisma.auditLog.create({
-      data: {
-        disputeId: dispute.id,
-        seq,
-        fromState: dispute.state,
-        toState: 'received',
-        actor: 'system:demo_reset',
-        reason: 'demo reset requested; pipeline output cleared, trail retained',
-        occurredAt: now,
-      },
-    });
-    await prisma.dispute.update({
-      where: { id: dispute.id },
-      data: {
-        state: 'received',
-        gateDecision: null,
-        gateReason: null,
-        abstentionClass: null,
-        collectedJson: undefined,
-        contestDraftJson: undefined,
-        submittedRequestJson: undefined,
-        approvedBy: null,
-        approvedAt: null,
-      },
-    });
-  }
-
-  return { rewound: dirty.length, demoDisputesRemoved: demoIds.length };
+  return { demoDisputesRemoved: demoIds.length };
 }

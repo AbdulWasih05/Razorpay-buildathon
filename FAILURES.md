@@ -1294,3 +1294,132 @@ count-based diffing read like a correct incremental-append pattern and
 *was* correct, for the one case anyone had tested. It had never been asked
 what happens on a second cycle, so nothing had ever made it fail -- exactly
 the question D-029 says to ask of any guard before trusting it.
+
+---
+
+### F-027 -- the eval report printed its own backticks, on the page a judge reads hardest
+
+**When.** 2026-09-05, looking at `/eval` while retypesetting it.
+
+**What broke.** The first line of the report rendered as *Model of record:
+`` `qwen/qwen3.8-27b` `` via groq* -- bold, with two literal backtick characters
+in it. Inline code worked everywhere else on the page; `pnpm eval` two sentences
+later came out as a proper code chip.
+
+The damage is not cosmetic. That line is where the report names the model of
+record, which D-021 and D-023 make load-bearing: the honesty of a "where we
+deliberately did not use AI" section extends to *which* AI, and the name was
+being displayed inside punctuation that made it look like the renderer had given
+up.
+
+**How it was diagnosed.** By reading the markdown source rather than the output.
+`eval/results.md` line 3 is `**\`qwen/qwen3.8-27b\`**` -- bold wrapping code. The
+renderer split on `/(\*\*[^*]+\*\*|`[^`]+`)/`, and `[^*]+` happily matches
+backticks, so the whole run matched as bold. `slice(2, -2)` then removed the
+asterisks and emitted the backticks as text. Both branches were individually
+correct; neither expected the other's delimiter inside it.
+
+The reason it survived is that it needs three things at once: a nested pair, in
+that order, in a document nobody diffs by character. It had been on screen since
+the metrics page shipped and had been screenshotted several times.
+
+**The fix.** Recurse. The bold branch now runs `inline()` over its own contents
+instead of emitting them as a string. Termination is free rather than lucky --
+the split pattern only matches `**` around runs containing no asterisk, so the
+inner text cannot contain another `**` and the recursion stops after one level.
+
+**What it taught.** A hand-rolled markdown renderer is the right call here --
+P4.2 wants the report displayed, not transformed, and a full parser is a
+dependency that can reformat what it renders. But "small enough to read" is not
+"small enough to be correct", and the failure mode of a flat tokeniser is
+specific and predictable: it handles every construct except two of them touching.
+The place to look is always the nesting, and the place to look FOR the nesting is
+the source file, not the screen -- I had looked at this page many times and read
+the backticks as part of the text.
+
+---
+
+### F-028 -- `resetDemo` was never scoped to the demo, and the reset button bricked the eval corpus it reset alongside
+
+**When.** 2026-09-05, the same adversarial pass that reproduced F-026 live,
+one question further.
+
+**What broke.** F-026 fixed the SYMPTOM: a dispute reprocessed after a reset
+had a desynced audit trail. The root cause sat one level up, unfixed, in the
+function the symptom came from. `resetDemo()` did two things: delete every
+`demo-`-prefixed dispute (correct, scoped), then rewind every dispute in the
+**entire table** whose state was not `received` -- no prefix filter, no
+corpus filter, nothing. The moment anyone calls `/demo/reset` -- the
+intended, documented, rate-limited trigger this module's own docblock says a
+"security-minded screener" will poke -- every one of the 100 seeded disputes
+not currently `received` (essentially all of them, since the corpus is
+processed to drafted/abstained at boot) was rewound to `received` too.
+`demo.ts`'s module docblock already claimed *"Nothing here touches the eval
+corpus"*, and `demo.test.ts`'s own docblock claimed *"the reset can delete
+one without touching the other"* -- neither claim was ever backed by a test
+that ran `resetDemo` against real data, so both were D-029's shape again: a
+claim that reads as rigour and enforces nothing.
+
+**How it was found.** Verified live against the deployed instance, by
+reproducing F-026's exact repro steps and then asking the question F-026's
+own account never asked: why did an ordinary-rail seeded dispute
+(`dsp_dev-v1_a1_18`) that F-026 never mentioned touching show the identical
+"illegal transition received -> approved" refusal? Its audit trail carried
+the same `system:demo_reset` row, at the same timestamp as the case F-026
+documented -- meaning one `/demo/reset` call had reset the whole corpus, not
+the single dispute F-026's narrower repro described.
+
+**Why F-026's fix does not cover this.** `rewindToReceived` heals a trail
+that has already desynced -- it lets a dispute correctly start a second
+cycle after something legitimately reset it. It says nothing about whether
+that something should have touched the dispute at all. Shipping F-026 alone
+would still leave the next screener who pokes `/demo/reset` wiping the
+corpus's entire processed state; the demo would fail more gracefully on the
+next reprocess instead of refusing every approval outright, and it would
+still be broken. TASKS.md's own P4.3 acceptance criterion is that a
+security-minded screener poking this exact link "must not be able to make
+the demo incoherent for the next visitor" -- an unscoped reset is precisely
+that failure, and it happened between one review round and the next.
+
+**The fix.** `resetDemo()` no longer queries `state: { not: 'received' }`
+over the whole table. It deletes `demo-`-prefixed disputes (and their audit
+logs) and returns. `ResetSummary` drops the now-meaningless `rewound` field
+-- there is nothing left to rewind: a demo-released dispute is deleted, and a
+seeded one is never touched, in any state, including `approved` or
+`submitted`. Three docblocks that stated the wrong scope as the design --
+`demo.ts`'s module comment, `resetDemo`'s own comment, and the `/demo/reset`
+route's comment in `server.ts` -- are corrected to describe the actual, now
+test-asserted scope, and to point at this entry instead of repeating the
+claim a fourth time.
+
+**Test.** `apps/api/src/demo-reset.test.ts`, new, database-gated the same
+way `roundtrip.test.ts` is (F-014's own pattern): seeds one dispute under its
+own generator-config name (so it cannot collide with `dev-v1` or `ood-v1`),
+drives it to `abstained` through the real pipeline (scenario b3, expired
+mandate -- gate-declined on arithmetic alone, so no model call is needed and
+the test is replay-safe with no recorded fixture), calls `/demo/reset`, and
+asserts the dispute's state and its full audit trail are byte-for-byte
+unchanged. A second test releases a demo dispute and asserts reset deletes it
+and reports `demoDisputesRemoved` alone.
+
+Docker Desktop's daemon was not running when this was first written, so both
+tests were only known to skip cleanly. Started the daemon, brought up the
+real Postgres container, regenerated the Prisma client (which needed killing
+three stale `tsx apps/api/src/index.ts` processes left over from an earlier
+session and holding the query-engine DLL open -- F-015's exact shape, again),
+and ran the whole suite against it: **21 files, 285 tests, 0 skipped, all
+green**, including both new tests and all five of `roundtrip.test.ts`'s. This
+is genuinely verified against a real database, not asserted from a clean
+skip. It is exercised again by CI's `integration` job and, more importantly
+for this specific bug, by the live end-to-end recheck against the redeployed
+instance that found it.
+
+**What it taught.** F-026 and F-028 are two different bugs wearing one
+symptom, and treating "the trail desyncs" as the whole story would have
+shipped a fix for the easier half. The harder question was not "how do we
+recover from a bad reset" but "why did the reset do that in the first
+place" -- sitting in the same function, described accurately by nobody's
+test and inaccurately by three separate comments. D-029's question again:
+a claim this specific ("nothing here touches the eval corpus") is either
+enforced by a test or it is decoration, and this repository had three
+copies of the decoration before this session had a fourth reason to look.

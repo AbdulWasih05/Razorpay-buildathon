@@ -267,8 +267,8 @@ nothing here claims it does.
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | [`eval/results.md`](eval/results.md) | The batch report. Generated, not written.                                                                                      |
 | [`EVAL.md`](EVAL.md)                 | Corpus design, the two-generator holdout, distribution grounding, and eleven known weaknesses stated before anyone has to ask. |
-| [`DECISIONS.md`](DECISIONS.md)       | Every non-obvious choice: what, why, what was rejected. 35 entries.                                                            |
-| [`FAILURES.md`](FAILURES.md)         | What broke, how it was diagnosed, what the fix was. Logged the same session, never backfilled. 16 entries.                     |
+| [`DECISIONS.md`](DECISIONS.md)       | Every non-obvious choice: what, why, what was rejected. 42 entries.                                                            |
+| [`FAILURES.md`](FAILURES.md)         | What broke, how it was diagnosed, what the fix was. Logged the same session, never backfilled. 28 entries.                     |
 | [`TASKS.md`](TASKS.md)               | The build loop, including what was cut and why.                                                                                |
 
 Built solo by Abdul Wasih for the Razorpay AI Buildathon, Track 2.

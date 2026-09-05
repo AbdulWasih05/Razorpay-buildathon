@@ -155,10 +155,12 @@ export class AuditTrail {
    *
    * Not a "legal transition" in the forward-only sense `append` checks --
    * `TRANSITIONS` has no path back to `received` from anywhere, on purpose.
-   * This is the recorded FACT that a new cycle is beginning, the same shape
-   * of event `resetDemo` already writes as its `demo_reset` row, just
-   * available as a first-class trail operation instead of a raw insert one
-   * caller happened to write correctly.
+   * This is the recorded FACT that a new cycle is beginning -- the same shape
+   * of event `resetDemo` used to write, inline, as a raw insert one caller
+   * happened to get right, before FAILURES.md F-028 scoped that function down
+   * to `demo-`-prefixed disputes only. A seeded dispute reaching this method
+   * now only ever does so through `?states=drafted,abstained` reprocessing,
+   * never through a demo reset.
    *
    * Added 2026-09-05 (see FAILURES.md): reprocessing a dispute that already
    * had a full cycle behind it -- a demo reset, or the documented
