@@ -1423,3 +1423,172 @@ test and inaccurately by three separate comments. D-029's question again:
 a claim this specific ("nothing here touches the eval corpus") is either
 enforced by a test or it is decoration, and this repository had three
 copies of the decoration before this session had a fourth reason to look.
+
+---
+
+### F-029 -- the drafted contest overstated every amount by a factor of a hundred
+
+**When.** 2026-09-05, during a UI/UX review pass, before any code was changed.
+
+**What broke.** `buildLetterPrompt` handed the drafter raw payment subunits and
+the drafter, reasonably, read them as rupees. For `disp_SIMKJih2TGDmDS` -- a
+₹1,654 agentic dispute -- the committed recording says *"Customer ordered 2x
+Family dinner (INR 165,400) on 2026-06-07"*. Two leaks, not one: the mandate
+block interpolated `chargedAmount`/`maxAmount` directly, and every `Evidence
+held:` line JSON-stringified the collector's `detail` blob, which carries
+`amount`, `orderTotal` and `charged` in paise. 74 of the 114 committed
+letter-draft recordings state a currency amount, and all of them are a hundred
+times the real value. One recording produced both scales in a single letter --
+`INR 523,200` and `Rs 5,232` for the same dispute.
+
+The deterministic side had the matching defect in a quieter place:
+`evaluateGate` emitted `charged 165400 against a 245635 cap` and `payment at
+2026-06-09T22:05:00.000Z falls inside ...` -- raw subunits and raw ISO, rendered
+in the rule trace directly beneath a Mandate panel showing `₹1,654 ≤ ₹2,456.35`
+and `09 Jun 2026, 22:05`.
+
+**How it was found.** By opening the running console and reading one drafted
+case top to bottom, which is not something the test suite does. 294 tests
+passed throughout: nothing asserted that a number in a generated letter matched
+the dispute it was about, and nothing compared two panels rendering the same
+fact. The bug was visible in the first agentic dispute anyone clicks, and it had
+survived every prior review because every prior review read the code.
+
+**Why it matters more than its size.** This is the one panel a model writes, on
+a money product, in front of payments engineers, and it contradicted two
+deterministic panels on the same screen. `summary` is a field in a payload
+submitted to Razorpay; an amount overstated a hundredfold in it is not a
+cosmetic defect.
+
+**The fix.** Subunits stay in the payload and are formatted before anything
+reads them as language. `packages/core/src/domain/money.ts` (`formatRupees`,
+`withReadableMoney`) and `when.ts` (`formatInstant`) are new, and both are
+hand-rolled rather than `toLocaleString`/`Intl`: their output goes into a prompt
+whose SHA-256 is the replay cache key, and `Intl` output depends on the
+runtime's ICU build, so a small-icu deploy would format differently from the
+machine that recorded and produce a replay miss in production. `assemble.ts`
+formats the mandate block and passes every evidence detail through
+`withReadableMoney`; `gate.ts` formats both money and instants in its rule
+details. The prompt was NOT given a rule asking the model to divide by a
+hundred -- arithmetic is not what it is there to do, and a fix that depends on
+the model complying is not a fix.
+
+**Re-recording, and the rule it runs against.** D-023 forbids re-recording after
+`eval/results.md` exists, with one carve-out for hard-rule-#1 schema fidelity.
+This is not that. It is a factual error in a generated artifact on the money
+path, which the carve-out as written did not cover; D-023 is amended in the same
+session to name that second reason rather than to stretch the first. Its three
+conditions were met: the model of record did not change (`qwen/qwen3.8-27b` via
+Groq); `pnpm abstentions` was run and every gate decision is unmoved (dev recall
+31/38, FP 0/52, the same seven lost-recall cases named); and the full before and
+after is here. Only 30 live calls were needed -- the gate declines most disputes
+before a drafter is ever called, so only contested cases have recordings.
+
+**What moved, reported whichever way it falls.**
+
+| metric | before | after |
+| --- | --- | --- |
+| dev recall on winnable | 31/38 = 81.6% | 31/38 = 81.6% |
+| dev precision | 100.0% | 100.0% |
+| dev abstention rate | 69.0% | 69.0% |
+| held-out recall on winnable | 6/9 = 66.7% | 7/9 = 77.8% |
+| held-out abstention rate | 76.7% | 73.3% |
+| held-out precision (ambiguous counted against) | 85.7% | 87.5% |
+| dev-vs-OOD shift | −14.9% | −3.8% |
+| drafter withheld a contest the gate cleared (held-out) | 1 | 0 |
+
+**The uncomfortable half, said plainly.** The OOD number got *better* after we
+changed a prompt, and the shift delta -- the ugly figure this project has
+pointed at as its credibility proof -- shrank from −14.9% to −3.8%. That shape
+is exactly what tuning against a holdout looks like, so the reasons it is not
+have to be checkable rather than asserted:
+
+- The defect was found in the **dev** console, on a dev dispute, and the fix was
+  written and the prompt changed before any held-out number was regenerated or
+  looked at.
+- The change is a units conversion at a boundary. It adds no instruction, no
+  example, no persona, and no evidence; it does not touch the gate, the
+  thresholds, the rubric, or the corpus. The model receives the same facts,
+  correctly denominated.
+- It was applied to both sets by the same code path. Nothing was run per-set and
+  kept.
+- **Dev did not move at all** -- not recall, not precision, not the abstention
+  rate. A change tuned to a holdout would be expected to move the set it was
+  tuned on.
+
+The mechanism is one case: on the held-out set the drafter previously withheld a
+contest the gate had cleared, and now it does not. Whether the amount was *why*
+it withheld is not something a replay run can tell us, and this entry does not
+claim it. It reports that the veto is gone and that the number moved with it.
+
+**What it taught.** Every money value in this system is an integer in paise
+because that is what Razorpay's API carries, and hard rule #1 says the schema
+wins -- so the schema's representation quietly became the representation
+everywhere, including in the two places where a human or a model reads a
+sentence. The rule was right and the reach of it was wrong. The other half: the
+test suite could not have caught this, because every test compared the system to
+itself. Reading one screen end to end found in a minute what 294 green tests had
+agreed on for a week.
+
+---
+
+### F-030 -- the capture layer read back less evidence than it captured, and only the product noticed
+
+**When.** 2026-09-05, immediately after F-029, while reprocessing the seeded
+corpus so the demo would show the corrected letters.
+
+**What broke.** `POST /review/run` failed on exactly ten disputes, all of them
+scenario class `a1` (ordinary rail, UPI 1064, goods not received), every one
+with a replay miss on `letter-draft`. The eval had just re-recorded every
+letter-draft prompt and passed; the product, running the same pipeline over the
+same corpus, asked for keys that did not exist.
+
+The cause was not in the recordings. `cleanRow` in `apps/api/src/review.ts`
+strips foreign keys out of a Prisma row on the way back into the capture
+envelope, and it did it by suffix -- drop anything ending in `Id` except
+`externalId`, `agentId` and `razorpayPaymentId`. `trackingId` ends in `Id`. A
+carrier tracking number is evidence, not a row pointer, and it was captured
+correctly, stored correctly (`trk_w74ZW9wvwdSjCx` is in the `fulfillment` table)
+and then dropped on every single read-back. The collector rendered
+`trackingId: null`, so the drafter never saw a tracking id for any shipment on
+any dispute, on a reason code whose whole question is whether the goods arrived.
+
+**The half that matters more.** The eval builds its evidence packs from the
+generator in memory and never touches the store, so the eval always saw the
+tracking id and the product never did. The two paths had been drafting from
+different evidence, and the report was scoring prompts the product does not
+send. Nobody had noticed because both sides were internally consistent: the eval
+was reproducible, the product was reproducible, and the fixture file quietly
+carried both variants of every `a1` letter from an old live run through the API.
+
+**How it was found.** By F-029's re-record invalidating the generator-path keys
+and leaving the store-path keys stale, which turned a silent divergence into ten
+loud failures. Then by building both prompts side by side and diffing them
+rather than guessing: one field, one line apart.
+
+**The fix.** `trackingId` joins the allowlist in `cleanRow`, with the tension
+written next to it. The suffix rule stays and the inverse -- naming the foreign
+keys to drop -- was rejected: foreign keys are cuids, a cuid in a prompt changes
+the replay hash on every reseed (D-007), and a denylist fails open into exactly
+the failure that silently turns a replayed eval into a live one. An allowlist
+fails closed, and closed means a missing field, which is what happened here and
+is the cheaper of the two.
+
+**Test.** `apps/api/src/review.test.ts` asserts `cleanRow` keeps a
+`trackingId` while still dropping an `orderId`. It asserts the field rather than
+the mechanism, so it survives the rule being rewritten.
+
+**Verified.** After the fix, the generator-path and store-path evidence lines
+for `dsp_dev-v1_a1_0` are byte-identical, and `POST /review/run` over the whole
+corpus processes 101 disputes with **zero errors** -- 70 abstained, 31 drafted,
+the same 69/31 split as `eval/results.md` plus the one demo-released dispute.
+The two paths now agree, which is the property that was quietly untrue before.
+
+**What it taught.** A heuristic that decides what evidence a model may see is a
+policy, and this one was written as a string-suffix check with three
+exceptions. It had been silently wrong for as long as it existed, and no test
+caught it because both consumers were tested against themselves rather than
+against each other. The real lesson is narrower and sharper: **an eval that
+builds its own inputs is not testing the product's inputs.** The record/replay
+design makes the eval byte-reproducible, and reproducibility said nothing at all
+about whether it was reproducing the right thing.

@@ -7,6 +7,6 @@ export default defineConfig({
     port: 5173,
     // The UI talks to the API through this proxy in dev, so there is one origin
     // and no CORS configuration to get wrong.
-    proxy: { '/api': { target: 'http://localhost:3000', changeOrigin: true, rewrite: (p) => p.replace(/^\/api/, '') } },
+    proxy: { '/api': { target: 'http://127.0.0.1:3001', changeOrigin: true, rewrite: (p) => p.replace(/^\/api/, '') } },
   },
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 
 import { fetchEvalReport } from './api.js';
 
@@ -129,14 +129,108 @@ function inline(text: string, keyPrefix: string): (string | JSX.Element)[] {
   });
 }
 
+/**
+ * A heading's anchor.
+ *
+ * Derived from the text rather than from the index, so a link into the report
+ * survives a section being added above it -- these ids end up in the address bar
+ * and in anything anyone pastes into a review.
+ */
+function slug(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Which section of the report is on screen.
+ *
+ * The same sequence rule the landing page's spine uses -- the last heading you
+ * have scrolled past, not the one occupying the most pixels, because the latter
+ * cannot resolve at the foot of a document (FAILURES.md F-022 sits next to this
+ * class of bug). The difference here is the scroll container: the console owns
+ * the scroll in a `.reportwrap` div rather than letting the window have it, so
+ * the listener goes on that element and `getBoundingClientRect` is compared
+ * against the container's top edge instead of the viewport's.
+ */
+function useActiveHeading(scroller: MutableRefObject<HTMLElement | null>, ids: string[]): string {
+  const [active, setActive] = useState<string>('');
+
+  useEffect(() => {
+    const node = scroller.current;
+    if (!node || ids.length === 0) return;
+    let frame = 0;
+
+    const measure = () => {
+      frame = 0;
+      const line = node.getBoundingClientRect().top + 120;
+      let current = ids[0] ?? '';
+      for (const id of ids) {
+        const heading = document.getElementById(id);
+        if (heading && heading.getBoundingClientRect().top <= line) current = id;
+      }
+      setActive(current);
+    };
+
+    const onScroll = () => {
+      if (frame === 0) frame = requestAnimationFrame(measure);
+    };
+
+    measure();
+    node.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      if (frame !== 0) cancelAnimationFrame(frame);
+      node.removeEventListener('scroll', onScroll);
+    };
+  }, [scroller, ids]);
+
+  return active;
+}
+
 export function ReportView({ markdown }: { markdown: string }) {
+  const blocks = parseReport(markdown);
+  const shell = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLElement | null>(null);
+
+  // The report is ten sections long and was rendering as one column against an
+  // empty right half, which made it both unbalanced and tiring to scroll. The
+  // contents rail fixes the same problem twice: it fills the gutter with
+  // something useful, and it turns a long scroll into a document you can jump
+  // around.
+  const sections = blocks
+    .filter((block): block is Extract<typeof block, { kind: 'heading' }> => block.kind === 'heading')
+    .filter((block) => block.level === 2)
+    .map((block) => ({ id: slug(block.text), text: block.text }));
+
+  const ids = useMemo(() => sections.map((section) => section.id), [markdown]);
+
+  useEffect(() => {
+    scroller.current = shell.current?.closest('.reportwrap') ?? null;
+  }, []);
+
+  const active = useActiveHeading(scroller, ids);
+
   return (
+    <div className="report-layout" ref={shell}>
     <div className="report">
-      {parseReport(markdown).map((block, i) => {
+      {blocks.map((block, i) => {
         const key = `b${i}`;
         if (block.kind === 'heading') {
-          const Tag = `h${Math.min(block.level + 1, 6)}` as 'h2';
-          return <Tag key={key}>{inline(block.text, key)}</Tag>;
+          // The markdown level IS the heading level. It used to be shifted down
+          // by one, which spent the `h2` treatment -- 21px with a rule under it
+          // -- on the document title and rendered all ten `##` sections as `h3`
+          // at 15px, BELOW the 15.5px body text they head. The contents rail
+          // promised ten numbered sections the page never visually delivered,
+          // on the page a judge reads hardest. There is exactly one `#` in the
+          // report and no other `h1` on the route, so nothing is being
+          // duplicated by letting it be one.
+          const Tag = `h${Math.min(block.level, 6)}` as 'h2';
+          return (
+            <Tag key={key} id={slug(block.text)}>
+              {inline(block.text, key)}
+            </Tag>
+          );
         }
         if (block.kind === 'table') {
           // The first column names the thing; every other column is a figure
@@ -146,7 +240,14 @@ export function ReportView({ markdown }: { markdown: string }) {
           // Nothing here decides what a number IS -- the cells are still the
           // report's own bytes, rendered verbatim (P4.2).
           return (
-            <table key={key}>
+            // Wrapped, so the table can be a real `display: table` that fills
+            // the reading column while the WRAPPER owns the horizontal scroll.
+            // As a `display: block` table it shrank to its own content, so no
+            // two tables on the page shared a right edge and every one of them
+            // stopped short of the prose beside it. Same pattern as the landing
+            // page's `.metrics-scroll`, because it is the same table.
+            <div className="report-table" key={key}>
+            <table>
               <thead>
                 <tr>
                   {block.header.map((cell, c) => (
@@ -168,6 +269,7 @@ export function ReportView({ markdown }: { markdown: string }) {
                 ))}
               </tbody>
             </table>
+            </div>
           );
         }
         if (block.kind === 'list') {
@@ -181,6 +283,26 @@ export function ReportView({ markdown }: { markdown: string }) {
         }
         return <p key={key}>{inline(block.text, key)}</p>;
       })}
+    </div>
+
+      {sections.length > 1 ? (
+        <nav className="report-toc" aria-label="Report contents">
+          <span className="label">Contents</span>
+          <ol>
+            {sections.map((section) => (
+              <li key={section.id}>
+                <a
+                  href={`#${section.id}`}
+                  className={active === section.id ? 'on' : undefined}
+                  aria-current={active === section.id ? 'true' : undefined}
+                >
+                  {section.text}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      ) : null}
     </div>
   );
 }

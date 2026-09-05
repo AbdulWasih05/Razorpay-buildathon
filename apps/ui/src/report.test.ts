@@ -61,10 +61,15 @@ describe('the numbers arrive with the sentences that qualify them', () => {
     const html = render();
     // Dev and held-out recall, as fractions rather than only percentages.
     // Held-out moved 7/9 -> 6/9 on 2026-09-05 (FAILURES.md F-025): closing a
-    // rubric-provenance fidelity finding changed what the drafter sees for
-    // one held-out case, and it declined a dispute the gate had cleared.
+    // rubric-provenance fidelity finding changed what the drafter sees for one
+    // held-out case, and it declined a dispute the gate had cleared. It moved
+    // back to 7/9 the same day (F-029), when the drafter stopped being handed
+    // raw subunits: it no longer withholds that case. Whether the amount was
+    // the reason it withheld is not something the run can tell us, so F-029
+    // reports the movement and does not claim the cause. Dev has not moved
+    // either time, and no gate decision moved either time.
     expect(html).toContain('31/38');
-    expect(html).toContain('6/9');
+    expect(html).toContain('7/9');
   });
 
   it('carries the caveat that must never be separated from FP = 0', () => {

@@ -11,6 +11,8 @@ export * from './capture/canonical.js';
 export * from './capture/prompt-input.js';
 
 // Domain
+export * from './domain/money.js';
+export * from './domain/when.js';
 export * from './domain/reason-codes.js';
 export * from './domain/rubric.js';
 export * from './domain/collector.js';

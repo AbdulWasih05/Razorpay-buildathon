@@ -1,6 +1,8 @@
 import {
   buildContestDraft,
+  formatRupees,
   unmetRequirements,
+  withReadableMoney,
   type CollectedEvidence,
   type ContestDraft,
   type GateResult,
@@ -111,8 +113,14 @@ function buildLetterPrompt(
     `What the customer is disputing is governed by this code's published evidence requirements.`,
     '',
     'Evidence held:',
+    // Money is rendered in rupees before the model sees it, never as the raw
+    // subunits the payload carries. F-029: the drafter was handed `165400` and
+    // wrote "INR 165,400" into a contest for a ₹1,654 dispute, on the same
+    // screen as two deterministic panels saying ₹1,654. The fix belongs here,
+    // at the boundary, rather than in a prompt rule asking the model to divide
+    // by a hundred -- arithmetic is not what it is here to do.
     ...present.map(
-      (finding) => `- ${finding.artifact}: ${JSON.stringify(finding.detail)}`,
+      (finding) => `- ${finding.artifact}: ${JSON.stringify(withReadableMoney(finding.detail))}`,
     ),
     '',
     'Evidence NOT held (do not claim any of these):',
@@ -125,7 +133,11 @@ function buildLetterPrompt(
     lines.push(
       '',
       'Mandate facts (computed, authoritative -- do not restate them incorrectly):',
-      `- amount charged: ${collected.mandate.chargedAmount} of a ${collected.mandate.maxAmount} cap`,
+      `- amount charged: ${formatRupees(collected.mandate.chargedAmount)} of a ${
+        collected.mandate.maxAmount === undefined
+          ? 'cap that was not captured'
+          : `${formatRupees(collected.mandate.maxAmount)} cap`
+      }`,
       `- within limit: ${collected.mandate.withinLimit}`,
       `- within validity window: ${collected.mandate.withinValidityWindow}`,
       `- consent recorded before payment: ${collected.mandate.consentBeforePayment}`,

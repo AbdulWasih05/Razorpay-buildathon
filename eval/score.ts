@@ -278,6 +278,14 @@ export function renderReport(input: ReportInput): string {
   // Two commands in this repo report a contested count and they are allowed to
   // differ. Saying so here is cheaper than a reader finding the discrepancy and
   // having to decide which number to trust.
+  //
+  // `0` rather than `−0`: this row is a subtraction, so it carries a minus sign
+  // -- but a signed zero reads as a rounding artifact rather than as "the
+  // drafter withheld nothing", and this table sits on the page a judge reads
+  // hardest. Zero is the honest rendering of no vetoes.
+  const withheld = (count: number | undefined): string =>
+    count === undefined || count === 0 ? '0' : `−${count}`;
+
   out.push(
     table(
       ['contested by', 'dev', 'held-out'],
@@ -289,8 +297,8 @@ export function renderReport(input: ReportInput): string {
         ],
         [
           'less contests the drafter withheld',
-          `−${dev.byClass['drafter_disagreement'] ?? 0}`,
-          `−${holdout.byClass['drafter_disagreement'] ?? 0}`,
+          withheld(dev.byClass['drafter_disagreement']),
+          withheld(holdout.byClass['drafter_disagreement']),
         ],
         [
           'the whole pipeline — what this report scores',

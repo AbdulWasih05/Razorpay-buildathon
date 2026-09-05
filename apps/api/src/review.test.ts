@@ -68,6 +68,21 @@ describe('cleanRow keeps what the envelope needs', () => {
     });
   });
 
+  /**
+   * F-030. `trackingId` is a carrier tracking number -- evidence a 1064 "goods
+   * not received" contest leans on -- and the drop-anything-ending-in-`Id` rule
+   * ate it on every read-back. It was captured and stored correctly and then
+   * lost on the one path that leads to a drafted contest, so the eval (which
+   * builds packs from the generator) scored a prompt the product never sent.
+   *
+   * The assertion is on the field, not on the allowlist, so it still holds if
+   * the mechanism is ever rewritten.
+   */
+  it('keeps a carrier tracking id, which is evidence and not a row pointer', () => {
+    const row = { externalId: 'ful_1', trackingId: 'trk_abc', orderId: 'cuid3' };
+    expect(cleanRow(row)).toEqual({ externalId: 'ful_1', trackingId: 'trk_abc' });
+  });
+
   it('renders dates as ISO strings, since the envelope is JSON', () => {
     const out = cleanRow({ occurredAt: new Date('2026-06-10T09:00:00.000Z') });
     expect(out.occurredAt).toBe('2026-06-10T09:00:00.000Z');

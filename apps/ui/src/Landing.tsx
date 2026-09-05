@@ -249,7 +249,7 @@ function Gap() {
           </p>
           <p>
             So the transaction store <em>is</em> the capture layer, and <code>POST /evidence-pack</code>{' '}
-            is that layer as a real endpoint rather than a box on a diagram &mdash; every one of the
+            is that layer as a real endpoint rather than a box on a diagram. Every one of the
             100 seeded disputes was captured through it.
           </p>
           <p>
@@ -295,7 +295,7 @@ function Gap() {
 
           <figcaption>
             Filled is evidence still held. Hollow is evidence that only ever existed at the moment
-            of the transaction &mdash; the same four squares as the mark, because the identity is
+            of the transaction. The same four squares as the mark, because the identity is
             the argument.
           </figcaption>
         </figure>
@@ -382,7 +382,7 @@ function Measured() {
 
       <p className="provenance">
         Rendered verbatim from the committed <code>eval/results.md</code>. Model of record{' '}
-        <code>qwen/qwen3.8-27b</code> via Groq, replayed from committed recordings &mdash;{' '}
+        <code>qwen/qwen3.8-27b</code> via Groq, replayed from committed recordings.{' '}
         <code>pnpm eval</code> reproduces the file byte for byte with no network and no API key.
         Headline metrics are precision and recall against corpus labels and false-positive cost in
         rupees; no simulated outcome is reported as a result anywhere.
@@ -420,14 +420,14 @@ function Boundary() {
             <li>Schema and evidence-field mapping</li>
             <li>Gate thresholds and the contest decision</li>
             <li>Metrics computation</li>
-            <li>Submission &mdash; every step on the money path</li>
+            <li>Submission, and every step on the money path</li>
           </ul>
         </div>
       </div>
 
       <p className="provenance">
         The drafter can only ever <em>withhold</em> a contest, never create one, raise an amount, or
-        submit &mdash; on the dev corpus it changed the outcome on 2 of 100 disputes, in the
+        submit. On the dev corpus it changed the outcome on 2 of 100 disputes, in the
         conservative direction only. Any model step that errors, times out, refuses, or returns
         output failing schema validation routes the dispute to abstain with{' '}
         <em>&ldquo;assembly failure, manual review required&rdquo;</em>, audit-logged and never
@@ -443,7 +443,7 @@ function Boundary() {
 const PROPERTIES = [
   {
     k: 'One door',
-    d: 'The approve action in the review console is the only path to submission. Eval mode scores gate decisions and drafts and provably never touches the submission adapter — a test enforces it.',
+    d: 'The approve action in the review console is the only path to submission. Eval mode scores gate decisions and drafts and provably never touches the submission adapter, and a test enforces it.',
   },
   {
     k: 'Abstention over bluffing',

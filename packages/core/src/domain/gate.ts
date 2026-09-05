@@ -1,5 +1,7 @@
 import type { CollectedEvidence } from './collector.js';
+import { formatRupees } from './money.js';
 import type { EvidenceArtifact } from './rubric.js';
+import { formatInstant } from './when.js';
 
 /**
  * The sufficiency gate (TASKS.md P3.1).
@@ -94,13 +96,23 @@ export function evaluateGate(
     });
 
     if (mandate.present) {
+      // Rupees, not the subunits the payload carries. A reviewer is invited to
+      // re-derive these lines against the mandate panel directly above them, and
+      // that panel is in rupees -- one fact written two ways on one screen is
+      // the defect F-029 logs. `maxAmount` is always set when the mandate is
+      // present (the collector sets both together); the fallback exists so the
+      // string stays honest rather than printing a confident ₹0 if that ever
+      // stops being true.
+      const charged = formatRupees(mandate.chargedAmount);
+      const cap = mandate.maxAmount === undefined ? 'uncaptured' : formatRupees(mandate.maxAmount);
+
       rules.push({
         id: 'within_mandate_limit',
         passed: mandate.withinLimit === true,
         detail:
           mandate.withinLimit === true
-            ? `charged ${mandate.chargedAmount} against a ${mandate.maxAmount} cap`
-            : `charged ${mandate.chargedAmount}, which exceeds the ${mandate.maxAmount} mandate cap: authorisation did not cover this charge`,
+            ? `charged ${charged} against a ${cap} cap`
+            : `charged ${charged}, which exceeds the ${cap} mandate cap: authorisation did not cover this charge`,
       });
 
       rules.push({
@@ -108,8 +120,8 @@ export function evaluateGate(
         passed: mandate.withinValidityWindow === true,
         detail:
           mandate.withinValidityWindow === true
-            ? `payment at ${mandate.paymentAt} falls inside ${mandate.validFrom} to ${mandate.validUntil}`
-            : `payment at ${mandate.paymentAt} falls outside the mandate window ${mandate.validFrom} to ${mandate.validUntil}: no valid consent covered it`,
+            ? `payment at ${formatInstant(mandate.paymentAt)} falls inside ${formatInstant(mandate.validFrom)} to ${formatInstant(mandate.validUntil)}`
+            : `payment at ${formatInstant(mandate.paymentAt)} falls outside the mandate window ${formatInstant(mandate.validFrom)} to ${formatInstant(mandate.validUntil)}: no valid consent covered it`,
       });
 
       rules.push({

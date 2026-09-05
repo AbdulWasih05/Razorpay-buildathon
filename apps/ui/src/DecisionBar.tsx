@@ -41,6 +41,34 @@ export function DecisionBar({
 
   const decision = detail.gateDecision ?? 'none';
 
+  /*
+    The clause under the verdict, and where it comes from.
+
+    It used to be `gateReason` -- the string written into the row when the
+    dispute was gated. That is the right thing to KEEP (it is the audit record,
+    and the trail below still shows it verbatim) and the wrong thing to display
+    here, because it is a snapshot of how the gate phrased itself at seed time.
+    After F-029 reformatted money and instants, seeded rows still read `charged
+    252900, which exceeds the 204588 mandate cap` while the replayed rule trace
+    three hundred pixels below said `charged ₹2,529, which exceeds the ₹2,045.88
+    mandate cap`. One fact, two renderings, on one screen -- the exact defect
+    F-029 is about, reintroduced by a stale column.
+
+    So the clause is now built from the SAME replayed trace the panel below
+    renders: the failing rules, joined the way the gate itself joins them. The
+    two cannot drift again because there is only one source.
+
+    The exception is deliberate. If the replay DISAGREES with the recorded
+    decision, the recorded one is authoritative and the replay is suspect, so the
+    bar falls back to the stored reason and the trace panel raises its own loud
+    error. A disagreement is not an occasion to prefer the newer computation.
+  */
+  const trace = detail.gateRules;
+  const replayed =
+    trace && trace.agrees
+      ? trace.rules.filter((rule) => !rule.passed).map((rule) => rule.detail).join('; ')
+      : '';
+
   return (
     <div className="decision">
       <div>
@@ -62,7 +90,8 @@ export function DecisionBar({
             {decision === 'none' ? 'not gated' : `gate: ${decision}`}
           </span>
           <span className="clause">
-            {detail.gateReason ??
+            {replayed ||
+              detail.gateReason ||
               (detail.collected
                 ? `holds ${detail.collected.coverage.present} of ` +
                   `${detail.collected.coverage.required} required artifacts`
@@ -117,18 +146,15 @@ function Door({
     );
   }
 
+  // The verdict line already names the decision and the reason for it; this
+  // used to restate both ("not contested (assembly)") a third time, next to
+  // the state badge in the identity row and the "gate: abstain" word in the
+  // verdict itself. Three spellings of one fact is not three confirmations of
+  // it, it is one fact a reader has to reconcile three times. This says only
+  // the one thing that is actually new here: there is no door to walk through.
   return (
     <div className="door">
-      <span className="settled">
-        Nothing to approve: this dispute was not contested
-        {detail.abstentionClass ? (
-          <>
-            {' '}
-            (<code>{detail.abstentionClass}</code>)
-          </>
-        ) : null}
-        .
-      </span>
+      <span className="settled">Nothing to approve here.</span>
     </div>
   );
 }

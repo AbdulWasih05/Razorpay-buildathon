@@ -15,9 +15,9 @@ import './styles.css';
  */
 
 const TITLES: Record<Route, string> = {
-  landing: 'Praman — defense-only dispute evidence responder',
-  console: 'Praman — dispute review',
-  eval: 'Praman — eval results',
+  landing: 'Praman · defense-only dispute evidence responder',
+  console: 'Praman · dispute review',
+  eval: 'Praman · eval results',
 };
 
 export function Root() {

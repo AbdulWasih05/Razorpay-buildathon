@@ -23,7 +23,7 @@ import { BlockHead, formatRupees, readableDate } from './ui.js';
  * paragraph, and code does the collecting, the arithmetic, the gating, the
  * mapping and the recording.
  */
-export function Detail({ detail }: { detail: DisputeDetail }) {
+export function Detail({ detail, now }: { detail: DisputeDetail; now: string | null }) {
   const collected = detail.collected;
 
   return (
@@ -33,7 +33,7 @@ export function Detail({ detail }: { detail: DisputeDetail }) {
       <RuleTrace detail={detail} />
       {detail.draft ? <Letter summary={detail.draft.summary} /> : null}
       {detail.draft ? <Mapping assignments={detail.draft.assignments} /> : null}
-      <Trail detail={detail} />
+      <Trail detail={detail} now={now} />
       {detail.submittedRequest ? <Payload request={detail.submittedRequest} /> : null}
     </div>
   );
@@ -55,6 +55,18 @@ export function Detail({ detail }: { detail: DisputeDetail }) {
  * lives with the agent platform and is gone by dispute time, which is the whole
  * argument for capturing at transaction time. Those rows say so on their face.
  */
+/**
+ * Required-and-absent is the fact that decides the case; anything present is
+ * settled regardless of necessity; supporting-and-absent rarely moves the
+ * decision. Three tones, not four, because "not_capturable" is still a kind
+ * of absent -- the row's own note underneath says why, so the tag does not
+ * need a fourth colour to say it again.
+ */
+function tone(finding: Finding): 'success' | 'danger' | 'muted' {
+  if (finding.state === 'present') return 'success';
+  return finding.necessity === 'required' ? 'danger' : 'muted';
+}
+
 function Ledger({ collected }: { collected: Collected }) {
   const phrase = new Map(collected.rubric.requires.map((r) => [r.artifact, r.sourcePhrase]));
   const unrecoverable = new Set(collected.structurallyUnavailable ?? []);
@@ -73,15 +85,26 @@ function Ledger({ collected }: { collected: Collected }) {
         Artifacts the reason-code rubric asks for, and whether the capture store holds them.
         Quoted wording is Razorpay&rsquo;s own, from the submit-evidence documentation.
       </p>
+      <p className="ledger-legend">
+        <span className="need danger">required · absent</span> blocks the gate
+        <span className="need muted">supporting · absent</span> weighed, not blocking
+        <span className="need success">present</span> held in the capture store
+      </p>
 
-      <table className="grid">
+      {/*
+        Two columns, not five. `necessity` and `held` used to be their own
+        columns saying one thing about one artifact -- "required, and we do
+        not have it" -- so the eye crossed columns to assemble a single fact.
+        They are now one tag, coloured by the fact itself rather than by
+        which of the two inputs happened to be more visible. `references` is
+        folded into the rubric cell it belongs to, and drops out entirely on
+        the rows -- most of them -- that captured none.
+      */}
+      <table className="grid ledger">
         <thead>
           <tr>
-            <th>artifact</th>
-            <th>need</th>
-            <th>held</th>
-            <th>what the rubric asks for</th>
-            <th>references</th>
+            <th>Artifact</th>
+            <th>What the rubric asks for</th>
           </tr>
         </thead>
         <tbody>
@@ -89,30 +112,31 @@ function Ledger({ collected }: { collected: Collected }) {
             const lost = unrecoverable.has(finding.artifact);
             const classes = [
               finding.necessity === 'supporting' ? 'supporting' : 'required',
+              `t-${tone(finding)}`,
               lost ? 'unrecoverable' : '',
             ]
               .filter(Boolean)
               .join(' ');
+            const refs = finding.references.join(' ');
             return (
               <tr key={finding.artifact} className={classes}>
                 <td className="artifact">
-                  {finding.artifact}
+                  <span className={`need ${tone(finding)}`}>
+                    {finding.necessity} · {finding.state}
+                  </span>
+                  <span className="artifact-name">{finding.artifact}</span>
                   {lost ? (
                     <span className="unrecoverable-note">
-                      Unrecoverable at dispute time — this evidence lives with the agent
+                      Unrecoverable at dispute time. This evidence lives with the agent
                       platform, not the merchant. Capturing it at transaction time is the only
                       moment it exists to be captured.
                     </span>
                   ) : null}
                 </td>
-                <td>{finding.necessity}</td>
-                <td>
-                  <span className={`badge ${finding.state}`}>{finding.state}</span>
-                </td>
                 <td className="why">
                   {finding.reason ?? phrase.get(finding.artifact) ?? '—'}
+                  {refs ? <span className="refs-inline">{refs}</span> : null}
                 </td>
-                <td className="refs">{finding.references.join(' ') || '—'}</td>
               </tr>
             );
           })}
@@ -355,7 +379,27 @@ function Mapping({ assignments }: { assignments: FieldAssignment[] }) {
  * Timestamps stay in full ISO on purpose. This is the audit record, and an
  * auditor wants the value that was written, not a prettier rendering of it.
  */
-function Trail({ detail }: { detail: DisputeDetail }) {
+/**
+ * Whether an audit row was written against the simulated corpus clock or a real
+ * one.
+ *
+ * The trail mixes both and did not say so. The seeded rows carry the corpus's
+ * own instants; a demo release, a reset or an approval happens when a visitor
+ * clicks and carries wall-clock time. Read down the column and the two are
+ * months apart with nothing explaining it, under a nav bar that says `clock:
+ * simulated` -- which is exactly the ambiguity F-024 was about, one layer down.
+ *
+ * The corpus epoch is fixed and every seeded instant is an offset from it, so
+ * "before the simulator's own horizon" separates them without a second source
+ * of truth. The threshold is the simulated now the API serves; anything after
+ * it cannot have been seeded.
+ */
+function isWallClock(occurredAt: string, simulatedNow: string | null): boolean {
+  if (!simulatedNow) return false;
+  return new Date(occurredAt).getTime() > new Date(simulatedNow).getTime();
+}
+
+function Trail({ detail, now }: { detail: DisputeDetail; now: string | null }) {
   const entries: AuditEntry[] = detail.auditLogs ?? [];
 
   return (
@@ -365,20 +409,36 @@ function Trail({ detail }: { detail: DisputeDetail }) {
         provenance="deterministic"
         count={`${entries.length || detail.timeline.length} entries, append-only`}
       />
+      <p className="hint">
+        Timestamps are the values that were written, in full ISO, not a prettier
+        rendering of them. Rows marked <span className="clock-live">live</span> were written in
+        real time by someone acting on this instance; every other row is on the simulated corpus
+        clock.
+      </p>
       {entries.length === 0 ? (
         <pre className="raw">{detail.timeline.join('\n')}</pre>
       ) : (
         <div className="trail">
           {entries.map((entry) => (
             <div className="tstep" key={entry.seq}>
-              <time dateTime={entry.occurredAt}>{entry.occurredAt}</time>
+              <time
+                dateTime={entry.occurredAt}
+                className={isWallClock(entry.occurredAt, now) ? 'live' : undefined}
+                title={
+                  isWallClock(entry.occurredAt, now)
+                    ? 'Real time: written when someone acted on this instance.'
+                    : 'Simulated: seeded from the corpus epoch, like every other date in the demo.'
+                }
+              >
+                {entry.occurredAt}
+              </time>
               <span className={entry.actor.startsWith('human:') ? 'actor human' : 'actor'}>
                 {entry.actor}
               </span>
               <span className="move">
                 {entry.fromState ? `${entry.fromState} → ` : ''}
                 <span className="to">{entry.toState}</span>
-                {entry.reason ? <span className="reason"> — {entry.reason}</span> : null}
+                {entry.reason ? <span className="reason"> · {entry.reason}</span> : null}
               </span>
             </div>
           ))}

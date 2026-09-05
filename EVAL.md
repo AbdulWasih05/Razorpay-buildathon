@@ -372,20 +372,34 @@ replay mode, no network, no API key. Headline:
 | metric                                   | dev           | held-out (OOD) | shift |
 | ---------------------------------------- | ------------- | -------------- | ----- |
 | disputes                                 | 100           | 30             | —     |
-| recall on winnable                       | 31/38 = 81.6% | 6/9 = 66.7%    | −14.9% |
+| recall on winnable                       | 31/38 = 81.6% | 7/9 = 77.8%    | −3.8% |
 | precision on contests                    | 100.0%        | 100.0%         | 0.0%  |
 | false positives (contested & unwinnable)  | 0/52          | 0/20           | 0     |
 | false-positive cost                      | ₹0            | ₹0             | ₹0    |
-| abstention rate                          | 69.0%         | 76.7%          | +7.7% |
+| abstention rate                          | 69.0%         | 73.3%          | +4.3% |
 | assembly failures                        | 0             | 0              | —     |
 
-**Held-out moved on 2026-09-05**, closing a rubric-provenance fidelity finding
-(seven UPI reason codes wrongly marked as having no published evidence
-guidance). Dev is verified unchanged (`pnpm abstentions`, gate-only, byte-
-identical before/after); held-out lost one case to a new drafter disagreement
-on a gate-cleared, full-coverage dispute — recall −11.1pp, within the drafter's
-veto-toward-safety scope (D-025) but a real, disclosed cost. Full account in
-FAILURES.md F-025.
+**Held-out moved twice on 2026-09-05, in both directions, and dev moved
+neither time.** First it fell 7/9 → 6/9 closing a rubric-provenance fidelity
+finding (seven UPI reason codes wrongly marked as having no published evidence
+guidance): held-out lost one case to a new drafter disagreement on a
+gate-cleared, full-coverage dispute — within the drafter's veto-toward-safety
+scope (D-025) but a real, disclosed cost. Full account in FAILURES.md F-025.
+
+Then it returned 6/9 → 7/9 closing F-029: the drafter was being handed raw
+payment subunits and was stating every amount a hundred times too large
+(`INR 165,400` for a ₹1,654 dispute). Money is now formatted before a model
+reads it, the drafter no longer withholds that case, and the OOD shift narrowed
+from −14.9% to −3.8%. **A prompt change that improves the holdout is the shape
+holdout-tuning takes, so the reasons this is not are set out in full in F-029
+rather than asserted here** — in short: the defect was found on a dev dispute
+before any held-out number was regenerated, it is a units conversion that adds
+no instruction or evidence, it was applied to both sets by one code path, and
+dev did not move on any metric while every gate decision stayed identical.
+
+Both re-records ran under D-023's carve-out, which was amended the same day to
+name "a factual error in a generated artifact on the money path" as a second
+admissible reason instead of reading F-029 into hard rule #1.
 
 The report carries, for **both** sets: the abstention decomposition (first, not
 the rate — D-030), precision and recall against ground truth with `ambiguous`
@@ -431,31 +445,43 @@ Stated here before anyone has to ask.
    our labelling*, and the dev-vs-OOD delta is offered as the evidence that the
    system is not merely tuned to its own generator.
 
-2. **Class frequencies are assumption, not data.** See above. No published
+2. **The harness builds its evidence packs from the generator, not from the
+   store.** The product reads a pack back out of Postgres; the eval constructs
+   one in memory. The pipeline after that point is the same code, but the inputs
+   travel different routes, and on 2026-09-05 those routes were found to
+   disagree: the store read-back was dropping carrier tracking ids, so for every
+   `a1` dispute the eval scored a prompt the product never sent (FAILURES.md
+   F-030). It is fixed, and the two paths are now verified byte-identical on a
+   sample dispute — but the structural point stands and is the honest version of
+   this limitation: **byte-reproducibility of the eval says nothing about
+   whether the eval reproduces the product.** The only complete answer is to run
+   the harness through the capture API, which is not what it does today.
+
+3. **Class frequencies are assumption, not data.** See above. No published
    per-reason-code distribution was found in a bounded search.
 
-3. **The agentic rail is over-represented on purpose.** ~44% of the dev corpus
+4. **The agentic rail is over-represented on purpose.** ~44% of the dev corpus
    is agent-initiated. Real-world share today is far lower. This is a test of a
    module, not a forecast of a market.
 
-4. **Ground truth is our judgement encoded as rules.** The rules are explicit,
+5. **Ground truth is our judgement encoded as rules.** The rules are explicit,
    inspectable and test-asserted, but they are still ours. A real dispute is
    adjudicated by an issuer applying network rules, and issuers are not perfectly
    consistent. "Winnable" here means "defensible on the evidence we hold", not
    "would have been won".
 
-5. **Held-out size is 30 against a dev set of 100.** Small enough that per-class
+6. **Held-out size is 30 against a dev set of 100.** Small enough that per-class
    OOD figures will be noisy — b4 and b5 have 2 cases each. Class-level OOD
    numbers should be read as directional; only the aggregate carries weight.
 
-6. **Dispute origination is simulated.** Razorpay's sandbox cannot originate a
+7. **Dispute origination is simulated.** Razorpay's sandbox cannot originate a
    dispute — they are bank-originated. The simulator mirrors the documented
    entity field-for-field and every generated event is validated against the
    contract schema built from the published examples, so the *shape* is real
    even though the *origination* is not. The contest path is built against the
    real documented contract.
 
-7. **Payment ids are synthetic, permanently, and they say so.** P0.2 was cut
+8. **Payment ids are synthetic, permanently, and they say so.** P0.2 was cut
    (D-032): the Disputes API exposes fetch, accept and contest only, so a
    dispute cannot be originated in test mode and `RazorpayClient.contest()` is
    unreachable against a real dispute with or without an account. Ids in
@@ -464,20 +490,20 @@ Stated here before anyone has to ask.
    schema check is weakened. No live Razorpay call is made anywhere in this
    repository.
 
-8. **The OOD shift is compound, so the delta is not attributable to one axis.**
+9. **The OOD shift is compound, so the delta is not attributable to one axis.**
    Seven axes move between dev and holdout at once. The aggregate delta answers
    "does it survive unfamiliar data"; it cannot answer "what specifically broke
    it". Per-axis ablation would need one holdout per axis and is out of budget.
    See "Exactly what moved, stated precisely" above.
 
-9. **Dev conversation language is developer-authored, which is the sharpest form
+10. **Dev conversation language is developer-authored, which is the sharpest form
    of the self-generated problem.** The dev templates were written by the same
    author-plus-model pairing that built the system that reads them. That is
    precisely why the holdout's language comes from a model with no involvement in
    this repository, and precisely why the language axis is called the sharp edge
    above -- it is the one where familiarity would flatter us most.
 
-10. **The a3 duplicate-charge capture gap was not closed, and it costs five
+11. **The a3 duplicate-charge capture gap was not closed, and it costs five
     winnable disputes.** `duplicate_payment_analysis` is required for UPI 1084
     and the capture envelope holds one payment per order, so a duplicate is
     asserted in corpus metadata rather than visible in the data (F-010). Five
@@ -488,7 +514,7 @@ Stated here before anyone has to ask.
     measured:** closing it takes dev recall 31/38 → 36/38. The five cases are
     named individually in `eval/results.md`.
 
-11. **The four LLM failure paths did not fire during the batch.** Error,
+12. **The four LLM failure paths did not fire during the batch.** Error,
     timeout, refusal and schema-validation failure are each covered by unit
     tests and each route to `assembly failure, manual review required`. Across
     130 disputes and 41 model calls in the scored run, zero fired. That is
@@ -498,7 +524,7 @@ Stated here before anyone has to ask.
     from a reasoning model — which is the incident the schema path was written
     for.
 
-12. **Seven held-out mandates exceed the Reserve Pay cap.** Reserve Pay blocks
+13. **Seven held-out mandates exceed the Reserve Pay cap.** Reserve Pay blocks
     are reported as capped at ₹10,000 for up to 90 days. All 44 dev mandates sit
     under that ceiling (max ₹8,947); **7 of the held-out set's 15 do not** (max
     ₹19,389), because the OOD config deliberately shifts the order-value band up

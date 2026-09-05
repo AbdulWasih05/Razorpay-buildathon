@@ -82,8 +82,45 @@
   --t-base: 14px;
   --t-lead: 16px;
   --t-title: 20px;
+
+  /**
+   * Three steps named by ROLE, not by size, because the console's problem was
+   * never that the sizes were wrong -- it was that nothing said which size a
+   * thing should take. Every panel had drifted into the 11-13px band, so an
+   * artifact name, the rubric sentence describing it and the reference ids
+   * beside it all rendered identically and no row had a subject.
+   *
+   *   subject -- what a row is ABOUT: the artifact, the rule id, the field name.
+   *   read    -- prose a reviewer actually reads through.
+   *   meta    -- supporting values that should be available, not prominent.
+   *
+   * Density is unchanged. A 2.5px range is not more dense than a 2px one, it is
+   * just less legible.
+   */
+  --t-subject: 14px;
+  --t-read: 13px;
+  --t-meta: 11.5px;
   --t-display: 30px;
   --t-hero: clamp(34px, 4.4vw, 56px);
+
+  /**
+   * Two more steps, named because they were already in use.
+   *
+   * The comment above says "one type scale", and the file under it had 11.5,
+   * 12.5 and 13.5 written out by hand in about a dozen rules -- so the scale
+   * was a claim rather than a fact, in a stylesheet whose whole argument is
+   * that nothing is arbitrary. These two are the sizes the ad-hoc values
+   * actually settled on, so declaring them changes no rendered pixel and makes
+   * the claim true.
+   *
+   *   ident -- a mono identifier in a dense row (a queue id, an amount, a
+   *            reference). It sits between `--t-small` and `--t-read` because
+   *            mono runs wider than sans at the same size.
+   *   prose -- the drafted letter, and only that: the one block of continuous
+   *            reading on a surface otherwise built for scanning.
+   */
+  --t-ident: 12.5px;
+  --t-prose: 13.5px;
 
   /* Ground and surfaces. A warm neutral, not pure white: paper, not a screen. */
   --bg: #f7f7f6;
@@ -125,6 +162,23 @@
 
   --radius: 5px;
   --radius-lg: 10px;
+
+  /**
+   * The instrument frame.
+   *
+   * The strip and the nav bar go dark; the workspace underneath stays on the
+   * light surface above. Two tones borrowed straight from the landing page's
+   * own dark ground (`--d-bg`/`--d-ink`) rather than invented fresh, so the
+   * console's frame and the document it links out to read as one product
+   * rather than a coincidence of two designers. `--chrome-accent` is the
+   * landing page's lifted-for-dark indigo (`--d-accent`): the console's own
+   * `--accent` is tuned for white paper and goes muddy on a dark ground.
+   */
+  --chrome-bg: #2c2c2a;
+  --chrome-fg: #f1efe8;
+  --chrome-fg-dim: #a8a29e;
+  --chrome-line: #46443f;
+  --chrome-accent: #9ba1ff;
 }
 
 * {
@@ -166,11 +220,26 @@ kbd,
  * read, not values you compare. Letter-spacing does the work that size would
  * otherwise have to, which keeps headings quiet without making them illegible.
  */
+/**
+ * A field name, anywhere on either surface.
+ *
+ * Mono, because a label names a thing rather than saying one -- the same rule
+ * that puts ids, amounts and reason codes in mono. It is set identically on the
+ * landing page, which is what lets the two registers read as one product: they
+ * share no palette and no type scale, but they share a grammar, and a reader
+ * moving from the document into the tool recognises the vocabulary.
+ */
 .label {
+  font-family: var(--mono);
   font-size: var(--t-label);
-  font-weight: 600;
-  letter-spacing: 0.085em;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+  /* ink-3, not ink-4. The landing page sets its labels at the fourth ink step
+     and they read fine there, because that step sits against a near-black
+     ground. The same step on paper is about 2.5:1 and stops being text. Shared
+     grammar does not mean shared values -- contrast is a property of the pair,
+     not of the token. */
   color: var(--ink-3);
 }
 
@@ -234,9 +303,9 @@ td.num,
   align-items: center;
   gap: 6px 16px;
   padding: 7px 16px;
-  background: #422006;
-  color: #fef3c7;
-  font-size: 12px;
+  background: var(--chrome-bg);
+  color: var(--chrome-fg);
+  font-size: var(--t-small);
   line-height: 1.45;
 }
 
@@ -253,6 +322,10 @@ td.num,
 .strip b {
   font-weight: 650;
   letter-spacing: 0.02em;
+  /* Amber, not the neutral frame colour: this is the one word on the page
+     that must read as a warning rather than as chrome, at rest as at 4.5:1
+     against `--chrome-bg`. */
+  color: #fbbf24;
 }
 
 .strip code {
@@ -266,16 +339,16 @@ td.num,
 .strip button {
   font: inherit;
   font-family: var(--sans);
-  color: #fef3c7;
+  color: var(--chrome-fg);
   background: transparent;
-  border: 1px solid #92400e;
+  border: 1px solid var(--chrome-line);
   border-radius: var(--radius);
   padding: 2px 9px;
   cursor: pointer;
 }
 
 .strip button:hover:not(:disabled) {
-  background: #57320a;
+  background: #3d3b37;
 }
 
 .strip button:disabled {
@@ -308,14 +381,19 @@ td.num,
 
 .decision.empty {
   color: var(--ink-3);
-  font-size: 13px;
+  font-size: var(--t-read);
 }
 
 .identity {
   display: flex;
   align-items: baseline;
   gap: var(--s3);
-  flex-wrap: wrap;
+  /* No wrapping. With `wrap`, the truncating meta took the remaining space and
+     pushed the state badge onto a line of its own, which cost the decision bar
+     a third row it can never scroll away from. Everything on this row either
+     fits or truncates; the narrow-screen block below restores wrapping, where
+     the bar is allowed to be taller because the layout is a column anyway. */
+  flex-wrap: nowrap;
   margin-bottom: var(--s2);
 }
 
@@ -341,6 +419,15 @@ td.num,
 .identity .meta {
   font-size: var(--t-small);
   color: var(--ink-3);
+  /* Truncated rather than wrapped. This row must stay one line: the decision
+     bar is the region that cannot scroll away, so every line it gains is a line
+     taken off the evidence below it for the whole session. The full label is on
+     the queue row and in the payload, so nothing is only here. */
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .identity .meta code {
@@ -348,28 +435,37 @@ td.num,
 }
 
 /* The verdict line. The word itself carries the weight; the clause after it
-   explains, and is deliberately quieter. */
+   explains, and is deliberately quieter.
+   `--t-title` (20px) rather than the 14px the identity row's own id and
+   amount are set at: the dispute's id is the least meaningful string on the
+   screen -- nobody reads it -- and the decision was outsizing the answer.
+   This is the one line the bar exists to show, so it is the largest thing
+   in it. */
 .verdict {
   display: flex;
   align-items: baseline;
-  gap: var(--s2);
+  gap: var(--s3);
   flex-wrap: wrap;
   font-size: var(--t-body);
 }
 
 .verdict .word {
-  font-size: var(--t-small);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--sans);
+  font-size: var(--t-title);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-transform: none;
 }
 
 .verdict .word.contest {
   color: var(--ok);
 }
 
+/* Same reasoning as `.badge.abstained`: the verdict the product is proudest of
+   should not be the colour of a warning. Full ink, so it reads as decided --
+   `contest` keeps the green because it is the branch that commits money. */
 .verdict .word.abstain {
-  color: var(--warn);
+  color: var(--ink);
 }
 
 .verdict .word.none {
@@ -386,6 +482,10 @@ td.num,
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  /* The one element on this row that must never be squeezed: `11d over`
+     breaking to two lines makes the bar taller than the truncation saved. */
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .meter {
@@ -409,7 +509,7 @@ td.num,
 }
 
 .meter-label {
-  font-size: 12px;
+  font-size: var(--t-small);
   color: var(--ink-3);
 }
 
@@ -457,14 +557,14 @@ td.num,
 }
 
 .door .note {
-  font-size: 11px;
+  font-size: var(--t-label);
   color: var(--ink-3);
   max-width: 25ch;
   line-height: 1.4;
 }
 
 .door .settled {
-  font-size: 12px;
+  font-size: var(--t-small);
   color: var(--ink-3);
   max-width: 34ch;
   line-height: 1.4;
@@ -478,6 +578,12 @@ td.num,
   flex: 1 1 auto;
   min-height: 0;
   background: var(--surface);
+}
+
+/* Collapsed by the reader's own choice (the toggle in the queue head), not a
+   narrower default -- the queue stays full width until asked to fold down. */
+.workspace.queue-collapsed {
+  grid-template-columns: 40px minmax(0, 1fr);
 }
 
 /* ---------------------------------------------------------------- queue -- */
@@ -502,6 +608,67 @@ td.num,
   margin-bottom: var(--s3);
 }
 
+.queue-title-right {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.queue-toggle {
+  font: inherit;
+  font-size: var(--t-read);
+  line-height: 1;
+  padding: 2px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.queue-toggle:hover {
+  border-color: var(--ink-4);
+  color: var(--ink);
+}
+
+/* The closed rail. A strip that names what it is hiding (`Queue`, and the
+   count) rather than a bare chevron -- collapsing the queue should never
+   read as the queue having disappeared. */
+.queue-closed {
+  border-right: 1px solid var(--line-strong);
+  background: var(--sunken);
+}
+
+.queue-reopen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s2);
+  width: 100%;
+  height: 100%;
+  padding: var(--s4) 0;
+  font: inherit;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ink-3);
+}
+
+.queue-reopen:hover {
+  background: #f5f5f4;
+  color: var(--ink);
+}
+
+.queue-reopen-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: var(--mono);
+  font-size: var(--t-label);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: inherit;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -510,7 +677,7 @@ td.num,
 
 .chip {
   font: inherit;
-  font-size: 11.5px;
+  font-size: var(--t-meta);
   padding: 2px 8px;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
@@ -583,9 +750,28 @@ td.num,
   gap: 8px;
 }
 
+/* The soonest abstained case, flagged so a first-time reviewer finds the
+   honest-refusal example without scanning the whole queue. Uses the accent
+   (identity/wayfinding) colour, not a semantic state colour -- this is a
+   guide, not a verdict. */
+.qrow-spotlight {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 1px 6px;
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-deep);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  border-radius: 3px;
+}
+
 .qrow-id {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--t-ident);
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -598,7 +784,7 @@ td.num,
 
 .qrow-amount {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--t-ident);
   font-variant-numeric: tabular-nums;
   color: var(--ink-2);
   white-space: nowrap;
@@ -613,7 +799,9 @@ td.num,
 }
 
 .qrow-what {
-  font-size: 11.5px;
+  display: block;
+  margin-top: 3px;
+  font-size: var(--t-meta);
   color: var(--ink-3);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -622,7 +810,7 @@ td.num,
 
 .queue-empty {
   padding: 16px 12px;
-  font-size: 12.5px;
+  font-size: var(--t-ident);
   color: var(--ink-3);
 }
 
@@ -635,7 +823,7 @@ td.num,
  */
 .rail {
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: var(--t-micro);
   letter-spacing: 0.03em;
   padding: 1px 5px;
   border-radius: 3px;
@@ -659,7 +847,7 @@ td.num,
 .badge {
   display: inline-block;
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: var(--t-micro);
   letter-spacing: 0.02em;
   padding: 1px 6px;
   border-radius: 3px;
@@ -677,12 +865,27 @@ td.num,
   color: var(--ok);
 }
 
+/**
+ * Abstention is not a warning.
+ *
+ * These three were amber, in the same family as the anomaly `warnbox` and the
+ * `not_capturable` rows. 69 of 100 disputes abstain, so the queue rendered as a
+ * near-solid column of alert -- while the product's own thesis is that an
+ * abstention with a stated reason is the CORRECT outcome and the thing that
+ * costs nothing. The screen was arguing against the README.
+ *
+ * Neutral, not muted: ink on a plain surface with a full-weight hairline. This
+ * is a decision the system reached and stands behind, not an absence and not a
+ * problem. Amber is now spent only on things that genuinely want a human's
+ * alarm -- anomaly signals, unrecoverable evidence -- which is the second half
+ * of the fix, because in a queue this amber those rows were invisible.
+ */
 .badge.abstained,
 .badge.absent,
 .badge.abstain {
-  border-color: #fde68a;
-  background: var(--warn-soft);
-  color: var(--warn);
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink-2);
 }
 
 .badge.not_capturable {
@@ -698,6 +901,15 @@ td.num,
   color: var(--info);
 }
 
+/* A dispute that has arrived and not yet been processed. It had no rule at all,
+   so a demo-released dispute rendered in the default grey with nothing saying
+   the state was a real one rather than an unstyled fallback. */
+.badge.received {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
 /* --------------------------------------------------------- provenance -- */
 
 /**
@@ -709,7 +921,11 @@ td.num,
  */
 .prov {
   font-family: var(--mono);
-  font-size: 9.5px;
+  /* Was 9.5px, which made hard rule #4 -- the strongest claim this project makes
+     about where a model is and is not -- the smallest text on the screen, set
+     in tracked uppercase, on a page that will be read on a projector. Sizes are
+     a statement of priority and that one was inverted. */
+  font-size: var(--t-micro);
   font-weight: 600;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -745,14 +961,14 @@ td.num,
 }
 
 .work-empty h2 {
-  font-size: 14px;
+  font-size: var(--t-base);
   font-weight: 600;
   color: var(--ink-2);
   margin: 0 0 6px;
 }
 
 .work-empty p {
-  font-size: 13px;
+  font-size: var(--t-read);
   line-height: 1.55;
   margin: 0 0 10px;
 }
@@ -761,6 +977,35 @@ td.num,
 section.block {
   padding: var(--s5) var(--s5) var(--s4);
   border-top: 1px solid var(--line);
+}
+
+/**
+ * One right edge for the workbench.
+ *
+ * At 1500px every panel stopped somewhere different -- the ledger at its own
+ * 1040px cap, the mandate grid and the rule trace at the full width of the
+ * region, the letter at its reading measure -- so the workspace read as
+ * unfinished rather than as dense. The measure of the prose was never the
+ * problem; the problem was that nothing else had one.
+ *
+ * The cap goes on the panels' CONTENT, not on the section, so the hairline
+ * between sections still spans the whole region. Prose keeps its own narrower
+ * measures (`.hint`, `.letter`) and is meant to look narrower than a table --
+ * that is a document behaving correctly, not a column that failed to fill.
+ */
+.work {
+  --col: 1040px;
+}
+
+.block-head,
+.ledger-legend,
+table.grid,
+.mandate,
+.rules,
+.trail,
+.map-row,
+pre.raw {
+  max-width: var(--col);
 }
 
 section.block:first-child {
@@ -781,17 +1026,17 @@ section.block:first-child {
 
 .block-head .count {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--t-label);
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
 
 .hint {
-  font-size: var(--t-small);
+  font-size: var(--t-read);
   color: var(--ink-3);
   line-height: 1.6;
   max-width: 76ch;
-  margin: 0 0 var(--s4);
+  margin: 0 0 var(--s5);
 }
 
 /* --------------------------------------------------------------- table -- */
@@ -801,11 +1046,15 @@ table.grid {
   border-collapse: collapse;
 }
 
+/* Sentence case, not caps-letterspaced: a two-word header set in small caps
+   reads as loudly as the artifact names underneath it, and a column head is
+   not the subject of anything. Weight and colour still mark it as a label
+   rather than content. */
 table.grid th {
+  font-family: var(--sans);
   font-size: var(--t-label);
-  font-weight: 600;
-  letter-spacing: 0.085em;
-  text-transform: uppercase;
+  font-weight: 550;
+  letter-spacing: 0;
   color: var(--ink-4);
   text-align: left;
   padding: 0 var(--s4) var(--s2) 0;
@@ -817,35 +1066,150 @@ table.grid td {
   padding: var(--s3) var(--s4) var(--s3) 0;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
-  font-size: var(--t-body);
+  /* Prose columns. The rubric wording is read, so it takes the reading step and
+     the secondary ink -- it supports the artifact rather than competing with
+     it. */
+  font-size: var(--t-read);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* The subject of the row. It names the artifact the whole row is about, so it
+   is the one thing in the row set at the subject step, in ink, in mono --
+   mono because it is an identifier a reviewer matches character by character
+   against the rubric and the payload. */
+table.grid td.artifact {
+  color: var(--ink);
+}
+
+.artifact-name {
+  display: block;
+  font-family: var(--mono);
+  font-size: var(--t-subject);
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+/**
+ * Necessity and held state, merged into one line above the artifact name.
+ * Colour is the fact rather than either input alone: a required artifact
+ * still absent is what decides the case regardless of how it got that way
+ * (`not_capturable` included), anything present is settled, and a missing
+ * supporting artifact rarely moves the decision either way.
+ */
+.need {
+  display: block;
+  margin-bottom: 3px;
+  font-size: var(--t-meta);
+  font-weight: 550;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.need.success {
+  color: var(--ok);
+}
+
+.need.danger {
+  color: var(--bad);
+}
+
+.need.muted {
+  color: var(--ink-4);
+}
+
+/* A reader shouldn't have to infer the necessity x state colour code from a
+   handful of rows -- it's stated once, in the same tag styling, above the
+   table it explains. */
+.ledger-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s4);
+  margin: 0 0 var(--s4);
+  font-size: var(--t-meta);
+  color: var(--ink-3);
+}
+
+.ledger-legend .need {
+  margin-bottom: 0;
+}
+
+/**
+ * Column priority, stated as widths.
+ *
+ * Automatic layout gave `references` 500px -- the widest column in the table --
+ * because it holds the longest strings. Width was being allocated by string
+ * length rather than by importance, so the lookup ids got the most space on
+ * screen and the rubric sentence a reviewer actually reads got barely half of
+ * it. Fixed layout puts the ordering back under our control. Two columns now,
+ * not four: `references` folds into the rubric cell it belongs to, and `held`
+ * is the `.need` tag's colour rather than a cell of its own.
+ */
+table.grid.ledger {
+  table-layout: fixed;
+  width: 100%;
+  /* The cap that used to live here is now `--col` on `.work`, shared with every
+     other panel. The reason for it is unchanged: uncapped on a wide monitor the
+     rubric column takes about 95 characters, past the width where a reader
+     reliably finds the start of the next line. Density is not a reason to
+     abandon a measure. */
+}
+
+table.grid.ledger th:nth-child(1) {
+  width: 230px;
 }
 
 table.grid tr:last-child td {
   border-bottom: 0;
 }
 
+/* The 4px bar repeats the `.need` tag's colour at the row's own edge, so the
+   tone reads before the eye even reaches the tag -- useful the moment a
+   reviewer is scanning the ledger rather than reading one row at a time. */
 table.grid td.artifact {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--t-ident);
   white-space: nowrap;
+  border-left: 4px solid transparent;
+  padding-left: var(--s3);
+}
+
+tr.t-success td.artifact {
+  border-left-color: var(--ok);
+}
+
+tr.t-danger td.artifact {
+  border-left-color: var(--bad);
+}
+
+tr.t-muted td.artifact {
+  border-left-color: var(--line-strong);
 }
 
 table.grid td.why {
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: var(--t-small);
   line-height: 1.45;
 }
 
-/* References break between ids, not inside them. `break-all` split
-   `log_dev-v1_b1_64_2` across two lines, which is the one thing a column of
-   identifiers must never do -- you cannot compare an id you cannot read. */
-table.grid td.refs {
+/* The reference ids, folded into the end of the rubric sentence rather than a
+   column of their own: most rows captured none, and a column that is an em
+   dash on every other row is width the sentence needed. Breaks between ids,
+   not inside one -- `break-all` split `log_dev-v1_b1_64_2` across two lines,
+   which is the one thing a run of identifiers must never do. */
+.refs-inline {
+  display: block;
+  margin-top: 3px;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--t-micro);
+  line-height: 1.4;
   color: var(--ink-4);
   overflow-wrap: break-word;
   word-break: normal;
-  min-width: 14rem;
 }
 
 /* Required rows carry the weight; supporting rows are visibly secondary,
@@ -865,7 +1229,7 @@ tr.unrecoverable td {
   display: block;
   margin-top: 3px;
   font-family: var(--sans);
-  font-size: 11.5px;
+  font-size: var(--t-meta);
   line-height: 1.4;
   color: var(--bad);
   white-space: normal;
@@ -880,7 +1244,13 @@ tr.unrecoverable td {
 
 .rule {
   display: grid;
-  grid-template-columns: 16px 190px minmax(0, 1fr);
+  /* The id column is sized for the longest rule name at the subject step:
+     `required_evidence_coverage` is 26 characters, which is about 218px in
+     JetBrains Mono at 14px. It was 190px, sized for the 12px the ids used to
+     be, so raising them to the subject step ran the id straight into its own
+     detail text. Each `.rule` is a separate grid, so this cannot be
+     `max-content` -- the columns would stop aligning row to row. */
+  grid-template-columns: 16px 248px minmax(0, 1fr);
   gap: 10px;
   align-items: baseline;
   padding: var(--s2) 0;
@@ -908,8 +1278,15 @@ tr.unrecoverable td {
 
 .rule .rid {
   font-family: var(--mono);
-  font-size: 12px;
-  color: var(--ink-2);
+  font-size: var(--t-subject);
+  font-weight: 500;
+  color: var(--ink);
+  /* If a longer rule name ever arrives, wrap it at a word boundary rather than
+     letting it collide with the detail. Never `break-all`: an identifier split
+     mid-token is one a reviewer cannot compare. */
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .rule.fail .rid {
@@ -918,8 +1295,9 @@ tr.unrecoverable td {
 }
 
 .rule .detail {
-  color: var(--ink-3);
-  line-height: 1.45;
+  font-size: var(--t-read);
+  color: var(--ink-2);
+  line-height: 1.5;
 }
 
 /* ----------------------------------------------------- mandate arithmetic -- */
@@ -953,7 +1331,7 @@ tr.unrecoverable td {
 
 .check .value {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--t-ident);
   font-variant-numeric: tabular-nums;
   color: var(--ink);
   line-height: 1.45;
@@ -982,7 +1360,7 @@ tr.unrecoverable td {
   border: 1px solid var(--line);
   border-left: 3px solid #d8b4fe;
   border-radius: var(--radius);
-  font-size: 13.5px;
+  font-size: var(--t-prose);
   line-height: 1.6;
   color: var(--ink);
   white-space: pre-wrap;
@@ -994,7 +1372,7 @@ tr.unrecoverable td {
   align-items: center;
   gap: 8px;
   margin-top: 7px;
-  font-size: 11.5px;
+  font-size: var(--t-meta);
   color: var(--ink-3);
 }
 
@@ -1029,7 +1407,7 @@ tr.unrecoverable td {
  */
 .map-row {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 252px minmax(0, 1fr);
   gap: var(--s5);
   padding: var(--s3) 0;
   border-bottom: 1px solid var(--line);
@@ -1041,7 +1419,8 @@ tr.unrecoverable td {
 
 .map-field {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--t-subject);
+  font-weight: 500;
   color: var(--ink);
   overflow-wrap: break-word;
   word-break: normal;
@@ -1049,13 +1428,13 @@ tr.unrecoverable td {
 
 .map-field .others {
   display: block;
-  font-size: 11px;
+  font-size: var(--t-label);
   color: var(--ink-3);
   margin-top: 2px;
 }
 
 .map-from {
-  font-size: 12px;
+  font-size: var(--t-small);
   color: var(--ink-3);
   line-height: 1.5;
 }
@@ -1092,13 +1471,29 @@ tr.unrecoverable td {
 
 .tstep time {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: var(--t-meta);
   color: var(--ink-4);
 }
 
-.tstep .actor {
+/* A row written in real time rather than on the corpus's simulated clock. The
+   accent marks it as wayfinding, not as a verdict -- nothing is wrong with
+   these rows, they are simply measured against a different clock. */
+.tstep time.live,
+.clock-live {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.clock-live {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 0.92em;
+}
+
+.tstep .actor {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: var(--t-meta);
   color: var(--ink-3);
 }
 
@@ -1128,7 +1523,7 @@ pre.raw {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: var(--t-meta);
   line-height: 1.55;
   color: var(--ink-2);
   white-space: pre-wrap;
@@ -1143,7 +1538,7 @@ pre.raw {
 .warnbox {
   padding: 8px 12px;
   border-radius: var(--radius);
-  font-size: 12.5px;
+  font-size: var(--t-ident);
   line-height: 1.5;
 }
 
@@ -1178,8 +1573,64 @@ pre.raw {
   align-items: center;
   gap: var(--s3);
   padding: var(--s3) var(--s5);
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  border-bottom: 1px solid var(--chrome-line);
+  background: var(--chrome-bg);
+  color: var(--chrome-fg);
+}
+
+.viewbar .brand {
+  color: var(--chrome-fg);
+}
+
+.viewbar .brand:hover .mark i {
+  background: var(--chrome-accent);
+}
+
+.viewbar .brand:hover .mark i.hollow {
+  box-shadow: inset 0 0 0 1.5px var(--chrome-accent);
+}
+
+.viewbar .mark i {
+  background: var(--chrome-accent);
+}
+
+.viewbar .mark i.hollow {
+  box-shadow: inset 0 0 0 1.5px rgba(155, 161, 255, 0.55);
+}
+
+.viewbar .brand .thin {
+  color: var(--chrome-fg-dim);
+  border-left-color: var(--chrome-line);
+}
+
+/**
+ * The nav pills, on the dark frame.
+ *
+ * The queue's own `.chip` is tuned for white paper (dark-on-light when
+ * active); inverted here rather than reused because the same rule on this
+ * ground would put a near-black pill on a near-black bar. Scoped to
+ * `.viewbar` so the queue filters below keep their light-surface styling
+ * untouched.
+ */
+.viewbar .chip {
+  border-color: var(--chrome-line);
+  background: transparent;
+  color: var(--chrome-fg-dim);
+}
+
+.viewbar .chip:hover {
+  border-color: var(--chrome-fg-dim);
+  color: var(--chrome-fg);
+}
+
+.viewbar .chip.on {
+  background: var(--chrome-fg);
+  border-color: var(--chrome-fg);
+  color: var(--chrome-bg);
+}
+
+.viewbar .label {
+  color: var(--chrome-fg-dim);
 }
 
 /**
@@ -1246,18 +1697,18 @@ pre.raw {
 
 .viewbar select {
   font: inherit;
-  font-size: 12px;
+  font-size: var(--t-small);
   font-family: var(--mono);
   padding: 2px 6px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--chrome-line);
   border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--ink);
+  background: var(--chrome-bg);
+  color: var(--chrome-fg);
 }
 
 .viewbar label {
-  font-size: 11.5px;
-  color: var(--ink-3);
+  font-size: var(--t-meta);
+  color: var(--chrome-fg-dim);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1292,14 +1743,140 @@ pre.raw {
  * holds -- and takes the landing page's reading measure and rhythm. Two
  * registers, one grammar: mono for figures and field names, sans for language.
  */
+/**
+ * The report and its contents rail.
+ *
+ * Centred and capped rather than left-hugging. A 66ch measure pinned to the left
+ * edge of a 1900px monitor leaves more than half the screen empty and makes the
+ * document feel endless -- the rail gives the gutter a job and gives a
+ * ten-section report a way to be navigated instead of only scrolled.
+ */
+.report-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 232px;
+  gap: clamp(32px, 5vw, 72px);
+  max-width: 1180px;
+  margin: 0 auto;
+  align-items: start;
+}
+
 .report {
   --r-body: 15.5px;
   --r-small: 13px;
 
-  max-width: 58rem;
-  padding: var(--s6) var(--s7) 96px;
+  min-width: 0;
+  padding: var(--s6) 0 96px var(--s7);
   font-size: var(--r-body);
   line-height: 1.68;
+}
+
+/**
+ * The contents.
+ *
+ * Sticky, so it is a position indicator rather than a list that scrolls away,
+ * and marked with a rule that moves rather than a background that fills -- the
+ * console does not paint blocks to show state anywhere else and should not start
+ * here.
+ */
+.report-toc {
+  position: sticky;
+  top: 0;
+  padding: var(--s6) var(--s5) var(--s6) 0;
+  max-height: 100dvh;
+  overflow-y: auto;
+}
+
+.report-toc .label {
+  display: block;
+  margin-bottom: var(--s3);
+}
+
+.report-toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: toc;
+}
+
+.report-toc li {
+  counter-increment: toc;
+}
+
+.report-toc a {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: var(--s2);
+  padding: var(--s2) 0;
+  font-size: var(--t-body);
+  line-height: 1.4;
+  color: var(--ink-3);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  padding-left: var(--s3);
+  transition: color 120ms linear;
+}
+
+/* The index is generated rather than written, so it cannot fall out of step
+   with the order of the sections it points at. */
+.report-toc a::before {
+  content: counter(toc, decimal-leading-zero);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--ink-4);
+  padding-top: 2px;
+}
+
+.report-toc a:hover {
+  color: var(--ink);
+}
+
+.report-toc a.on {
+  color: var(--ink);
+  border-left-color: var(--accent);
+}
+
+.report-toc a.on::before {
+  color: var(--accent);
+}
+
+/* A jumped-to heading lands below the top edge rather than flush against it. */
+.report h2,
+.report h3 {
+  scroll-margin-top: var(--s5);
+}
+
+/**
+ * The document title.
+ *
+ * It names the whole report once, so it is set apart by size and by the space
+ * under it rather than by a rule -- the rules belong to the section headings,
+ * which are the divisions a reader actually navigates by. Before this it was
+ * the only thing on the page WITH a rule, which is why the ten sections beneath
+ * it read as a flat list of bold lines.
+ */
+.report h1 {
+  font-size: 28px;
+  font-weight: 640;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 0 0 var(--s5);
+}
+
+@media (max-width: 1100px) {
+  .report-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report {
+    padding-inline: var(--s6);
+  }
+
+  /* Below this width the rail would take space the prose needs, and the report
+     is short enough to read straight through on a narrow screen. */
+  .report-toc {
+    display: none;
+  }
 }
 
 .report h2 {
@@ -1367,14 +1944,25 @@ pre.raw {
  * to match the landing page's headline table, because they are the same numbers
  * out of the same file and a reader who sees both should not have to check.
  */
-.report table {
-  display: block;
+.report-table {
   overflow-x: auto;
-  width: auto;
-  max-width: 100%;
-  border-collapse: collapse;
   margin: var(--s4) 0 var(--s6);
+}
+
+.report table {
+  width: 100%;
+  /* Below this the columns start colliding rather than compressing, so the
+     wrapper scrolls instead. Matches the landing page's headline table. */
+  min-width: 480px;
+  border-collapse: collapse;
   font-variant-numeric: tabular-nums;
+}
+
+/* The first column names the thing and takes the slack, which pins every
+   figure column to the same right edge down the whole page. */
+.report th:first-child,
+.report td:first-child {
+  width: 100%;
 }
 
 .report th,
@@ -1382,6 +1970,11 @@ pre.raw {
   text-align: left;
   white-space: nowrap;
   vertical-align: baseline;
+  /* Cells set their own leading. Prose leading of 1.68 is right for a
+     paragraph and far too loose for a single-line table row, where it inherits
+     on top of the padding and pushes the rows apart until the column stops
+     reading as a column. */
+  line-height: 1.4;
   padding: var(--s3) var(--s6) var(--s3) 0;
   border-bottom: 1px solid var(--line);
 }
@@ -1461,6 +2054,15 @@ pre.raw {
     z-index: 5;
     grid-template-columns: 1fr;
     gap: 10px;
+  }
+
+  .identity {
+    flex-wrap: wrap;
+  }
+
+  .identity .meta {
+    flex-basis: 100%;
+    white-space: normal;
   }
 
   .door {

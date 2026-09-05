@@ -80,7 +80,19 @@ export function Provenance({ kind }: { kind: 'deterministic' | 'llm' }) {
  * plausible -- which is exactly how F-024 shipped. The `title` names the instant
  * so a reader can check the arithmetic instead of trusting the badge.
  */
-export function Deadline({ respondBy, now }: { respondBy: string; now: string | null }) {
+export function Deadline({
+  respondBy,
+  now,
+  bare = false,
+}: {
+  respondBy: string;
+  now: string | null;
+  /** Skip the reference-window meter. The queue row is narrow and dense
+   *  enough that the bar competes with the id and the amount for the same
+   *  line's width without adding a fact the `Xd over`/`Xd left` text does
+   *  not already state; the decision bar keeps the meter. */
+  bare?: boolean;
+}) {
   const days = daysUntil(respondBy, now);
   const fill = Math.max(0, Math.min(days, 14)) / 14;
   const tone = days < 0 ? 'passed' : days < 3 ? 'urgent' : 'normal';
@@ -91,12 +103,14 @@ export function Deadline({ respondBy, now }: { respondBy: string; now: string | 
       className={`deadline ${tone}`}
       title={
         `respond_by ${respondBy}, counted from ${against}` +
-        ` — the bar reads against a 14-day reference window, not this dispute's own`
+        `. The bar reads against a 14-day reference window, not this dispute's own.`
       }
     >
-      <span className="meter">
-        <i style={{ ['--fill' as string]: `${(fill * 100).toFixed(0)}%` }} />
-      </span>
+      {bare ? null : (
+        <span className="meter">
+          <i style={{ ['--fill' as string]: `${(fill * 100).toFixed(0)}%` }} />
+        </span>
+      )}
       <span className="meter-label">{label}</span>
     </span>
   );

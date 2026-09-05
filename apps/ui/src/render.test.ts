@@ -59,8 +59,11 @@ function text(html: string): string {
     .replace(/&amp;/g, '&');
 }
 
+// `NOW` is declared below and only read when this is called, which is after the
+// module has finished evaluating. The audit trail needs it to tell a row written
+// on the corpus's simulated clock from one written in real time.
 function work(detail: DisputeDetail): string {
-  return renderToStaticMarkup(createElement(Detail, { detail }));
+  return renderToStaticMarkup(createElement(Detail, { detail, now: NOW }));
 }
 
 // The instant the tests read deadlines from. Fixed, like the corpus it is
@@ -137,7 +140,14 @@ describe('what the reviewer must be able to see', () => {
     expect(drafted!.collected!.findings.length).toBeGreaterThan(0);
     for (const finding of drafted!.collected!.findings) {
       expect(html, finding.artifact).toContain(finding.artifact);
-      expect(html, finding.artifact).toContain(`badge ${finding.state}`);
+      // The state used to ride on a `badge {state}` class. The ledger now says
+      // it in the tag's own words -- `required · absent` -- which is what the
+      // reviewer actually reads. Asserting on the visible text rather than on a
+      // class name means a restyle cannot break this test, and losing the state
+      // from the screen cannot pass it.
+      expect(text(html), finding.artifact).toContain(
+        `${finding.necessity} · ${finding.state}`,
+      );
     }
   });
 

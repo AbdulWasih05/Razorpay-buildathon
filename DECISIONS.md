@@ -714,11 +714,40 @@ docs said something else and the code was wrong." Three conditions, every time:
    session, whether or not the headline numbers actually moved. "Unmoved" is a
    measured outcome to report, not an assumption to skip reporting under.
 
+**Amended 2026-09-05 (second time, same day), to add a second admissible
+reason rather than stretch the first.** F-029 found the drafter stating every
+amount a hundred times too large, because it was handed raw paise. That is not
+a schema-fidelity fix -- no field was invented, omitted, or misattributed --
+and reading it into hard rule #1 to authorise a re-record would be the carve-out
+doing the thing it exists to prevent. So the second reason is written down:
+
+> **A factual error in a generated artifact on the money path.** The output
+> misstates a fact about the dispute it describes -- an amount, a date, a
+> reference -- in a field that reaches Razorpay. Not "the letter reads better
+> now", not "the model picked a nicer emphasis": a statement that is false about
+> the transaction.
+
+The same three conditions apply unchanged, and a fourth is added for this reason
+only, because this is the reason most likely to move a number in a flattering
+direction:
+
+4. If a headline number moves **favourably**, the entry states the mechanism,
+   states what was not touched (gate, thresholds, rubric, corpus), and says
+   whether the dev set moved. A fix that improves the holdout while leaving dev
+   untouched needs that shown, not asserted -- it is the shape holdout-tuning
+   would take, and the difference has to be checkable by a reader who assumes
+   the worst.
+
+F-029 moved held-out recall 6/9 -> 7/9 and shrank the OOD shift from −14.9% to
+−3.8%, with dev unmoved on every metric and every gate decision identical. The
+full account, including why that is a units fix and not a tuned one, is in F-029
+rather than summarised away here.
+
 **What this does not weaken.** The rule still forbids re-recording to chase a
 better number, to swap providers, or to "clean up" a run after the fact for any
-reason short of hard rule #1. Two uses of the carve-out exist as of this
-writing (F-019, F-025) and both are logged with their full before/after,
-including the one that did not stay flat.
+reason short of the two named above. Three uses of the carve-out exist as of
+this writing (F-019, F-025, F-029) and all three are logged with their full
+before/after, including the two that did not stay flat.
 
 **Deadline: P4.1 start (Sep 2).** Whichever path is taken, this entry gets a
 one-line amendment naming the model of record and the date it was fixed, and
@@ -1984,3 +2013,74 @@ bar, and every deadline's tooltip names the instant it counted from, so a review
 can check the arithmetic rather than trust the badge. A simulated corpus shown
 against a real clock was, strictly, unlabelled simulated data -- the rule was
 being applied to the rows and not to the axis they were measured on.
+
+---
+
+### D-044 -- two registers, one grammar: the overview is a document, the console stays a tool
+
+**Context.** D-040 committed the console to a dense light ops register and D-041
+added an overview page at `/`. That overview was then built in the console's
+type scale, and it read as a template: eyebrow, an enormous headline with a
+coloured second clause, a lede, two filled buttons, alternating tinted bands.
+Executed better it would still have read as a template, because the shape *is*
+the template -- it is the shape every hackathon submission ships.
+
+**Decided: the overview is set as an engineering document, and it is dark.**
+
+The audience settles it. The readers are Razorpay platform engineers deciding
+whether the thing is real, and a page that behaves like a well-typeset technical
+paper is both rarer in that field and more honest about what it contains. Three
+consequences carry the whole design:
+
+- **A spine.** A thin numbered rail carries the four sections and marks which
+  one you are in. It is a table of contents, which is why it tracks scroll
+  position rather than sitting there looking structural.
+- **Its own type scale.** The console reads at 13-14px because density is the
+  point there; prose at 13px is a wall. The overview runs 17px on a 34em
+  measure, and the steps between display and body are real rather than one
+  enormous jump followed by flatness. **This was the actual defect** -- one
+  scale was serving a dense table UI and a reading page, which is how a page
+  manages to feel cramped and flat at the same time.
+- **No filled bands.** Rhythm is whitespace and hairlines, with the gap between
+  sections about four times any gap inside one. That contrast is what signals a
+  new idea; tinted alternating blocks were doing that job badly.
+
+The thesis splits across two weights, 640 to 300, rather than two colours. A
+coloured second clause is the template's move; a weight change is quieter,
+survives a greyscale screenshot, and reads as one voice getting softer instead
+of two things bolted together.
+
+**Dark is not a reversal of D-040.** That entry chose light for *dense data
+legibility* in the console, and says nothing about an overview page. The change
+of ground on entering `/app` is deliberate: it should feel like stepping out of
+a document and into a tool.
+
+**What did NOT change, and why the amendment is narrow.** The console keeps its
+register entirely -- dense, light, colour encoding state and never decorating,
+hairlines rather than shadows, no motion. Its execution was sound and the week of
+submission is the wrong time to re-litigate a working surface. What it took from
+this pass is grammar, not appearance.
+
+**One grammar across both surfaces.** Labels are mono, uppercase, tracked, at
+the same size on both. Figures are mono with tabular numerals on both. Sans is
+for language on both. The two surfaces share no palette and no type scale, and a
+reader moving between them still recognises the vocabulary. **Shared grammar is
+not shared values**: the overview sets labels at the fourth ink step and they
+read well against near-black, while the same step on paper is about 2.5:1 and
+stops being text -- contrast is a property of the pair, not of the token.
+
+**The eval page was retypeset too, and it is the one that mattered most.** It is
+the console's only reading surface and it was set like the console: 13.5px prose
+in a 72rem container whose headings ruled off far past where the text stopped.
+It now takes the overview's measure and rhythm on the console's light ground --
+the same mistake the landing page was making, in the other direction. Its tables
+are set like the overview's headline table, because they are the same numbers out
+of the same file and a reader who sees both should not have to check.
+
+**Rejected: rebuilding the console to match.** It would have re-opened D-040 on
+the last working day for a cohesion nobody asked for, and the console's density
+is a decision rather than an accident.
+
+**Rejected: a refined product page.** The safest option, and it keeps the shape
+that was the problem. Better craft applied to the template still yields the
+template.

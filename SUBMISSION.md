@@ -199,11 +199,11 @@ the one part of the contract nobody had revisited.
 >
 > | | dev (100) | held-out (30) | shift |
 > | --- | --- | --- | --- |
-> | recall on winnable | 31/38 = 81.6% | 6/9 = 66.7% | −14.9% |
+> | recall on winnable | 31/38 = 81.6% | 7/9 = 77.8% | −3.8% |
 > | precision on contests | 100% | 100% | 0 |
 > | false positives | 0/52 | 0/20 | 0 |
 > | false-positive cost | ₹0 | ₹0 | ₹0 |
-> | abstention rate | 69.0% | 76.7% | +7.7% |
+> | abstention rate | 69.0% | 73.3% | +4.3% |
 >
 > The abstention rate is the number most likely to be misread, so it is
 > decomposed rather than quoted flat: of the 69 dev abstentions, 52 are disputes

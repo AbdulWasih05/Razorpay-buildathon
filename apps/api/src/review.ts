@@ -512,7 +512,26 @@ export function cleanRow(
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(row)) {
     if (drop.has(key)) continue;
-    if (key.endsWith('Id') && key !== 'externalId' && key !== 'agentId' && key !== 'razorpayPaymentId') {
+    /*
+      Foreign keys are cuids, and a cuid in a prompt would change the replay
+      hash on every reseed (D-007), so the suffix rule stays: drop anything
+      ending in `Id` unless it is named here.
+
+      The allowlist is where business fields that happen to end in `Id` have to
+      be declared, and `trackingId` was missing from it (FAILURES.md F-030). It
+      is a carrier tracking number -- evidence, not a row pointer -- and the
+      heuristic ate it on every read-back, so the drafter never saw a tracking
+      id for any shipment while the eval, which builds its packs from the
+      generator rather than from the store, always did. Captured, stored, and
+      then dropped on the one path that leads to a contest.
+
+      Adding a name here is deliberately the only way past this rule. The
+      inverse -- listing the foreign keys to drop -- fails open, and it fails
+      open into the exact defect that silently turns a replayed eval into a live
+      one.
+    */
+    const BUSINESS_ID_FIELDS = ['externalId', 'agentId', 'razorpayPaymentId', 'trackingId'];
+    if (key.endsWith('Id') && !BUSINESS_ID_FIELDS.includes(key)) {
       continue;
     }
     if (key.endsWith('Json')) continue;
