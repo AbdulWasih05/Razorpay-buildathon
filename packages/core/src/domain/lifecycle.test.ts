@@ -173,3 +173,80 @@ describe('reconstruction from stored rows', () => {
     expect(entry.fromState).toBe('drafted');
   });
 });
+
+describe('starting a new cycle on a dispute that already has one (2026-09-05 fix)', () => {
+  // Found live: reprocessing a dispute after a demo reset (or, identically,
+  // via the documented `?states=drafted,abstained` reprocessing `/review/run`
+  // supports) left `dispute.state` at "drafted" while the persisted trail
+  // still ended at the reset's own row -- because the fresh trail
+  // `processDispute` builds always starts at seq 0, and the old
+  // count-based `slice(existingRowCount)` diffing silently dropped
+  // everything once a dispute had ANY prior history. A real approval was
+  // then refused with "illegal transition received -> approved", blaming the
+  // actor for a desync that was never about the actor.
+
+  it('appends a rewind row, then continues seq numbering rather than restarting at 0', () => {
+    const trail = contestedToApproval(); // received, triaged, gated, drafted -- seq 0..3
+    expect(trail.state).toBe('drafted');
+
+    const rewind = trail.rewindToReceived('system', 're-run: capture gap closed', T(10));
+    expect(rewind.seq).toBe(4);
+    expect(rewind.fromState).toBe('drafted');
+    expect(rewind.toState).toBe('received');
+    expect(trail.state).toBe('received');
+
+    // The second cycle continues from seq 5, not seq 0 -- this is the entire
+    // fix. The old bug's shape was indistinguishable from silence: no error,
+    // just rows that were never written.
+    const second = trail.append({ toState: 'triaged', actor: 'system', occurredAt: T(11) });
+    expect(second.seq).toBe(5);
+    expect(second.fromState).toBe('received');
+    expect(trail.length).toBe(6);
+  });
+
+  it('reproduces the exact live sequence and shows a real human can approve afterwards', () => {
+    // 1. A dispute goes through a full cycle and lands at `drafted`.
+    const trail = contestedToApproval();
+    // 2. A demo reset (or a reprocessing run) rewinds it.
+    trail.rewindToReceived('system', 'demo reset requested', T(10));
+    // 3. It is reprocessed: triaged -> gated -> drafted again, seq continuing.
+    trail.append({ toState: 'triaged', actor: 'system', occurredAt: T(11) });
+    trail.append({ toState: 'gated', actor: 'gate', reason: 'all rules passed', occurredAt: T(12) });
+    trail.append({ toState: 'drafted', actor: 'llm', occurredAt: T(13) });
+    expect(trail.state).toBe('drafted');
+    expect(trail.length).toBe(8); // 4 from the first cycle + rewind + 3 from the second
+
+    // 4. This is the assertion that was failing live: a real human CAN now
+    // approve it, because the trail's state genuinely reflects `drafted`
+    // rather than being stuck at the reset's `received` row.
+    const approval = trail.append({ toState: 'approved', actor: 'human:wasih', occurredAt: T(14) });
+    expect(approval.fromState).toBe('drafted');
+    expect(trail.state).toBe('approved');
+  });
+
+  it('refuses to rewind an approved dispute', () => {
+    const trail = contestedToApproval();
+    trail.append({ toState: 'approved', actor: 'human:wasih', occurredAt: T(4) });
+    expect(() => trail.rewindToReceived('system', 're-run', T(5))).toThrow(IllegalTransitionError);
+  });
+
+  it('refuses to rewind a submitted dispute', () => {
+    const trail = contestedToApproval();
+    trail.append({ toState: 'approved', actor: 'human:wasih', occurredAt: T(4) });
+    trail.append({ toState: 'submitted', actor: 'adapter', occurredAt: T(5) });
+    expect(() => trail.rewindToReceived('system', 're-run', T(6))).toThrow(IllegalTransitionError);
+  });
+
+  it('is a no-op concern on a fresh dispute: never called when already at received', () => {
+    // Documented via the guard in `runPipeline` (`trail.length > 0 && trail.state
+    // !== 'received'`) rather than in this class -- a brand-new dispute's
+    // first cycle should never call rewindToReceived at all. This test pins
+    // that rewinding FROM received, while not something the caller should do,
+    // does not corrupt seq numbering if it ever happened.
+    const trail = new AuditTrail('disp_fresh');
+    const entry = trail.rewindToReceived('system', 'no-op', T(0));
+    expect(entry.seq).toBe(0);
+    expect(entry.fromState).toBeNull();
+    expect(trail.state).toBe('received');
+  });
+});

@@ -112,7 +112,15 @@ export function parseReport(markdown: string): Block[] {
 function inline(text: string, keyPrefix: string): (string | JSX.Element)[] {
   return text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={`${keyPrefix}-${i}`}>{part.slice(2, -2)}</strong>;
+      // Recurse, because bold wrapping code is a real shape in the report and
+      // the flat version rendered it wrong: `**\`qwen/qwen3.8-27b\`**` came out
+      // as bold text with literal backticks in it, on the page a judge reads
+      // most carefully. The split pattern only matches `**` around non-asterisk
+      // runs, so the inner text can never contain another `**` and this
+      // terminates after one level.
+      return (
+        <strong key={`${keyPrefix}-${i}`}>{inline(part.slice(2, -2), `${keyPrefix}-${i}b`)}</strong>
+      );
     }
     if (part.startsWith('`') && part.endsWith('`')) {
       return <code key={`${keyPrefix}-${i}`}>{part.slice(1, -1)}</code>;
@@ -131,12 +139,20 @@ export function ReportView({ markdown }: { markdown: string }) {
           return <Tag key={key}>{inline(block.text, key)}</Tag>;
         }
         if (block.kind === 'table') {
+          // The first column names the thing; every other column is a figure
+          // for it. That is true of every table the report emits, and it is
+          // what lets the numbers be set right-aligned in mono so a reader can
+          // compare a column down the page instead of reading it across.
+          // Nothing here decides what a number IS -- the cells are still the
+          // report's own bytes, rendered verbatim (P4.2).
           return (
             <table key={key}>
               <thead>
                 <tr>
                   {block.header.map((cell, c) => (
-                    <th key={`${key}-h${c}`}>{inline(cell, `${key}-h${c}`)}</th>
+                    <th key={`${key}-h${c}`} className={c === 0 ? '' : 'num'}>
+                      {inline(cell, `${key}-h${c}`)}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -144,7 +160,9 @@ export function ReportView({ markdown }: { markdown: string }) {
                 {block.rows.map((row, r) => (
                   <tr key={`${key}-r${r}`}>
                     {row.map((cell, c) => (
-                      <td key={`${key}-r${r}c${c}`}>{inline(cell, `${key}-r${r}c${c}`)}</td>
+                      <td key={`${key}-r${r}c${c}`} className={c === 0 ? 'rowname' : 'num'}>
+                        {inline(cell, `${key}-r${r}c${c}`)}
+                      </td>
                     ))}
                   </tr>
                 ))}

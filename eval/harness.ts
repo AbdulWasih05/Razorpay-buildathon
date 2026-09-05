@@ -233,8 +233,23 @@ function toCase(
     ...(assembled.abstentionReason ? { abstentionReason: assembled.abstentionReason } : {}),
     // Attribution reads ground truth, so it happens here -- after the decision,
     // never before it. The pipeline itself cannot reach this function.
+    //
+    // `attributeAbstention` cannot see WHOSE decision it is scoring -- it only
+    // reads `collected`, which is right for the gate-only score in
+    // `eval/abstentions.ts`. Here, where a drafter can also decline, a
+    // `drafter_disagreement` on a full-required-coverage winnable case would
+    // otherwise land in `false_negative`, which means "the gate was wrong"
+    // (D-030) -- and here the gate was not wrong, it cleared the dispute; the
+    // drafter vetoed it, which D-025 says is a different, sanctioned thing.
+    // Reassigned to `drafter_veto` so the two are never blurred (F-025).
     ...(decision === 'abstain'
-      ? { cause: attributeAbstention(collected, dispute.groundTruth) }
+      ? {
+          cause:
+            assembled.abstentionClass === 'drafter_disagreement' &&
+            attributeAbstention(collected, dispute.groundTruth) === 'false_negative'
+              ? ('drafter_veto' as const)
+              : attributeAbstention(collected, dispute.groundTruth),
+        }
       : {}),
     requiredArtifacts: collected.coverage.required,
     presentArtifacts: collected.coverage.present,

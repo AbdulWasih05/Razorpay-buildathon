@@ -60,8 +60,11 @@ describe('the numbers arrive with the sentences that qualify them', () => {
   it('shows the headline metrics', () => {
     const html = render();
     // Dev and held-out recall, as fractions rather than only percentages.
+    // Held-out moved 7/9 -> 6/9 on 2026-09-05 (FAILURES.md F-025): closing a
+    // rubric-provenance fidelity finding changed what the drafter sees for
+    // one held-out case, and it declined a dispute the gate had cleared.
     expect(html).toContain('31/38');
-    expect(html).toContain('7/9');
+    expect(html).toContain('6/9');
   });
 
   it('carries the caveat that must never be separated from FP = 0', () => {

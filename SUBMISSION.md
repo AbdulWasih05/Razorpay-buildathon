@@ -199,18 +199,21 @@ the one part of the contract nobody had revisited.
 >
 > | | dev (100) | held-out (30) | shift |
 > | --- | --- | --- | --- |
-> | recall on winnable | 31/38 = 81.6% | 7/9 = 77.8% | −3.8% |
+> | recall on winnable | 31/38 = 81.6% | 6/9 = 66.7% | −14.9% |
 > | precision on contests | 100% | 100% | 0 |
 > | false positives | 0/52 | 0/20 | 0 |
 > | false-positive cost | ₹0 | ₹0 | ₹0 |
-> | abstention rate | 69.0% | 73.3% | +4.3% |
+> | abstention rate | 69.0% | 76.7% | +7.7% |
 >
 > The abstention rate is the number most likely to be misread, so it is
 > decomposed rather than quoted flat: of the 69 dev abstentions, 52 are disputes
 > the corpus says are unwinnable, 10 are genuinely ambiguous cases where policy
 > is to abstain, and 7 are recall we lost to specific artifacts the capture layer
 > does not hold — each named by dispute id in the report. **Zero** are the gate
-> misjudging evidence it already had.
+> misjudging evidence it already had. One held-out case is a fifth thing: the
+> drafter declining a dispute the gate cleared with full coverage — see
+> FAILURES.md F-025, which is the honest cost of the 2026-09-05 rubric-provenance
+> fix and is reported rather than smoothed into an existing bucket.
 >
 > `pnpm eval` reproduces all of it: replay mode, no network, no API key. Two runs
 > produce a byte-identical report, and a test regenerates it and diffs it against

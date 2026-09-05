@@ -354,6 +354,22 @@ const COLLECTORS: Record<EvidenceArtifact, Collect> = {
   item_selection_confirmation: () =>
     notCapturable(ARTIFACTS.item_selection_confirmation.notSourceableReason as string),
 
+  // Added 2026-09-05 alongside the rubric.ts provenance fix: five artifacts
+  // named by Razorpay's published guidance that the capture envelope has no
+  // slot for. All `supporting` on every code that requests them, so reporting
+  // them as `not_capturable` here cannot change a gate decision -- it only
+  // makes them show up honestly in the collector output instead of not
+  // existing as a concept at all.
+  merchant_refund_policy: () =>
+    notCapturable(ARTIFACTS.merchant_refund_policy.notSourceableReason as string),
+  merchant_terms_conditions: () =>
+    notCapturable(ARTIFACTS.merchant_terms_conditions.notSourceableReason as string),
+  customer_withdrawal_letter: () =>
+    notCapturable(ARTIFACTS.customer_withdrawal_letter.notSourceableReason as string),
+  alternate_payment_negative_proof: () =>
+    notCapturable(ARTIFACTS.alternate_payment_negative_proof.notSourceableReason as string),
+  reauth_proof: () => notCapturable(ARTIFACTS.reauth_proof.notSourceableReason as string),
+
   refund_settlement_proof: (pack) => {
     // The distinction this artifact exists for: a refund that was RAISED is not
     // a refund that was PAID, and UPI 1061 is a complaint that the money never

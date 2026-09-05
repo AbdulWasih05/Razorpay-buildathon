@@ -372,12 +372,20 @@ replay mode, no network, no API key. Headline:
 | metric                                   | dev           | held-out (OOD) | shift |
 | ---------------------------------------- | ------------- | -------------- | ----- |
 | disputes                                 | 100           | 30             | —     |
-| recall on winnable                       | 31/38 = 81.6% | 7/9 = 77.8%    | −3.8% |
+| recall on winnable                       | 31/38 = 81.6% | 6/9 = 66.7%    | −14.9% |
 | precision on contests                    | 100.0%        | 100.0%         | 0.0%  |
 | false positives (contested & unwinnable)  | 0/52          | 0/20           | 0     |
 | false-positive cost                      | ₹0            | ₹0             | ₹0    |
-| abstention rate                          | 69.0%         | 73.3%          | +4.3% |
+| abstention rate                          | 69.0%         | 76.7%          | +7.7% |
 | assembly failures                        | 0             | 0              | —     |
+
+**Held-out moved on 2026-09-05**, closing a rubric-provenance fidelity finding
+(seven UPI reason codes wrongly marked as having no published evidence
+guidance). Dev is verified unchanged (`pnpm abstentions`, gate-only, byte-
+identical before/after); held-out lost one case to a new drafter disagreement
+on a gate-cleared, full-coverage dispute — recall −11.1pp, within the drafter's
+veto-toward-safety scope (D-025) but a real, disclosed cost. Full account in
+FAILURES.md F-025.
 
 The report carries, for **both** sets: the abstention decomposition (first, not
 the rate — D-030), precision and recall against ground truth with `ambiguous`

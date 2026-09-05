@@ -58,6 +58,24 @@ export const ABSTENTION_CAUSES = [
   'capture_gap',
   'evidence_absent',
   'false_negative',
+  /**
+   * Added 2026-09-05 (see FAILURES.md F-025). `attributeAbstention` below
+   * cannot see WHY the pipeline abstained -- gate or drafter -- because it
+   * only ever runs against the deterministic `collected` evidence, which is
+   * exactly right for `eval/abstentions.ts`'s gate-only score (no drafter
+   * exists there to blame). `false_negative` therefore means "full required
+   * coverage, declined anyway" with no distinction between "the gate was
+   * wrong" and "the gate cleared it and the drafter vetoed it" -- the two are
+   * different findings (D-025: a drafter veto is sanctioned, a gate false
+   * negative is not) and this file's own guard already asserts the pipeline
+   * pins false_negative at 0 to mean the FIRST claim. The eval harness (which
+   * DOES know the pipeline's `abstentionClass`) reassigns a
+   * `drafter_disagreement` case out of `false_negative` and into this cause
+   * instead of leaving the two blurred -- exactly the F-011/D-025 shape this
+   * project has hit before, caught this time before it shipped as a false
+   * "the gate was wrong" claim.
+   */
+  'drafter_veto',
 ] as const;
 
 export type AbstentionCause = (typeof ABSTENTION_CAUSES)[number];

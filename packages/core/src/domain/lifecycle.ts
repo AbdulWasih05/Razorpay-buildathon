@@ -149,6 +149,52 @@ export class AuditTrail {
     for (const entry of entries) trail.entries.push({ ...entry });
     return trail;
   }
+
+  /**
+   * Start a new pipeline cycle on a dispute that already has one behind it.
+   *
+   * Not a "legal transition" in the forward-only sense `append` checks --
+   * `TRANSITIONS` has no path back to `received` from anywhere, on purpose.
+   * This is the recorded FACT that a new cycle is beginning, the same shape
+   * of event `resetDemo` already writes as its `demo_reset` row, just
+   * available as a first-class trail operation instead of a raw insert one
+   * caller happened to write correctly.
+   *
+   * Added 2026-09-05 (see FAILURES.md): reprocessing a dispute that already
+   * had a full cycle behind it -- a demo reset, or the documented
+   * `?states=drafted,abstained` reprocessing `/review/run` supports -- used
+   * to feed a FRESH trail (which always starts its own count at `received`,
+   * seq 0) into a persistence step that only ever appended
+   * `trail.list().slice(existingRowCount)`. Once a dispute had any prior
+   * history, that slice was empty, so the dispute's `state` column kept
+   * moving while its audit trail silently stopped, and a later approval was
+   * refused for a reason ("illegal transition received -> approved") that
+   * had nothing to do with the actor being blamed for it.
+   *
+   * Refuses from `approved` or `submitted`: a contest a human has approved,
+   * or one Razorpay has actually received, must never be silently walked
+   * backwards by a reprocessing run. That would replace the one record of
+   * what actually happened with a fresh judgement of what the pipeline would
+   * say today, which is exactly the kind of "quietly different number"
+   * hard rule #6 exists to prevent -- here applied to a fact about a
+   * dispute's real history rather than a metric.
+   */
+  rewindToReceived(actor: Actor, reason: string, occurredAt: Date): AuditEntry {
+    const from = this.state;
+    if (from === 'approved' || from === 'submitted') {
+      throw new IllegalTransitionError(from, 'received', actor);
+    }
+    const entry: AuditEntry = {
+      seq: this.entries.length,
+      fromState: this.entries.length === 0 ? null : from,
+      toState: 'received',
+      actor,
+      reason,
+      occurredAt,
+    };
+    this.entries.push(entry);
+    return entry;
+  }
 }
 
 /** True once a dispute can no longer move. */

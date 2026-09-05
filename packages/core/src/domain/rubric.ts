@@ -17,9 +17,14 @@ import { SCENARIOS, type ScenarioClass } from './scenarios.js';
  * 1. **Every requirement carries its provenance.** `published` means it answers
  *    to a phrase Razorpay printed, and the phrase is quoted on the requirement.
  *    `derived` means Razorpay published no evidence guidance for that code and
- *    this is *our* considered view, labelled as ours. A test asserts that no
- *    `published` requirement exists for a code with no published guidance, so
- *    the two can never quietly blur.
+ *    this is *our* considered view, labelled as ours. Tests assert this in
+ *    BOTH directions: no `published` requirement exists for a code marked
+ *    `hasPublishedGuidance: false`, AND no code is marked `false` while
+ *    reason-codes.ts's transcription says otherwise. Only the forward
+ *    direction existed until 2026-09-05 -- an adversarial review caught seven
+ *    UPI codes marked `false` that the live page actually publishes guidance
+ *    for, because the only thing being checked was self-consistency with
+ *    reason-codes.ts, and reason-codes.ts was the file that had the gap.
  *
  * 2. **It knows what we cannot produce.** An artifact carries `sourceable`.
  *    `refund_settlement_proof` is required by the docs for UPI 1061 and our
@@ -45,6 +50,11 @@ export const EVIDENCE_ARTIFACTS = [
   'refund_record',
   'refund_settlement_proof',
   'item_selection_confirmation',
+  'merchant_refund_policy',
+  'merchant_terms_conditions',
+  'customer_withdrawal_letter',
+  'alternate_payment_negative_proof',
+  'reauth_proof',
 ] as const;
 
 export type EvidenceArtifact = (typeof EVIDENCE_ARTIFACTS)[number];
@@ -156,6 +166,57 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
     // slot to the product; a merchant genuinely holds this record.
     sourceable: true,
   },
+  // Added 2026-09-05: five artifacts Razorpay's own published guidance names
+  // for UPI reason codes this rubric already covered, but which the capture
+  // envelope has no slot for. None of these are `required` on any code -- see
+  // the RUBRIC table below -- so adding them, honestly marked unsourceable,
+  // cannot change gate coverage or any headline metric. Leaving them out of
+  // the table entirely was the actual bug this file existed to prevent: a
+  // published item this store cannot supply belongs in the rubric as
+  // `not_capturable`, not silently absent from it.
+  merchant_refund_policy: {
+    artifact: 'merchant_refund_policy',
+    description: "The merchant's written refund/return policy document.",
+    contestField: 'refund_cancellation_policy',
+    sourceable: false,
+    notSourceableReason:
+      "The capture envelope records order and refund facts, never the merchant's policy documents themselves -- nothing at checkout emits a copy of a refund policy PDF. Repairable: a merchant-onboarding step could attach one, but nothing in the transaction-time capture model produces it today.",
+  },
+  merchant_terms_conditions: {
+    artifact: 'merchant_terms_conditions',
+    description: "The merchant's written terms and conditions covering refund and fulfilment.",
+    contestField: 'term_and_conditions',
+    sourceable: false,
+    notSourceableReason:
+      'Same gap as merchant_refund_policy: a T&C document is a merchant-level artifact, not a transaction-time capture, and the capture envelope has no slot for it.',
+  },
+  customer_withdrawal_letter: {
+    artifact: 'customer_withdrawal_letter',
+    description: 'A letter from the customer withdrawing their complaint.',
+    contestField: 'others',
+    othersType: 'customer_withdrawal_letter',
+    sourceable: false,
+    notSourceableReason:
+      'This document, if it exists at all, is produced after the dispute is raised and held by the bank or the customer, never by the merchant at transaction time. Structurally outside what a capture layer can ever supply.',
+  },
+  alternate_payment_negative_proof: {
+    artifact: 'alternate_payment_negative_proof',
+    description: 'Proof the disputed amount was not also paid through a different channel.',
+    contestField: 'others',
+    othersType: 'alternate_payment_negative_proof',
+    sourceable: false,
+    notSourceableReason:
+      'Proving a negative across payment channels Praman does not observe (cash, a different gateway, a different merchant account) is outside what any one capture layer can hold.',
+  },
+  reauth_proof: {
+    artifact: 'reauth_proof',
+    description: 'Evidence of a re-authorisation attempt for a delayed-settlement claim.',
+    contestField: 'others',
+    othersType: 'reauth_proof',
+    sourceable: false,
+    notSourceableReason:
+      'The capture schema does not model a re-authorisation event distinct from the original payment capture, so there is nothing to report even as absent-but-tracked.',
+  },
 };
 
 export type RequirementProvenance = 'published' | 'derived';
@@ -236,8 +297,14 @@ export const RUBRIC: Record<string, RubricEntry> = {
       published('refund_record', 'Proof of refund generation'),
       published(
         'refund_settlement_proof',
-        'Bank statement showing refund amount which should match payment amount',
+        'Bank statement showing refund amount which should match the payment amount',
       ),
+      // Added 2026-09-05: these two were on the live page from the start and
+      // missing from this transcription -- the omission an adversarial review
+      // caught. Both `supporting`: settlement proof already decides the claim
+      // (D-030), and neither is sourceable, so this cannot change coverage.
+      published('customer_communication', 'Customer communication showing refund confirmation', 'supporting'),
+      published('merchant_refund_policy', 'Refund policies', 'supporting'),
       derived(
         'order_record',
         'The refund is only meaningful against the order it reverses.',
@@ -253,11 +320,15 @@ export const RUBRIC: Record<string, RubricEntry> = {
     requires: [
       published('product_description', 'Product description/image screenshots', 'supporting'),
       published('delivery_proof', 'Proof of product/service delivery'),
-      derived(
+      // Was `derived`: Razorpay publishes this exact phrase for 1062. Same
+      // artifact, same necessity, corrected provenance only.
+      published(
         'customer_communication',
-        'Whether the customer confirmed this specific item is what decides a "not as described" claim, and on the agentic rail the trace records it verbatim.',
+        'Customer communication showcasing dissatisfaction',
         'supporting',
       ),
+      // Added 2026-09-05, previously omitted from this transcription.
+      published('merchant_refund_policy', 'Return policies', 'supporting'),
       derived(
         'item_selection_confirmation',
         'This code turns on whether the item ordered is the item asked for. That agreement is the whole dispute, and the capture layer holds no structured record of it -- so the gate refuses to guess rather than reading the answer out of a conversation.',
@@ -286,6 +357,12 @@ export const RUBRIC: Record<string, RubricEntry> = {
         'Dispatch is the weaker half of delivery evidence: it supports a contest but does not establish receipt on its own.',
         'supporting',
       ),
+      // Added 2026-09-05, previously omitted from this transcription.
+      published(
+        'merchant_terms_conditions',
+        'Terms & Conditions showcasing refund & fulfillment policies',
+        'supporting',
+      ),
     ],
   },
   'upi:128': {
@@ -297,9 +374,12 @@ export const RUBRIC: Record<string, RubricEntry> = {
       // The load-bearing line of the whole product. For an agent-initiated
       // payment, the mandate record and the orchestration log ARE these logs.
       published('authorisation_evidence', 'Internal logs to show authorisation was obtained'),
+      // Re-checked 2026-09-05: this quote was itself truncated, dropping "for
+      // the debited amount" -- the same class of error F-019 fixed on this
+      // exact code, on the clause next to the one F-019 fixed.
       published(
         'invoice_breakdown',
-        'Invoicing details along with detailed price breakdown',
+        'Invoicing details along with detailed price breakdown for the debited amount',
         'supporting',
       ),
       derived(
@@ -325,16 +405,36 @@ export const RUBRIC: Record<string, RubricEntry> = {
     ],
   },
 
-  // --- UPI, no published guidance: requirements are ours, and say so ---------
+  // --- UPI, published guidance restored 2026-09-05 ---------------------------
+  //
+  // These seven codes were marked `hasPublishedGuidance: false` and given
+  // fully `derived` requirement lists. That was wrong: Razorpay's
+  // submit-evidence page publishes evidence guidance for all seven -- the
+  // actual bug was in reason-codes.ts, whose `evidenceGuidance` sat empty for
+  // these codes despite the file's own docblock claiming a full transcription.
+  // An adversarial review checking the live page directly, rather than this
+  // file's internal cross-check against reason-codes.ts, is what caught it
+  // (see FAILURES.md's entry on this). Every `derived` requirement Praman had
+  // already assigned stays exactly as it was -- same artifact, same necessity
+  // -- so gate coverage does not move; the published items are added
+  // alongside them, all `supporting` unless a derived requirement already
+  // covered the identical fact, in which case that entry's provenance is
+  // corrected to `published` in place.
   'upi:1084': {
     network: 'upi',
     code: '1084',
     category: 'processing_error',
-    hasPublishedGuidance: false,
+    hasPublishedGuidance: true,
     requires: [
-      derived(
+      // Was `derived`: this is the same fact Razorpay's first bullet names.
+      published(
         'duplicate_payment_analysis',
-        'A duplicate-processing claim is a factual question about how many payments exist against one order. Answering it is the whole contest.',
+        'System logs to prove only one transaction was processed for single authorisation',
+      ),
+      published(
+        'invoice_breakdown',
+        'Invoicing to prove each transaction was for separate service/product',
+        'supporting',
       ),
       derived('order_record', 'Establishes whether the two payments belong to one order or two.'),
       derived('payment_record', 'The payments being compared.'),
@@ -344,13 +444,26 @@ export const RUBRIC: Record<string, RubricEntry> = {
     network: 'upi',
     code: '1085',
     category: 'processing_error',
-    hasPublishedGuidance: false,
+    hasPublishedGuidance: true,
     requires: [
-      derived(
+      // Was `derived`: matches "Authorisation proof showing final amount was
+      // authorised by cardholder" -- on the agentic rail, the mandate cap.
+      published(
         'authorisation_evidence',
-        'The claim is that the charge exceeded what was authorised, so the authorisation ceiling -- on the agentic rail, the mandate cap -- is the fact in dispute.',
+        'Authorisation proof showing final amount was authorised by cardholder',
       ),
-      derived('invoice_breakdown', 'Shows what the charged amount was actually composed of.'),
+      // Was `derived`: matches the invoice bullet verbatim.
+      published(
+        'invoice_breakdown',
+        'Invoice with detailed price breakdown (price, taxes, fee, discount and so on) prove amount charged was correct',
+        'supporting',
+      ),
+      published(
+        'product_description',
+        'Screenshot of product/service along with the price details',
+        'supporting',
+      ),
+      published('payment_record', 'System logs to show correct amount was charged', 'supporting'),
       derived('order_record', 'The amount charged, against the amount ordered.'),
     ],
   },
@@ -358,41 +471,114 @@ export const RUBRIC: Record<string, RubricEntry> = {
     network: 'upi',
     code: '1063',
     category: 'processing_error',
-    hasPublishedGuidance: false,
+    hasPublishedGuidance: true,
     requires: [
       derived('payment_record', 'Whether this payment succeeded is the question being asked.'),
       derived('order_record', 'Establishes what was being paid for, and once.'),
+      published(
+        'alternate_payment_negative_proof',
+        'Proof showing payment was not received using any other method',
+        'supporting',
+      ),
+      published(
+        'refund_record',
+        'Refund proof if amount was refunded for duplicate charge',
+        'supporting',
+      ),
+      published(
+        'product_description',
+        'Proof to show the claimed transaction was for a different product/service',
+        'supporting',
+      ),
     ],
   },
   'upi:1081': {
     network: 'upi',
     code: '1081',
     category: 'processing_error',
-    hasPublishedGuidance: false,
-    requires: [derived('payment_record', 'Settlement timing is a fact about the payment record.')],
+    hasPublishedGuidance: true,
+    requires: [
+      // Was `derived`: matches the timestamp bullet.
+      published(
+        'payment_record',
+        'Time stamp of transaction and processing of the payment showing debit amount',
+      ),
+      published(
+        'authorisation_evidence',
+        'Internal logs to prove that charge was submitted within allowed time frame',
+        'supporting',
+      ),
+      published('reauth_proof', 'In case of re-auth, please provide proof of same', 'supporting'),
+      published('authorisation_evidence', 'Customer authorisation proof', 'supporting'),
+      published(
+        'invoice_breakdown',
+        'Masked card details and invoice of the transaction',
+        'supporting',
+      ),
+    ],
   },
   'upi:108': {
     network: 'upi',
     code: '108',
     category: 'authorisation_error',
-    hasPublishedGuidance: false,
+    hasPublishedGuidance: true,
     requires: [
       derived('payment_record', 'Whether the beneficiary was credited is a payment-record fact.'),
+      published('delivery_proof', 'Proof of service/product delivery', 'supporting'),
+      published(
+        'customer_communication',
+        'Customer interaction showcasing product/service related enquiries',
+        'supporting',
+      ),
+      published('customer_withdrawal_letter', 'Customer Withdrawn letter', 'supporting'),
+      published(
+        'merchant_terms_conditions',
+        'Terms & Conditions showcasing refund & fulfillment policies',
+        'supporting',
+      ),
     ],
   },
   'upi:1065': {
     network: 'upi',
     code: '1065',
     category: 'authorisation_error',
-    hasPublishedGuidance: false,
-    requires: [derived('payment_record', 'Whether the transaction failed is a payment-record fact.')],
+    hasPublishedGuidance: true,
+    requires: [
+      derived('payment_record', 'Whether the transaction failed is a payment-record fact.'),
+      published('delivery_proof', 'Proof of service/product delivery', 'supporting'),
+      published(
+        'customer_communication',
+        'Customer interaction showcasing product/service related enquiries',
+        'supporting',
+      ),
+      published('customer_withdrawal_letter', 'Customer Withdrawn letter', 'supporting'),
+      published(
+        'merchant_terms_conditions',
+        'Terms & Conditions showcasing refund & fulfillment policies',
+        'supporting',
+      ),
+    ],
   },
   'upi:121': {
     network: 'upi',
     code: '121',
     category: 'authorisation_error',
-    hasPublishedGuidance: false,
-    requires: [derived('payment_record', 'Credit status is a payment-record fact.')],
+    hasPublishedGuidance: true,
+    requires: [
+      derived('payment_record', 'Credit status is a payment-record fact.'),
+      published('delivery_proof', 'Proof of service/product delivery', 'supporting'),
+      published(
+        'customer_communication',
+        'Customer interaction showcasing product/service related enquiries',
+        'supporting',
+      ),
+      published('customer_withdrawal_letter', 'Customer Withdrawn letter', 'supporting'),
+      published(
+        'merchant_terms_conditions',
+        'Terms & Conditions showcasing refund & fulfillment policies',
+        'supporting',
+      ),
+    ],
   },
 
   // --- RuPay, no published guidance on the page -----------------------------

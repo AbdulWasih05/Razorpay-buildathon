@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { ORDER_RELATIONS, cleanRow } from './review.js';
+import type { PrismaClient } from '@prisma/client';
+import type { ContestDraft } from '@praman/core';
+import type { DisputeAdapter } from '@praman/adapter';
+
+import { ORDER_RELATIONS, approveAndSubmit, cleanRow } from './review.js';
 
 /**
  * Regression tests for FAILURES.md F-014.
@@ -73,5 +77,105 @@ describe('cleanRow keeps what the envelope needs', () => {
     expect(cleanRow({ externalId: 'ord_1', itemsJson: [{ sku: 'a' }] })).toEqual({
       externalId: 'ord_1',
     });
+  });
+});
+
+/**
+ * Route-level adversarial tests for the money path, owed since F-013 and
+ * never paid ("Route-level adversarial tests are now owed for anything on
+ * the money path" -- FAILURES.md F-013). These exercise `approveAndSubmit`
+ * itself, not a unit inside it, because F-013's whole lesson was that a
+ * caller can satisfy every unit-level guard while the *path* is still broken.
+ *
+ * A second review found the descendant of the same bug: `isHumanActor`
+ * (the audit-trail-layer check) only reads the `human:` prefix, so
+ * `human:system` passes it. `ApprovalToken.approve` is the only check that
+ * reads the name -- and until this fix, it ran AFTER the audit-trail write
+ * and the document-upload loop, so a spoofed actor still caused a real
+ * adapter call (`uploadDocument`) before anything rejected it. These tests
+ * assert not just that the call throws, but that ZERO adapter calls happened
+ * -- the thing a unit test of `ApprovalToken` alone cannot see.
+ */
+describe('approveAndSubmit refuses a spoofed actor before any side effect', () => {
+  function fakeDraft(): ContestDraft {
+    return {
+      disputeId: 'disp_test1',
+      amount: 1000,
+      disputedAmount: 1000,
+      summary: 'test summary',
+      action: 'draft',
+      assignments: [{ field: 'customer_communication', documentIds: [], referenceKeys: ['ref_1'] }],
+      references: ['ref_1'],
+    } as unknown as ContestDraft;
+  }
+
+  function fakePrisma(): PrismaClient {
+    return {
+      dispute: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'row_1',
+          externalId: 'dsp_test1',
+          razorpayDisputeId: 'disp_test1',
+          state: 'drafted',
+          contestDraftJson: fakeDraft(),
+          auditLogs: [],
+        }),
+        update: vi.fn(),
+      },
+      auditLog: {
+        count: vi.fn().mockResolvedValue(0),
+        createMany: vi.fn(),
+      },
+    } as unknown as PrismaClient;
+  }
+
+  function fakeAdapter(): DisputeAdapter & { uploadDocument: ReturnType<typeof vi.fn> } {
+    return {
+      name: 'fake',
+      simulated: true,
+      uploadDocument: vi.fn().mockResolvedValue({ reference: 'ref_1', documentId: 'doc_1' }),
+      submit: vi.fn().mockResolvedValue({
+        simulated: true,
+        request: { action: 'submit' },
+      }),
+    } as unknown as DisputeAdapter & { uploadDocument: ReturnType<typeof vi.fn> };
+  }
+
+  it.each(['human:system', 'human:bot', 'human:llm', 'human:adapter', 'human:admin'])(
+    'rejects %s and calls the adapter zero times',
+    async (spoofedActor) => {
+      const prisma = fakePrisma();
+      const adapter = fakeAdapter();
+
+      await expect(
+        approveAndSubmit({ prisma, adapter, now: () => new Date() } as never, 'dsp_test1', spoofedActor),
+      ).rejects.toThrow(/system actor|not a person/);
+
+      // The proof F-013's own regression tests could not offer: no upload, no
+      // submit, and no write to the audit trail either -- the manufactured
+      // identity produces exactly nothing, not "nothing except what already ran".
+      expect(adapter.uploadDocument).not.toHaveBeenCalled();
+      expect(adapter.submit).not.toHaveBeenCalled();
+      expect((prisma.auditLog.createMany as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+      expect((prisma.dispute.update as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    },
+  );
+
+  it('still accepts a real reviewer name, including one with a hyphen', async () => {
+    // The check the reserved-name defence must not become is paranoid: the
+    // regression this pins is that F-013's fix tightened WHO can approve
+    // without narrowing WHAT a real name can look like.
+    const prisma = fakePrisma();
+    const adapter = fakeAdapter();
+
+    const result = await approveAndSubmit(
+      { prisma, adapter, now: () => new Date() } as never,
+      'dsp_test1',
+      'human:systems-team-anita',
+    );
+
+    expect(result.state).toBe('submitted');
+    expect(adapter.uploadDocument).toHaveBeenCalledTimes(1);
+    expect(adapter.submit).toHaveBeenCalledTimes(1);
   });
 });

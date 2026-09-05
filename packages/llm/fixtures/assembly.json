@@ -14,6 +14,32 @@
       "recordedAt": "2026-09-03T10:02:01.873Z"
     },
     {
+      "key": "017a195ff2837d9f87dd6263ec1b72d0cd0d990706622325b7b38626be987a72",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 1064. Order shipped 2026-06-20 via Delhivery (tracking trk_0zoxUNcbEnG3qL). Shipment record confirms status 'delivered'. Delivery proof (pod_4Z6ZWLMf2Pwl0v) records successful delivery on 2026-06-21 at 19:44 UTC. Evidence demonstrates the goods were dispatched and received by the customer. No customer communication or terms of service documents are attached to this transaction.\"\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:16:38.500Z"
+    },
+    {
+      "key": "04606260321121aff69b69f2a6d69ed338f35ee71ae9447da877c13a537170cb",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Order placed 2026-06-06 for INR 79,600. The dispute reason (UPI 1061) typically alleges non-receipt or unauthorized transaction. The evidence shows the transaction was fully refunded. The order_record confirms the status is 'refunded'. The refund_record confirms the refund amount of INR 79,600. The refund_settlement_proof provides the UTR (utr_EBirIXAjEx6jOr) and confirms the refund was initiated on 2026-06-12 and settled on 2026-06-15. Since the funds have been returned to the customer, the financial loss alleged in the dispute has been rectified. The evidence supports that the merchant has honored the refund request, resolving the basis for the dispute.\"\n}",
+        "providerRefused": false,
+        "attempts": 3
+      },
+      "recordedAt": "2026-09-04T20:16:07.642Z"
+    },
+    {
       "key": "07a55a180761f89f7a5ad8b19d9622d8c909a050092c93bf7e0f651ae62115de",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -144,6 +170,19 @@
       "recordedAt": "2026-08-31T20:12:45.102Z"
     },
     {
+      "key": "1fe4abd8d9be6f02cd99224955ed44b9d51fd89f8e1322706fa8a3831c45def6",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 1064. Goods shipped 2026-06-18 via Delhivery (tracking trk_1cbmpG9i9mHY3M). Shipment record confirms status 'delivered'. Delivery proof (pod_LuXQ1OH2PujQvM) records delivery on 2026-06-21 at 15:36 UTC. Evidence demonstrates the order was fulfilled and received. No customer communication or terms of service documents are attached.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-04T20:15:21.444Z"
+    },
+    {
       "key": "207b4c825f0d47662d4409f5b578818507c9fce6ab2c24d69ba4205418bda7b8",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -168,6 +207,19 @@
         "attempts": 1
       },
       "recordedAt": "2026-08-31T19:56:38.048Z"
+    },
+    {
+      "key": "23fc0eb330a8f10e2b583b52d206d62c0dc3b9b7fa1141ed1957af7309280177",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Order placed 2026-06-05 for INR 698,600. Dispute code UPI 1061. Evidence shows the transaction was fully refunded. order_record confirms status 'refunded' and amount 698600. refund_record confirms orderStatus 'refunded' and amount 698600. refund_settlement_proof provides UTR utr_iz2JYZ4TeRCzIR, showing the refund of 698600 was initiated 2026-06-11 and settled 2026-06-14. The customer received the full refund. This resolves the dispute as the funds were returned to the customer.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:16:39.833Z"
     },
     {
       "key": "256aab90915c3a727609fa6746b5e6183ec9b3f9eea2415baadb94d052b6c10e",
@@ -274,6 +326,19 @@
       "recordedAt": "2026-09-03T10:17:54.634Z"
     },
     {
+      "key": "3a726f9d6949653e7373075893cf33ec299ce15401d21f195620c3c1c791445b",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Customer purchased goods delivered on 2026-06-08. Dispute reason UPI 1064 requires proof of delivery. Shipment record (trk_ApO9wjYjKhWpcB) shows status 'delivered' via Ekart, shipped 2026-06-08. Delivery proof (pod_0LWdgHeT0xMTCz) confirms receipt at 18:24 UTC on 2026-06-08. Evidence supports that goods were delivered as per transaction.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:14:58.809Z"
+    },
+    {
       "key": "3b206c0403205036dd6d00e06e2ab9799fc348b4aab016b824a1cb8330ffc75b",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -365,6 +430,19 @@
       "recordedAt": "2026-09-03T10:02:06.830Z"
     },
     {
+      "key": "411fabc3b64a7919a4148563381a2f971452e790690fff11c0f8703b508e40fc",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 1064. Evidence confirms physical delivery. Shipment record (trk_w74ZW9wvwdSjCx) shows status 'delivered' via Delhivery, shipped 2026-06-13 06:03 UTC. Delivery proof (pod_OteBUBsPUJ49M5) records receipt at 2026-06-13 09:20 UTC. These documents verify the goods were dispatched and received by the customer. No customer communication or T&C documents are attached, as they are not captured at transaction time. The evidence supports that the transaction was completed and the item was delivered.\"\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:14:57.797Z"
+    },
+    {
       "key": "4309b56524993ecf92cbba48f109465eb13b7eb9d390419b5a7160ecd7f5a365",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -376,6 +454,19 @@
         "attempts": 2
       },
       "recordedAt": "2026-09-03T10:19:13.277Z"
+    },
+    {
+      "key": "449586c4f5cd458de5d719ca3d224b34113ea810322cbc6507b342ec414ca256",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 1064. Goods shipped 2026-06-15 via Delhivery (tracking trk_teZw9y3Cbal6Lo). Shipment record confirms status 'delivered'. Delivery proof (pod_DwVaL6FWreH2Do) records delivery at 2026-06-18T08:23:00.000Z. Evidence demonstrates the order was fulfilled and received by the customer. This directly addresses the dispute by proving the transaction was completed as agreed.\"\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:15:03.711Z"
     },
     {
       "key": "44bcbb0660c2f3b490b4cf157b29a982cde2aa444c3a12471b88f76cd0712b04",
@@ -443,6 +534,19 @@
       "recordedAt": "2026-08-31T20:13:25.774Z"
     },
     {
+      "key": "5453bcc7b15bfea32b16f3d1f7eb4695b11ae879f912a645a078ee01205151e4",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 1064. Goods shipped 2026-06-20 via Bluedart (trk_7QtWZYj43apCl2). Shipment record confirms status 'delivered'. Delivery proof (pod_RipAlgrOFiH8d2) records delivery at 2026-06-21T08:38:00Z. Evidence demonstrates the order was fulfilled and received by the customer. No customer communication or T&C documents are attached, as these are not captured at transaction time. The provided logistics documents substantiate that the service was rendered.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:15:04.357Z"
+    },
+    {
       "key": "58d36710d01ffffe395a522f7b30a3f0caeea810c0e378a59ad852fb5151520b",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -480,6 +584,19 @@
         "attempts": 2
       },
       "recordedAt": "2026-09-03T09:12:37.635Z"
+    },
+    {
+      "key": "674ef732b2c4ff1ea255f507bbd458a56e703d69fd5383d261b7527a9f2b23cc",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 1064. Goods shipped 2026-06-22 via Bluedart (tracking trk_Fizs9UrC1E5qnK). Shipment record shows status 'delivered'. Delivery proof (pod_hUZU7WngZqdK1O) confirms receipt on 2026-06-25 at 03:15 UTC. Evidence demonstrates the order was fulfilled and delivered to the customer. No customer communication or merchant terms are attached, as these are not captured at transaction time. The provided logistics documents directly address the dispute by proving delivery completion.\"\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:15:02.434Z"
     },
     {
       "key": "6a3e25a13f000e6b3ea702fbbe9939cdc24aba3a881ce36ff93fa37c46a3b1d7",
@@ -599,6 +716,19 @@
       "recordedAt": "2026-08-31T19:56:38.846Z"
     },
     {
+      "key": "797e55f1d660d05c4a4068ae6d8e993b7efd890ffd41a63b9b9d59f00f8f739b",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 1064. Customer purchased goods shipped on 2026-06-22 via Ekart (tracking trk_V6VOL4tGBE7MFi). Shipment record confirms status 'delivered'. Delivery proof (pod_pON6XC1aNMZI3i) records delivery at 2026-06-24T15:03:00.000Z. Evidence demonstrates the order was fulfilled and received by the customer, directly addressing the dispute claim.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:15:03.049Z"
+    },
+    {
       "key": "7bb9af5f8d8c1947b8506295f18824e858633c082a42dffaf2a71d5b668c6dc0",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -677,6 +807,19 @@
       "recordedAt": "2026-08-31T20:13:37.765Z"
     },
     {
+      "key": "84a985f8ed0277038d6d47b15ced86015d5573949a9f06090187e42bcf58a182",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"insufficientEvidence\": true, \"reason\": \"Missing customer_communication and merchant_refund_policy. Evidence only proves a refund was processed, not that the original transaction was valid or that the dispute reason (upi 1061) is resolved by the refund.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-04T20:16:43.998Z"
+    },
+    {
       "key": "860372fba93cd56543267cd38e96a55e06f0c60ebc100c10dfe0979965cea9cc",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -714,6 +857,19 @@
         "attempts": 1
       },
       "recordedAt": "2026-09-03T10:23:04.243Z"
+    },
+    {
+      "key": "88d25f4c33292171afba8fbdcb7e80e8e362d2b9025855bc88a9125f33f228b9",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Order placed 2026-06-07 for INR 12,032.00. The merchant processed a full refund. The order_record confirms the status is 'refunded' and the amount matches the disputed value. The refund_record verifies the refund status and amount. The refund_settlement_proof provides the UTR (utr_PGZYxUDwrc3ONU) and confirms the refund was initiated on 2026-06-13 and settled on 2026-06-16. This evidence demonstrates that the customer was fully reimbursed for the transaction, directly addressing the dispute.\"\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:16:39.152Z"
     },
     {
       "key": "8f5a602e6451a2b535d39cf2dc46246b6961786585f78d145a861c13c918d2fc",
@@ -781,6 +937,19 @@
       "recordedAt": "2026-08-31T20:12:15.240Z"
     },
     {
+      "key": "9cc9371bced27ddacd64ba6949ab7171ffed3e2bafe7379e37c4967dff06bb26",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Order placed 2026-06-21 for INR 300700. The order_record confirms the transaction status is 'refunded'. The refund_record shows the full amount of INR 300700 was processed. The refund_settlement_proof provides the UTR (utr_1EJ0v4TqJM56PG) and confirms the refund was initiated on 2026-06-27 and settled on 2026-06-30. This evidence demonstrates that the merchant fulfilled the refund obligation for the disputed amount. The dispute reason (upi 1061) is addressed by the completion of the refund as documented in the settlement proof.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-04T20:16:27.387Z"
+    },
+    {
       "key": "9ef1b2de81ceee3783cd09b03816b604b83ff55aadd05ef3bf3524cdccc50079",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -805,6 +974,19 @@
         "attempts": 2
       },
       "recordedAt": "2026-09-03T10:18:05.239Z"
+    },
+    {
+      "key": "a3b41decec8d2dc524e30b934a20b0eeccc9a408699e708f24676e625c7f30a5",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Order placed 2026-06-18 for INR 119,600. The dispute is resolved by a full refund. The order_record confirms the status is 'refunded'. The refund_record shows the full amount of INR 119,600 was processed. The refund_settlement_proof provides the UTR (utr_lcV8JGd4PmJUj2) and confirms the refund was initiated on 2026-06-24 and settled on 2026-06-27. Since the customer has been fully reimbursed, the financial claim is satisfied.\"\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:16:08.295Z"
     },
     {
       "key": "a4b2f9cef805d6112246ba62bb2d669f5b362edc659b3fae2c1131c9c9876cf1",
@@ -870,6 +1052,19 @@
         "attempts": 1
       },
       "recordedAt": "2026-09-03T10:02:04.297Z"
+    },
+    {
+      "key": "ad064ca95c0ec71f861f2cd02a1579227e0cacd1fd4aa1d63a0758f41096bb67",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 1064. Evidence shows physical delivery. Shipment record (trk_jclmDwHKLmD6bq) confirms item shipped via Ekart on 2026-07-30. Delivery proof (pod_DqpEByB0bS5AL6) confirms receipt on 2026-08-01. These documents verify the transaction was completed and goods were delivered to the customer. No communication logs or T&C documents are attached as they are not captured at transaction time. The evidence supports that the service was rendered.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-04T20:23:37.657Z"
     },
     {
       "key": "ad264564003cbd40cd7541df3314a33c503df8f07971f48083574cfd544de30b",
@@ -948,6 +1143,32 @@
         "attempts": 1
       },
       "recordedAt": "2026-09-01T11:06:14.282Z"
+    },
+    {
+      "key": "b18a013fa99ae7f94d6e1116bfe419240d3b81bc1668b674d21910b55f814308",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute reason UPI 1064. Goods were shipped on 2026-06-23 via Bluedart (tracking trk_r6vOLedGbsNAdE) and delivered on 2026-06-24 at 22:12 UTC. The shipment_record confirms status 'delivered'. The delivery_proof (ref pod_hc3s5CnwH8DoH2) provides the timestamped proof of delivery. These documents verify that the order was fulfilled and received by the customer, directly addressing the dispute claim.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-04T20:15:01.259Z"
+    },
+    {
+      "key": "b53bd174216418c9d291321dae038aad1ed8315ff77c57bc9d793199b4e5ccce",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Order placed 2026-07-20 for INR 594,400. The order_record confirms the status is 'refunded'. The refund_record shows the full amount of INR 594,400 was processed. The refund_settlement_proof provides the UTR (utr_9A3mhC7YBgNYd6) and confirms the refund was initiated on 2026-07-26 and settled on 2026-07-29. This evidence demonstrates that the merchant has already refunded the customer for the disputed amount. The dispute reason (upi 1061) is addressed by the completion of the refund transaction, as the funds have been returned to the customer's account.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:23:32.511Z"
     },
     {
       "key": "b59c05c6a9905a64b92055cfaf7c7d77ba187399031eaca11b4636877f92ed9f",
@@ -1054,6 +1275,19 @@
       "recordedAt": "2026-08-31T20:12:16.184Z"
     },
     {
+      "key": "c8570e9f4f58b6adc4562aceb146ef852edd96771f980fd99cafc63737c14bdb",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Order placed 2026-06-25 for INR 187,300. The order_record confirms the transaction status is 'refunded'. The refund_record shows the full amount of INR 187,300 was processed. The refund_settlement_proof provides the UTR (utr_A3yn8tmF0paBeP) and confirms the refund was initiated on 2026-07-01 and settled on 2026-07-04. This evidence demonstrates that the merchant has already refunded the customer for the disputed amount. The dispute reason (upi 1061) is resolved by the completion of the refund, as the customer has been reimbursed. No further action is required from the merchant regarding the payment itself.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-04T20:16:37.225Z"
+    },
+    {
       "key": "cba212c424eb649387474922401a2f7c36ee3a2cb6df89077911ba73a1ba0c62",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -1158,6 +1392,19 @@
       "recordedAt": "2026-08-31T20:16:22.264Z"
     },
     {
+      "key": "d0534eca7ac773abdc20bdc82bdb30ccd12eec0770d31724ba134b854a47a701",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute reason UPI 1064. Evidence: shipment_record shows Delhivery shipped the order on 2026-06-22 (tracking trk_YRSdkZmjo3EViH). delivery_proof confirms delivery on 2026-06-23 (ref pod_0D2FibiDMfmzwP). The goods were delivered to the customer. No customer communication or merchant terms are attached.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:15:01.800Z"
+    },
+    {
       "key": "d3c0243ad6ed0c52fb246540e6c216c54c371ea3e69bc74f8af2c2650cc32e92",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -1195,6 +1442,19 @@
         "attempts": 2
       },
       "recordedAt": "2026-08-31T20:12:38.527Z"
+    },
+    {
+      "key": "dc9b8ce294ff2755849e3008912b2e1c275431dcb45db3ec94e5580881035752",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Order placed 2026-06-22 for INR 101,000 (order_record). Merchant processed a full refund of INR 101,000, initiated 2026-06-28 and settled 2026-07-01 (refund_settlement_proof, UTR: utr_rKZ2XoriD0RWfS). Order status is 'refunded' (order_record, refund_record). The customer received the full amount back. This dispute is invalid as funds were returned.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:16:37.840Z"
     },
     {
       "key": "dcb368a2b514f52e75c58a6e4f54a68a7c645244049a270321c703eca94a7ddc",
@@ -1379,6 +1639,19 @@
       "recordedAt": "2026-08-31T20:13:51.291Z"
     },
     {
+      "key": "f0825045ddd244354c40d580c084d514ee4998588684045ed5af3b4271cab914",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Order placed 2026-07-24 for INR 80,100. Dispute reason UPI 1061 (duplicate charge) is not supported by the evidence. The order record shows a single transaction with itemCount 1. The refund record and settlement proof confirm the full amount was refunded, settled 2026-08-02. No evidence of a duplicate charge exists in the provided documents. The evidence supports a refund, not a duplicate transaction dispute.\" }",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:23:31.792Z"
+    },
+    {
       "key": "f11ffa253b88d9f76b2c6266f273586b04d949507ad638cf5498cdf713ae915b",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -1416,6 +1689,19 @@
         "attempts": 2
       },
       "recordedAt": "2026-08-31T20:15:53.977Z"
+    },
+    {
+      "key": "f1f1779b61bf1e9d2f3cbfd3102478eb85eb3dc3711eeb6e3d96f6c334596381",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Dispute code UPI 1064. Goods shipped 2026-08-01 via Ekart (tracking trk_yNCh8j6LaPqJoB). Shipment record confirms status 'delivered'. Delivery proof (pod_c5O34JOjuvGtgB) records delivery on 2026-08-04 at 02:17 UTC. Evidence demonstrates the order was fulfilled and received by the customer. No customer communication or merchant terms are attached, as these are not captured at transaction time. The provided logistics documents substantiate that the service was rendered.\"\n}",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-04T20:23:57.410Z"
     },
     {
       "key": "f36fe60dbe314221555bba1649d9fbcc2aeae876d2d60fddfa247c7c57077058",
@@ -1457,6 +1743,19 @@
       "recordedAt": "2026-09-03T10:17:56.192Z"
     },
     {
+      "key": "f873e22b749ae58b2ef6ff3283cfde6ca74d2ee2775abec9584bbbbb790f95c3",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{ \"letter\": \"Dispute code UPI 1064. Customer purchased goods shipped 2026-06-07 via Ekart (tracking trk_KL4XQL0FwbU9yJ). Shipment record confirms status 'delivered'. Delivery proof (ref pod_adwBcTCZ8jw5qJ) confirms receipt on 2026-06-09 at 21:12 UTC. Evidence demonstrates the order was fulfilled and delivered to the customer. No customer communication or merchant T&C documents are attached, as these are not captured at transaction time. The provided logistics evidence supports the claim that the service was rendered.\" }",
+        "providerRefused": false,
+        "attempts": 2
+      },
+      "recordedAt": "2026-09-04T20:15:12.579Z"
+    },
+    {
       "key": "f896cb073edff86c7c0c99c97b05b86a1884ba06bbdedf133bc3cf577e53406f",
       "provider": "groq",
       "model": "qwen/qwen3.8-27b",
@@ -1481,6 +1780,19 @@
         "attempts": 2
       },
       "recordedAt": "2026-08-31T20:13:05.550Z"
+    },
+    {
+      "key": "fa32e11b1487a68ed0fc3812aeee81753e8599b1be5ffa721c5930a5f96c5ff2",
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"Order placed 2026-07-30 for INR 34,400. The merchant processed a full refund of INR 34,400. The order_record confirms the status is 'refunded'. The refund_record shows the order status as 'refunded' for the full amount. The refund_settlement_proof provides the UTR (utr_gdIHItgjYzcB0X) and confirms the refund was initiated on 2026-08-05 and settled on 2026-08-08. The dispute reason (UPI 1061) typically relates to unauthorized or duplicate transactions. The evidence demonstrates that the transaction was fully reversed via a valid refund settlement. The customer has been reimbursed the exact amount disputed. No further payment is due. The attached documents verify the financial reversal is complete.\"\n}",
+        "providerRefused": false,
+        "attempts": 1
+      },
+      "recordedAt": "2026-09-04T20:23:38.417Z"
     },
     {
       "key": "fce4c1e66fb64fbeccceb640467a57163099af36f25b67bdd686447492b5373f",

@@ -36,6 +36,31 @@ export interface PipelineDeps {
   client: AssemblyClient;
 }
 
+/** Rebuild an `AuditTrail` from the rows Prisma hands back. Shared with `approveAndSubmit`. */
+function trailFromRows(
+  razorpayDisputeId: string,
+  rows: readonly {
+    seq: number;
+    fromState: string | null;
+    toState: string;
+    actor: string;
+    reason: string | null;
+    occurredAt: Date;
+  }[],
+): AuditTrail {
+  return AuditTrail.from(
+    razorpayDisputeId,
+    rows.map((row) => ({
+      seq: row.seq,
+      fromState: row.fromState as DisputeState | null,
+      toState: row.toState as DisputeState,
+      actor: row.actor as Actor,
+      ...(row.reason ? { reason: row.reason } : {}),
+      occurredAt: row.occurredAt,
+    })),
+  );
+}
+
 /** Run one dispute through the pipeline and persist every step of it. */
 export async function runPipeline(
   deps: PipelineDeps,
@@ -43,9 +68,23 @@ export async function runPipeline(
 ): Promise<{ disputeId: string; state: DisputeState }> {
   const dispute = await deps.prisma.dispute.findUnique({
     where: { externalId: disputeExternalId },
-    include: { payment: { include: { order: { include: { evidencePack: true } } } } },
+    include: {
+      payment: { include: { order: { include: { evidencePack: true } } } },
+      auditLogs: { orderBy: { seq: 'asc' } },
+    },
   });
   if (!dispute) throw new Error(`no dispute ${disputeExternalId}`);
+  // `/review/run?states=...` documents reprocessing an already-drafted or
+  // -abstained dispute (P4.0's own use case). It must never reach one that is
+  // `approved` or `submitted`: rewinding either would overwrite the one
+  // record of a real human decision, or a real submission, with today's
+  // fresh judgement. `AuditTrail.rewindToReceived` refuses this too, but
+  // failing here skips a wasted model call for a request that cannot succeed.
+  if (dispute.state === 'approved' || dispute.state === 'submitted') {
+    throw new Error(
+      `dispute ${disputeExternalId} is ${dispute.state}: cannot reprocess a dispute that has already been approved or submitted`,
+    );
+  }
 
   const packExternalId = dispute.payment.order.evidencePack?.externalId;
   if (!packExternalId) throw new Error(`dispute ${disputeExternalId} has no evidence pack`);
@@ -64,7 +103,57 @@ export async function runPipeline(
     raisedAt: dispute.raisedAt,
   });
 
-  await persistTrail(deps.prisma, dispute.id, processed.trail);
+  // `processed.trail` always models ONE FULL CYCLE from `received`, because
+  // `processDispute` has no idea whether this dispute has ever been through
+  // the pipeline before -- it is not given the existing trail, by design (it
+  // is also called from scripts that have no database at all). The first run
+  // of any dispute, that fresh trail IS the trail: existing rows = 0, and
+  // `persistTrail`'s old count-based diffing worked by coincidence.
+  //
+  // It stopped working -- silently -- the moment a dispute got a SECOND cycle:
+  // P4.0(a)'s own `?states=drafted,abstained` reprocessing, or a demo reset.
+  // `persisted.length` (say, 5) then exceeds the fresh trail's length (4), so
+  // `trail.list().slice(existing)` is empty, nothing new is ever written, and
+  // `dispute.state` moves on ahead of the trail that is supposed to justify
+  // it. Found live (2026-09-05): a dispute reprocessed after a demo reset
+  // showed `state: "drafted"` with a real draft, while its persisted trail
+  // still ended at the reset's own `received` row -- and a real human trying
+  // to approve it was refused with "illegal transition received -> approved",
+  // which blames the actor when the actual cause is nowhere near the actor.
+  //
+  // The fix treats a second-or-later cycle as its own recorded event rather
+  // than a silent extension of the first. If the dispute is not already at
+  // `received`, an explicit rewind row is appended first -- same shape as
+  // `resetDemo`'s own `demo_reset` row, because "this dispute is starting a
+  // new cycle" is exactly what that row already means, and a demo reset
+  // followed by a reprocess is now two honestly-recorded events instead of
+  // one recorded event and one silently-dropped one. Every subsequent step
+  // from the fresh trail (skipping its own redundant first `received` entry)
+  // is then re-applied on top, seq numbers continuing from wherever the
+  // persisted trail actually left off -- never restarting at 0.
+  const trail = trailFromRows(dispute.razorpayDisputeId, dispute.auditLogs);
+  if (trail.length > 0 && trail.state !== 'received') {
+    // Domain time, not `deps.now()`: this reuses the fresh cycle's own step-0
+    // timestamp (D-007 -- no wall clock inside a pipeline run) rather than
+    // inventing a second clock for one row of the same trail.
+    const cycleStart = processed.trail.list()[0]?.occurredAt ?? dispute.raisedAt;
+    trail.rewindToReceived(
+      'system',
+      'pipeline re-run: reprocessing from a non-received state',
+      cycleStart,
+    );
+  }
+  for (const entry of processed.trail.list().slice(1)) {
+    trail.append({
+      toState: entry.toState,
+      actor: entry.actor,
+      ...(entry.reason ? { reason: entry.reason } : {}),
+      ...(entry.detail ? { detail: entry.detail } : {}),
+      occurredAt: entry.occurredAt,
+    });
+  }
+
+  await persistTrail(deps.prisma, dispute.id, trail);
   await deps.prisma.dispute.update({
     where: { id: dispute.id },
     data: {
@@ -109,17 +198,7 @@ export async function approveAndSubmit(
   const draft = dispute.contestDraftJson as unknown as ContestDraft | null;
   if (!draft) throw new Error(`dispute ${disputeExternalId} has no draft to approve`);
 
-  const trail = AuditTrail.from(
-    dispute.razorpayDisputeId,
-    dispute.auditLogs.map((row) => ({
-      seq: row.seq,
-      fromState: row.fromState as DisputeState | null,
-      toState: row.toState as DisputeState,
-      actor: row.actor as Actor,
-      ...(row.reason ? { reason: row.reason } : {}),
-      occurredAt: row.occurredAt,
-    })),
-  );
+  const trail = trailFromRows(dispute.razorpayDisputeId, dispute.auditLogs);
 
   // NOT prefixed for the caller. F-013: this function used to turn whatever it
   // was handed into `human:<that>`, so `approvedBy: "system"` became
@@ -133,8 +212,33 @@ export async function approveAndSubmit(
   const actor = approvedBy as Actor;
   const approvedAt = deps.now();
 
+  // The reserved-name check runs FIRST, before anything else in this function
+  // -- including the audit trail and, critically, before any adapter call.
+  //
+  // F-013 was: a route manufactured a `human:` prefix, so `isHumanActor` (the
+  // format-only check the state machine and the trail use) passed on a lie.
+  // That was fixed by refusing to manufacture the prefix. An adversarial
+  // review then found the same shape of bug one layer further in: even with
+  // the prefix un-manufactured, `isHumanActor('human:system')` is still
+  // correctly `true` -- it only ever checked the prefix, never the name -- so
+  // `trail.append` and the document-upload loop below both used to run to
+  // completion for a caller sending `{"approvedBy": "human:system"}` before
+  // `ApprovalToken.approve`'s reserved-name check (the only one that actually
+  // reads the name) finally threw. The submission itself was always blocked --
+  // `submit()` needs the token this call mints -- but a real
+  // `adapter.uploadDocument()` call (in production: a live Documents API
+  // upload) fired first, on a spoofed identity, before anything rejected it.
+  //
+  // Minting the token here, before the trail write and before any adapter
+  // call, means a reserved actor causes zero side effects rather than "zero
+  // side effects except the ones that already happened."
+  const approval = ApprovalToken.approve(draft.disputeId, actor, approvedAt);
+
   // Throws for any non-human actor, and for any state that cannot reach
-  // `approved`. This is the check, not a formality before the real one.
+  // `approved`. Redundant with the check above by design (D-029: this table's
+  // own guard is `isHumanActor`, which only reads the prefix -- it stays as a
+  // second, format-level check on the state machine, not as the thing this
+  // function relies on for safety).
   trail.append({ toState: 'approved', actor, reason: 'reviewer approved the draft', occurredAt: approvedAt });
 
   // Upload evidence, then contest. Documents first: a contest referencing an
@@ -147,7 +251,6 @@ export async function approveAndSubmit(
     );
   }
 
-  const approval = ApprovalToken.approve(draft.disputeId, actor, approvedAt);
   const result = await deps.adapter.submit(draft, documents, approval);
 
   trail.append({
@@ -231,17 +334,7 @@ export async function readDispute(prisma: PrismaClient, externalId: string) {
   });
   if (!dispute) return null;
 
-  const trail = AuditTrail.from(
-    dispute.razorpayDisputeId,
-    dispute.auditLogs.map((row) => ({
-      seq: row.seq,
-      fromState: row.fromState as DisputeState | null,
-      toState: row.toState as DisputeState,
-      actor: row.actor as Actor,
-      ...(row.reason ? { reason: row.reason } : {}),
-      occurredAt: row.occurredAt,
-    })),
-  );
+  const trail = trailFromRows(dispute.razorpayDisputeId, dispute.auditLogs);
 
   return {
     externalId: dispute.externalId,

@@ -1,6 +1,6 @@
 # Praman
 
-**Live demo: https://PRAMAN-DEPLOY-URL-PENDING** — hosted free, so it sleeps after 15 minutes idle. A scheduled ping keeps it awake; if that ping was missed, the first request takes about a minute to wake it. · [DECISIONS](DECISIONS.md) · [FAILURES](FAILURES.md) · [EVAL](EVAL.md) · [eval/results.md](eval/results.md)
+**Live demo: https://praman-zif9.onrender.com/** — hosted free, so it sleeps after 15 minutes idle. A scheduled ping keeps it awake; if that ping was missed, the first request takes about a minute to wake it. · [DECISIONS](DECISIONS.md) · [FAILURES](FAILURES.md) · [EVAL](EVAL.md) · [eval/results.md](eval/results.md)
 
 A **defense-only** dispute evidence responder for India's UPI agentic stack. It
 reads a dispute in Razorpay's documented Disputes API schema, assembles the
@@ -39,11 +39,11 @@ one that reads it here.
 
 | metric                                   | dev (100)     | held-out OOD (30) | shift  |
 | ---------------------------------------- | ------------- | ----------------- | ------ |
-| recall on winnable disputes              | 31/38 = 81.6% | 7/9 = 77.8%       | −3.8% |
+| recall on winnable disputes              | 31/38 = 81.6% | 6/9 = 66.7%       | −14.9% |
 | precision on contests                    | 100.0%        | 100.0%            | 0.0%   |
 | false positives (contested & unwinnable) | 0/52          | 0/20              | 0      |
 | false-positive cost                      | ₹0           | ₹0               | ₹0    |
-| abstention rate                          | 69.0%         | 73.3%             | +4.3%  |
+| abstention rate                          | 69.0%         | 76.7%             | +7.7%  |
 | assembly failures                        | 0             | 0                 | —     |
 
 **Model of record: `qwen/qwen3.8-27b` via Groq.** The intended provider was
@@ -69,14 +69,25 @@ timid to act.
 | correct — the corpus says the dispute is unwinnable           | 52    | 20       |
 | conservative — the corpus says it is genuinely ambiguous      | 10    | 0        |
 | **recall lost — a required artifact we do not hold, named**   | **7** | **2**    |
+| **recall lost — the drafter declined a case with full coverage** | **0** | **1**    |
 | **recall lost — the gate misjudged evidence it already held** | **0** | **0**    |
 
-Every winnable dispute we failed to contest is attributable to a specific
-artifact the capture layer does not hold, and **not one** to the gate misreading
-evidence it already had. The seven dev losses are named individually by dispute
-id in [`eval/results.md`](eval/results.md); five of them
-are one gap (`duplicate_payment_analysis`) that we scheduled, did not finish,
-and froze rather than rushing on the last day — see D-033.
+On the dev set, every winnable dispute we failed to contest is attributable to
+a specific artifact the capture layer does not hold, and **not one** to the
+gate or the drafter misreading evidence it already had. The seven dev losses
+are named individually by dispute id in [`eval/results.md`](eval/results.md);
+five of them are one gap (`duplicate_payment_analysis`) that we scheduled, did
+not finish, and froze rather than rushing on the last day — see D-033.
+
+**Held-out is not as clean as dev on this axis, and that is disclosed rather
+than smoothed over.** One held-out case (`dsp_ood-v1_a4_14`, UPI 1061, ground
+truth winnable) was cleared by the gate — coverage was complete — and declined
+by the drafter anyway, on evidence the drafter itself calls insufficient. That
+is a real recall cost, not a bug: the drafter's veto only ever removes a
+contest, never adds one (D-025), so this cannot be a false positive, but it is
+the first recorded instance of the drafter disagreeing with a gate that had
+full coverage rather than a partial one. See FAILURES.md F-025 for the full
+account, including the model's own stated reason.
 
 ### What these numbers do not claim
 

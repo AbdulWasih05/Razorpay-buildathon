@@ -169,9 +169,31 @@ at 2am on day 4.
 **Rejected.** Convention plus code review -- there is one author and no second
 reviewer, so convention is the weakest available mechanism here.
 
----
+**Amended 2026-09-05: the claim was stronger than the mechanism, and an
+adversarial review found the gap empirically.** `no-restricted-imports`
+matches the literal import-specifier string, which two probes confirmed does
+not cover: a dynamic `await import('@praman/llm')`, and a relative-path
+import of the same module (`'../../llm/src/index.js'`) -- both produced zero
+lint errors, while the equivalent static specifier import correctly failed.
+Neither was ever present in the shipped codebase; the gap was in the
+guarantee, not in an actual violation.
 
-### D-006 -- the OOD generator runs on Groq `openai/gpt-oss-120b`
+**Fix.** `packages/core/src/boundary.test.ts`: a second, structurally
+different check on the same boundary -- a regex scan over stripped source
+text, not an import-specifier matcher, so it does not share ESLint's blind
+spot. Verified against both confirmed bypasses directly: a probe file
+containing exactly the dynamic-import and relative-path forms failed both new
+tests, then passed once removed. Mirrors the eval-cannot-import-adapter guard
+and the holdout guard -- this project's established pattern for a boundary no
+single tool fully expresses.
+
+**The honest framing, stated because D-029 says to ask it of every guard:**
+"enforced by the linter, not by discipline" is still true and still the
+common case -- every static import is still caught the moment it is typed.
+What was not true, until this amendment, was "enforced, full stop" -- two
+specific paths existed that the enforcement mechanism, by its own documented
+design, does not check. Two independently-mechanised guards is the actual
+claim this project can now make.
 
 **Decided.** The second provider is Groq; the held-out corpus (P1.3) is
 generated with `openai/gpt-oss-120b`.
@@ -661,6 +683,42 @@ report whose numbers no committed fixture can reproduce, which is the precise
 opposite of the property the whole record/replay design exists to provide. If
 the key arrives late, the answer is "we shipped Qwen and said so", not "we
 re-ran it quickly".
+
+**Amended 2026-09-05, after the rule was broken once and needed a name for
+why.** Commit `4b0e077` (the UPI 128 clause fix, F-019) re-minted recordings
+and changed `eval/results.md` after the file already existed from a prior
+commit -- the letter of this rule, broken, honestly (headline metrics verified
+unmoved via `pnpm abstentions` before re-minting) but never reconciled against
+this entry's own text. An adversarial review caught the gap between the two. A
+second instance followed immediately: closing the rubric-provenance finding
+behind F-025 re-minted recordings again, and that time a headline number
+**did** move (held-out recall, 77.8% -> 66.7%) -- disclosed in full in F-025
+rather than quietly re-run until a case landed the old way.
+
+**The carve-out, stated instead of left implicit a third time.** Re-recording
+after `eval/results.md` exists is permitted for exactly one reason: a
+correction mandated by hard rule #1 (schema fidelity -- an invented, omitted,
+or misattributed field or requirement). It is not permitted for a better
+number, a nicer letter, a different persona, or any reason that is not "the
+docs said something else and the code was wrong." Three conditions, every time:
+
+1. The model of record does not change (still `qwen/qwen3.8-27b` via Groq --
+   this carve-out is about *when* fixtures may be re-minted, never about
+   *which model* mints them).
+2. `pnpm abstentions` (gate-only) is run before and after; any change to
+   *required*-coverage decisions on the dev set is itself grounds to stop and
+   investigate before proceeding, since a fidelity fix is not supposed to move
+   the gate.
+3. The change and its full effect -- including on headline numbers, not only
+   on the sub-metric the fix targeted -- is logged in FAILURES.md the same
+   session, whether or not the headline numbers actually moved. "Unmoved" is a
+   measured outcome to report, not an assumption to skip reporting under.
+
+**What this does not weaken.** The rule still forbids re-recording to chase a
+better number, to swap providers, or to "clean up" a run after the fact for any
+reason short of hard rule #1. Two uses of the carve-out exist as of this
+writing (F-019, F-025) and both are logged with their full before/after,
+including the one that did not stay flat.
 
 **Deadline: P4.1 start (Sep 2).** Whichever path is taken, this entry gets a
 one-line amendment naming the model of record and the date it was fixed, and

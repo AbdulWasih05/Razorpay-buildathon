@@ -46,8 +46,10 @@ describe('provenance is honest', () => {
   });
 
   it('quotes a source phrase that really appears in the published guidance', () => {
-    // Not "cites the docs" -- checks the phrase is a substring of the verbatim
-    // string transcribed from the page.
+    // Not "cites the docs" -- checks the phrase is one of the verbatim bullets
+    // transcribed from the page, exactly (not a substring of one -- see the
+    // note on `evidenceGuidance`'s type: it is an array of whole bullets
+    // specifically so a phrase can't half-match one and still pass).
     for (const [key, entry] of Object.entries(RUBRIC)) {
       for (const requirement of entry.requires) {
         if (requirement.provenance !== 'published') continue;
@@ -58,6 +60,26 @@ describe('provenance is honest', () => {
           reasonCode?.evidenceGuidance.includes(requirement.sourcePhrase as string),
           `${key}: "${requirement.sourcePhrase}" is not in the published guidance`,
         ).toBe(true);
+      }
+    }
+  });
+
+  it('marks `hasPublishedGuidance: false` only where the page truly has none (D-029, pointed both ways)', () => {
+    // The test above already checks the forward direction: a code marked
+    // `false` cannot carry a `published` requirement. This is the reverse,
+    // and it is the direction that was actually missing: a code cannot be
+    // marked `false` while the source-of-truth table says the page publishes
+    // guidance for it. Both directions now check against reason-codes.ts
+    // directly rather than against each other, so this and the "agrees with
+    // the reason-code table" test below are deliberately redundant checks of
+    // the same fact from opposite ends.
+    for (const [key, entry] of Object.entries(RUBRIC)) {
+      const reasonCode = findReasonCode(entry.network, entry.code);
+      expect(reasonCode, key).toBeDefined();
+      if ((reasonCode?.evidenceGuidance.length ?? 0) > 0) {
+        expect(entry.hasPublishedGuidance, `${key} has published guidance but is marked false`).toBe(
+          true,
+        );
       }
     }
   });
@@ -76,23 +98,25 @@ describe('provenance is honest', () => {
     for (const [key, entry] of Object.entries(RUBRIC)) {
       const reasonCode = findReasonCode(entry.network, entry.code);
       expect(reasonCode, key).toBeDefined();
-      expect(entry.hasPublishedGuidance, key).toBe((reasonCode?.evidenceGuidance ?? '') !== '');
+      expect(entry.hasPublishedGuidance, key).toBe((reasonCode?.evidenceGuidance.length ?? 0) > 0);
     }
   });
 
-  it('consumes every published phrase for the four codes that have guidance', () => {
-    // Razorpay lists its guidance comma-separated. If they publish a requirement
-    // and we silently drop it, that is schema infidelity in the rubric.
-    const guided = ALL_REASON_CODES.filter((code) => code.evidenceGuidance !== '');
-    expect(guided).toHaveLength(4);
+  it('consumes every published bullet for every code that has guidance', () => {
+    // `evidenceGuidance` is an array of whole bullets (not a comma-joined
+    // string split back apart -- 1085's own guidance contains an internal
+    // comma, which is exactly why the split-based version of this test would
+    // have silently mis-parsed the thing it was checking). If Razorpay
+    // publishes a bullet and the rubric drops it, that is schema infidelity.
+    const guided = ALL_REASON_CODES.filter((code) => code.evidenceGuidance.length > 0);
+    expect(guided.length).toBeGreaterThan(10); // was 4; regressing this silently is the bug this test exists to catch
     for (const reasonCode of guided) {
       const entry = RUBRIC[rubricKey(reasonCode.network, reasonCode.code)];
       expect(entry, `${reasonCode.network}:${reasonCode.code}`).toBeDefined();
-      const phrases = reasonCode.evidenceGuidance.split(', ').filter((p) => p.length > 0);
       const claimed = (entry?.requires ?? [])
         .filter((r) => r.provenance === 'published')
         .map((r) => r.sourcePhrase);
-      for (const phrase of phrases) {
+      for (const phrase of reasonCode.evidenceGuidance) {
         expect(claimed, `${reasonCode.code} dropped "${phrase}"`).toContain(phrase);
       }
     }

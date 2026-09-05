@@ -20,6 +20,12 @@ const LABELS: Record<AbstentionCause, string> = {
   capture_gap: 'RECALL LOST -- capture gap (structurally unavailable)',
   evidence_absent: 'RECALL LOST -- evidence absent from this pack',
   false_negative: 'RECALL LOST -- gate declined with full coverage',
+  // This script scores the GATE ONLY -- no drafter ever runs here, so this
+  // cause can never actually appear in `pnpm abstentions`' output. Still
+  // required: `AbstentionCause` is shared with the eval harness, which does
+  // reach this cause (F-025), and a label map is exactly the kind of thing
+  // that goes stale silently if it is allowed to omit a variant.
+  drafter_veto: 'RECALL LOST -- drafter declined a case the gate cleared (harness only)',
 };
 
 function rupees(subunits: number): string {

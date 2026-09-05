@@ -1109,3 +1109,188 @@ overdue badges look like urgent work, not like a bug -- there is no error, no
 blank space, nothing missing. It took someone opening the console to *look
 around* rather than to check something specific. That is an argument for the P5.6
 dry-run, not against the test suite.
+
+---
+
+### F-025 -- fixing a schema-fidelity bug moved a headline OOD number, and the fix wasn't free
+
+**When.** 2026-09-05, closing an adversarial review's rubric-provenance finding
+(seven UPI codes wrongly marked `hasPublishedGuidance: false`, plus omitted
+published items on 1061/1062/1064/128 -- see below and DECISIONS.md's
+amendment to D-023).
+
+**What broke.** Not code. `reason-codes.ts`'s own docblock claimed "transcribes
+the UPI section in full" while `evidenceGuidance` sat `''` for seven of eleven
+UPI codes, and rubric.ts's `hasPublishedGuidance: false` for those seven
+correctly mirrored that gap -- so the guard checking rubric.ts against
+reason-codes.ts was self-consistent and still wrong, because reason-codes.ts
+was the file with the omission. Exactly D-029's pattern, in a file whose whole
+job is to prevent it, caught by a reviewer checking the live page directly
+instead of trusting either file.
+
+**The fix.** Filled in the missing `evidenceGuidance` (as a verbatim string
+*array*, not a comma-joined string -- 1085's own published text contains an
+internal comma, which the old join-then-split test logic would have silently
+mis-parsed had it ever been asked to carry it). Added the missing published
+items across five UPI codes, all `supporting` unless a requirement already
+`required` covered the identical fact, in which case only its provenance
+changed. Added the reverse-direction test D-029 had never gotten around to for
+this file: a code marked `hasPublishedGuidance: false` must have no guidance in
+the source-of-truth table, not just no `published` requirement in the rubric.
+
+**Verified stable, one set:** `pnpm abstentions` (gate only, no model) on the
+dev corpus before and after: 33 contested, 31/38 recall, the same seven named
+lost-recall cases, byte-identical. Necessity for every `required` item was
+untouched, so gate coverage could not move and did not.
+
+**Verified NOT stable, the other set.** `pnpm eval -- --live` (needed because
+the changed rubric changes the prompt hash for every code it touches) re-minted
+recordings for the newly-published codes. Dev headline numbers came back
+unchanged. **Held-out did not:** recall dropped 7/9 (77.8%) -> 6/9 (66.7%),
+abstention rose 73.3% -> 76.7%. One case flipped -- `dsp_ood-v1_a4_14`, UPI
+1061, ground truth `winnable` -- from contested to a new `drafter_disagreement`.
+The model's own recorded reason:
+
+> "Missing customer_communication and merchant_refund_policy. Evidence only
+> proves a refund was processed, not that the original transaction was valid
+> or that the dispute reason (upi 1061) is resolved by the refund."
+
+**Why this happened.** Adding `customer_communication` and
+`merchant_refund_policy` to 1061 as `supporting` (never `required`) put two new
+`not_capturable` findings in front of the drafter for this case that were not
+there before the fix. The drafter treated their absence as disqualifying --
+which is precisely the confusion D-026 exists to prevent ("necessity is our
+judgement, not Razorpay's, and `supporting` means a contest can stand without
+it"). The gate agreed the case was sufficient; the model, reading a longer list
+of gaps, second-guessed it anyway.
+
+**Why it is reported rather than absorbed.** This is not F-019's shape. F-019's
+re-recording moved a sub-metric (evidence completeness) and left every headline
+number untouched, which is what made "verified byte-identical, headline
+numbers unmoved" a true sentence to write. This one does not get to make that
+claim, and saying otherwise -- or quietly re-running until a case landed the
+old way -- would be the exact dishonesty hard rule #6 exists to catch. The
+direction is the safe one (D-025: the drafter's worst case is excess caution,
+never excess claim, and this case only ever lost a contest, never gained one),
+but "safe direction" is not "no cost," and a −11.1-point OOD recall swing from
+a one-line rubric fix is a real number, reported as it reads.
+
+**Not fixed today, named instead.** The deeper issue is a prompt-level one --
+the drafter should weigh a `supporting`-and-absent finding differently from a
+`required`-and-absent one, and right now it does not, because necessity is a
+rubric-level concept the drafter's prompt never receives. Patching that is a
+prompt-version bump, a re-verification of every recorded letter and flag on
+both sets, and its own review -- not a same-session fix bolted onto a
+provenance correction. Recorded here as the concrete argument for doing it,
+rather than fixed under time pressure the way P4.0(b) was correctly *not*
+fixed under time pressure (D-033).
+
+**What it taught.** A fix scoped as "add missing published items, all
+`supporting`, so necessity cannot move" is true about the **gate** and was
+verified true about the gate. It is not automatically true about the
+**drafter**, which reads the same findings without the gate's required/
+supporting distinction attached to them. "Cannot change gate coverage" and
+"cannot change the pipeline's output" are different claims, and this file
+exists because the difference between them cost a real number.
+
+**Addendum, same session: fixing the number exposed a taxonomy bug underneath
+it.** `eval/abstentions.ts`'s `attributeAbstention` labels any winnable,
+full-required-coverage abstention `false_negative` -- correct when it is the
+gate that declined, because it means "the gate was wrong" (D-030). It cannot
+see whether the abstention actually came from the gate or from the drafter,
+because it is only ever given `collected` evidence, not the pipeline's
+`abstentionClass`. Running the pinned regression tests after this fix caught
+it immediately: `dsp_ood-v1_a4_14` is a `drafter_disagreement` (the gate
+cleared it), and it was about to be reported as `false_negative` (the gate
+did not). That is exactly the D-025 distinction this project has already
+paid for once (F-011: a merits decline filed as broken plumbing) --
+here it would have been the opposite direction, a sanctioned drafter veto
+filed as a gate defect, in the metric whose entire job is to say the gate is
+never wrong when it demonstrably held. Fixed by adding a sixth cause,
+`drafter_veto`, and reassigning at the one call site (`eval/harness.ts`)
+that actually knows which component decided -- `eval/abstentions.ts`'s
+gate-only score is untouched, and cannot ever produce the new cause, because
+no drafter runs there to blame. The floor test
+(`false_negative` pinned at 0 on both sets) stays true, and now means what
+its own name says, rather than meaning it by coincidence.
+
+---
+
+### F-026 -- a reset-and-replay against the live demo desynced the audit trail, and blamed the actor for it
+
+**When.** 2026-09-05, an adversarial review's live pass against the deployed
+instance (`https://praman-zif9.onrender.com`): reset the demo, released a
+batch of demo disputes, reprocessed the queue, then attempted to approve a
+freshly-drafted seeded dispute.
+
+**What broke.** `POST /demo/reset` correctly appended a `demo_reset` row and
+put `dsp_dev-v1_b1_64` back at `received` -- verified append-only, exactly as
+designed. `POST /review/run?states=received` then correctly reprocessed it:
+the DB row came back `state: "drafted"`, `gateDecision: "contest"`, a real
+draft attached. But its audit trail, fetched right after, was still **five
+rows long, ending at the reset**. Approving it -- with a real actor,
+`human:wasih`, not a spoofed one -- was refused:
+
+> `{"error":"approval_refused","detail":"illegal transition received -> approved by human:wasih"}`
+
+The message blames the actor. The actor was never the problem: the persisted
+trail genuinely still said `received`, because nothing after the reset had
+ever been written to it, even though the dispute had visibly gone through
+triaged -> gated -> drafted a second time.
+
+**Cause.** `packages/llm/src/pipeline.ts`'s `processDispute` always builds
+`new AuditTrail(...)` and hardcodes its first step as `toState: 'received'`
+at seq 0 -- it has no way to know whether this dispute has ever been through
+the pipeline before, by design (it is also called from scripts with no
+database at all). `apps/api/src/review.ts`'s old `persistTrail` then wrote
+only `trail.list().slice(existingRowCount)`. The first time a dispute is
+processed, `existingRowCount` is 0 and the slice is everything -- correct,
+by coincidence. The moment a dispute gets a **second** cycle -- a demo reset,
+or the documented `?states=drafted,abstained` reprocessing `/review/run`
+already supports for exactly this reason (P4.0(a) used it) --
+`existingRowCount` (5) exceeds the fresh trail's own length (4), the slice is
+empty, and every subsequent write silently vanishes while `dispute.state`
+keeps moving. No error, anywhere, at any point -- the shape F-018/F-020/F-022/
+F-024 all share: everything that could throw stayed silent, and the only
+symptom was a fact about the world (the trail) disagreeing with a fact in the
+database (`state`).
+
+**Why the demo's own reset button is what surfaces it.** Every one of the 100
+seeded disputes is normally processed exactly once, so `existingRowCount` is
+always 0 in the ordinary run and the bug has no way to appear. The reset
+button exists specifically to invite a second cycle -- reset, then show the
+pipeline running again -- which makes it, structurally, the single feature
+most likely to trigger this, on the one surface a judge is invited to click.
+
+**Fix.** `AuditTrail` gets a new operation, `rewindToReceived(actor, reason,
+occurredAt)`: not a legal forward transition (there is no path back to
+`received` in `TRANSITIONS`, on purpose), but an honestly-recorded fact that
+a new cycle is starting -- the same shape of row `resetDemo` already writes
+for its own `demo_reset` entry, now available as a first-class trail
+operation rather than a raw insert one caller happened to get right.
+`runPipeline` now rebuilds the trail from whatever is actually persisted,
+rewinds it explicitly if the dispute is not already at `received`, and
+replays the fresh cycle's steps on top with seq numbers continuing from where
+the real trail left off -- never restarting at 0. `rewindToReceived` refuses
+from `approved` or `submitted`, and `runPipeline` refuses to even start
+processing either state, so a reprocessing run can never silently overwrite
+the one record of a human's real decision or a real submission.
+
+**Verified.** `packages/core/src/domain/lifecycle.test.ts` reproduces the
+exact live sequence -- full cycle, rewind, second full cycle, then a real
+human approval -- and asserts it now succeeds with correct seq numbering
+(19 tests, lifecycle.test.ts). `pnpm typecheck`, `pnpm lint` and the full
+suite pass. Not yet re-verified against the live instance itself, because the
+fix has not been deployed; the live reproduction above is the record that the
+bug was real, not a claim that the fix has been.
+
+**What it taught.** The docblock directly above `runPipeline`'s call site
+already said, correctly, that reprocessing a `submitted` dispute would "walk
+its state backwards while its audit trail still says submitted" -- the risk
+was named in a comment before this fix existed, and the comment did not
+prevent it, because naming a risk is not the same as guarding it. And this is
+D-029's shape again, in yet another mechanism: `persistTrail`'s
+count-based diffing read like a correct incremental-append pattern and
+*was* correct, for the one case anyone had tested. It had never been asked
+what happens on a second cycle, so nothing had ever made it fail -- exactly
+the question D-029 says to ask of any guard before trusting it.

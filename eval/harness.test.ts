@@ -90,15 +90,44 @@ describe('the numbers that must not regress', () => {
   it('keeps recall at or above what shipped', { timeout: 120_000 }, async () => {
     // Counts, not ratios: 31/38 rounds to 82% in the report, and a floor copied
     // from the rounded figure fails against the number it came from.
+    //
+    // Held-out's floor moved 7 -> 6 on 2026-09-05 (FAILURES.md F-025). Closing
+    // a rubric-provenance fidelity finding (seven UPI codes wrongly marked as
+    // having no published guidance) added two new `supporting` findings to
+    // UPI 1061's evidence, and the drafter -- reading a longer list of gaps --
+    // declined one held-out case the gate had cleared with full coverage.
+    // Dev is verified unchanged over the same fix (`pnpm abstentions`,
+    // gate-only, byte-identical before/after). This floor is deliberately
+    // moved, not loosened on a hunch: D-023's carve-out permits re-recording
+    // for a hard-rule-#1 fix, and the honest cost is reported rather than
+    // hidden behind a floor that would otherwise just start failing forever.
     const { dev, holdout } = await metrics();
     expect(dev.confusion.truePositives).toBeGreaterThanOrEqual(31);
-    expect(holdout.confusion.truePositives).toBeGreaterThanOrEqual(7);
+    expect(holdout.confusion.truePositives).toBeGreaterThanOrEqual(6);
   });
 
   it('loses recall only to named capture gaps, never to a gate misjudgement', async () => {
+    // `false_negative` means the GATE declined a full-coverage winnable case
+    // with no excuse -- a real gate bug. It is distinct from `drafter_veto`
+    // (added alongside F-025): the gate cleared the case and the drafter
+    // vetoed it, which D-025 says is a sanctioned, different thing. This test
+    // pins the claim its name makes; it does not pin the drafter to be right
+    // every time, which is a different (and weaker) claim than the one made
+    // here on purpose.
     const { dev, holdout } = await metrics();
     expect(dev.byCause.false_negative).toBe(0);
     expect(holdout.byCause.false_negative).toBe(0);
+  });
+
+  it('pins the one known drafter_veto case, and refuses to let the bucket grow unnoticed', async () => {
+    // `dsp_ood-v1_a4_14` is currently the only case in either set where the
+    // gate cleared a full-coverage winnable dispute and the drafter declined
+    // it anyway. A bound rather than an exact `toBe(1)` on dev, because dev's
+    // recordings were re-minted for the same fix and happened not to flip
+    // this way -- 0 there is a fact, not a floor being asserted loosely.
+    const { dev, holdout } = await metrics();
+    expect(dev.byCause.drafter_veto).toBe(0);
+    expect(holdout.byCause.drafter_veto).toBeLessThanOrEqual(1);
   });
 
   it('lets the drafter withhold contests and never add one', { timeout: 120_000 }, async () => {

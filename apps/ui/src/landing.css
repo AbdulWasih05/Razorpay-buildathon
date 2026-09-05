@@ -1,435 +1,832 @@
 /**
- * The overview page at `/`.
+ * Praman overview page, at `/`.
  *
- * A different rhythm from the console, on purpose: the console is a tool and is
- * dense, this is a document and is airy. What the two share is the type scale,
- * the spacing scale, the accent and the mark -- so moving between them reads as
- * one product rather than a site with an app bolted onto it.
+ * The brief, and what changed: the first version was a landing page in the
+ * default shape -- eyebrow, huge headline with a coloured second clause, lede,
+ * two buttons, then alternating tinted bands. That stack is what every
+ * submission ships, and executed well it still reads as a template, because the
+ * shape is the template.
  *
- * Tokens come from `styles.css`, which is imported by the router root before
- * this file. Nothing here redefines a token; if a value is not on the scale, it
- * is a mistake rather than an exception.
+ * This is set as a document instead. The judges are platform engineers reading
+ * to decide whether the thing is real; a page that behaves like a well-typeset
+ * technical paper is both rarer and more honest about what it contains. Three
+ * consequences, and they are the whole design:
+ *
+ *   1. A spine. A thin numbered rail on the left carries the sections and marks
+ *      where you are. It is a table of contents, not an ornament -- which is why
+ *      it tracks scroll position rather than sitting there looking structural.
+ *   2. Its own type scale. The console reads at 13-14px because density is the
+ *      point there. Prose read at 13px is a wall. This page runs a 17px body on
+ *      a 34em measure, and the hierarchy between display and body has real steps
+ *      in it rather than one enormous jump and then flatness.
+ *   3. No filled bands. Rhythm comes from whitespace and hairlines. Tinted
+ *      alternating sections are the template's way of signalling "new section"
+ *      without earning it typographically.
+ *
+ * Dark, where the console is light. D-040 committed the *console* to light for
+ * dense-data legibility and says nothing about this page. The change of ground
+ * when you open the console is deliberate: it should feel like stepping out of
+ * a document and into a tool.
  */
 
+/* A spine link that jump-cuts reads as a broken anchor rather than navigation.
+   Scoped with `:has` so it applies on this page only -- the console must never
+   animate a scroll position, because there it would be moving data under a
+   reviewer mid-read. Overridden by the reduced-motion block at the foot. */
+html:has(.landing) {
+  scroll-behavior: smooth;
+}
+
 .landing {
-  background: var(--surface);
-  color: var(--ink);
-  min-height: 100%;
+  /* ---------------------------------------------------------------- ground */
+  /* Warm near-blacks, not pure black -- the same warmth as the console's
+     paper greys, so the two surfaces read as one product in two registers. */
+  --d-bg: #0f0e0c;
+  --d-raised: #171512;
+  --d-line: #2a2622;
+  --d-line-strong: #3d3730;
+
+  /* Ink, four steps like the console's, inverted. */
+  --d-ink: #f6f3ef;
+  --d-ink-2: #c6bfb5;
+  --d-ink-3: #8d8579;
+  --d-ink-4: #5f5850;
+
+  /* The identity indigo, lifted for a dark ground. #3538cd is unreadable here;
+     this is the same hue carried up in lightness rather than a new colour. */
+  --d-accent: #9ba1ff;
+  --d-accent-dim: #6f76e0;
+  --d-accent-wash: rgba(155, 161, 255, 0.09);
+
+  /* ------------------------------------------------------------ type scale */
+  /* Separate from the console's on purpose. A number that is right for a table
+     row is wrong for a paragraph, and sharing one scale between them is what
+     made the first version feel cramped and flat at the same time. */
+  --d-micro: 11px;
+  --d-small: 13.5px;
+  --d-body: 17px;
+  --d-lead: 20.5px;
+  --d-h3: 19px;
+  --d-h2: clamp(25px, 2.5vw, 33px);
+  --d-display: clamp(33px, 4.3vw, 58px);
+
+  /* The measure. 34em at 17px is about 62 characters, which is the band where
+     a reader's eye returns to the right line without effort. Everything that is
+     prose is clamped to it; tables and diagrams are allowed to exceed it. */
+  --measure: 34em;
+
+  /* Vertical rhythm. The gap BETWEEN sections is deliberately much larger than
+     any gap inside one -- that contrast is what tells a reader a new idea has
+     started, and it is the job the tinted bands used to do badly. */
+  --gap-section: clamp(72px, 9vw, 132px);
+  --gap-block: 34px;
+  --gap-tight: 14px;
+
+  --rail: 132px;
+
+  background: var(--d-bg);
+  color: var(--d-ink);
+  font-family: var(--sans);
+  font-size: var(--d-body);
+  line-height: 1.65;
+  min-height: 100dvh;
+  /* Variable-font optical sizing and the old-style figure default off, so
+     numbers in prose line up with numbers in tables. */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
 }
 
-.landing .wrap {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 0 var(--s5);
+.landing ::selection {
+  background: var(--d-accent);
+  color: var(--d-bg);
 }
 
-/* ---------------------------------------------------------------- hero -- */
+/* ============================================================== the spine == */
 
-.hero {
-  padding: var(--s7) 0 var(--s8);
-  border-bottom: 1px solid var(--line);
-  /* One very soft wash, not a gradient banner: enough to lift the hero off the
-     page without becoming decoration. */
-  background:
-    radial-gradient(58rem 26rem at 10% -14%, var(--accent-soft) 0%, transparent 62%),
-    var(--surface);
+/**
+ * The rail.
+ *
+ * Fixed, so it is a position indicator rather than a header that scrolls past.
+ * It holds four things and nothing else: the mark, the section numbers, their
+ * names, and which one you are in.
+ */
+.spine {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--rail);
+  height: 100dvh;
+  padding: 30px 0 30px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  border-right: 1px solid var(--d-line);
+  background: var(--d-bg);
+  z-index: 10;
 }
 
-.brand-lg {
-  font-size: var(--t-lead);
-  margin-bottom: var(--s7);
+.spine .mark i {
+  background: var(--d-ink);
+}
+
+.spine .mark i.hollow {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--d-ink-3);
+}
+
+.spine-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/**
+ * A section marker.
+ *
+ * The number is mono because it is an index, not language -- the same rule the
+ * console follows for ids and codes. The rule under it is the state: hairline
+ * when the section is elsewhere, accent and full-width when you are in it.
+ */
+.spine-link {
+  display: block;
   text-decoration: none;
+  color: var(--d-ink-4);
+  font-size: var(--d-micro);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  transition: color 140ms linear;
 }
 
-.eyebrow {
-  font-size: var(--t-label);
-  font-weight: 600;
+.spine-num {
+  display: block;
+  font-family: var(--mono);
+  font-size: var(--d-micro);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: inherit;
+}
+
+.spine-rule {
+  display: block;
+  width: 14px;
+  height: 1px;
+  margin: 7px 0;
+  background: var(--d-line-strong);
+  transition:
+    width 180ms ease,
+    background-color 140ms linear;
+}
+
+.spine-name {
+  display: block;
+  font-weight: 500;
+}
+
+.spine-link:hover {
+  color: var(--d-ink-2);
+}
+
+.spine-link.on {
+  color: var(--d-ink);
+}
+
+.spine-link.on .spine-rule {
+  width: 34px;
+  background: var(--d-accent);
+}
+
+/* ============================================================= the column == */
+
+.doc {
+  margin-left: var(--rail);
+  padding: 0 clamp(28px, 6vw, 96px) 0 clamp(34px, 5vw, 76px);
+  max-width: 1180px;
+}
+
+.doc section {
+  /* scroll-margin so a spine link lands the heading below the top edge rather
+     than flush against it. */
+  scroll-margin-top: 40px;
+  padding-block: 0 var(--gap-section);
+}
+
+.prose {
+  max-width: var(--measure);
+}
+
+.landing p {
+  margin: 0 0 var(--gap-tight);
+  color: var(--d-ink-2);
+}
+
+.landing p:last-child {
+  margin-bottom: 0;
+}
+
+ /* Scoped to prose deliberately. A bare `.landing a` rule outranks every
+    component rule below it on specificity, which is how the wordmark and the
+    spine's section numbers came out indigo -- a link colour is for links a
+    reader is meant to follow mid-sentence, not for every anchor on the page. */
+.prose a,
+.provenance a,
+.foot p a {
+  color: var(--d-accent);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--d-accent-dim);
+}
+
+.prose a:hover,
+.provenance a:hover,
+.foot p a:hover {
+  text-decoration-color: var(--d-accent);
+}
+
+.landing code {
+  font-family: var(--mono);
+  font-size: 0.87em;
+  color: var(--d-ink);
+  background: var(--d-raised);
+  border: 1px solid var(--d-line);
+  border-radius: 3px;
+  padding: 0.08em 0.34em;
+}
+
+.landing em {
+  font-style: normal;
+  color: var(--d-ink);
+}
+
+/* ================================================================ masthead = */
+
+ /* Two columns on a wide screen: the argument, and the metadata that balances
+    it. The colophon column is fixed-width rather than fractional so the prose
+    measure never stretches -- a measure that grows with the viewport is the
+    fastest way to make a well-set page unreadable on a large monitor. */
+.masthead {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 268px;
+  gap: clamp(40px, 6vw, 92px);
+  align-content: center;
+  align-items: start;
+  padding-block: 88px var(--gap-section);
+}
+
+.masthead-main {
+  min-width: 0;
+}
+
+/**
+ * The colophon.
+ *
+ * Set as a definition list because that is what it is. Labels in mono because
+ * they are field names, values in sans because they are language -- the same
+ * split the console uses, so the two surfaces share a grammar even though they
+ * share no palette.
+ */
+.colophon {
+  margin: 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--d-line-strong);
+}
+
+.colophon div {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--d-line);
+}
+
+.colophon div:last-child {
+  border-bottom: none;
+}
+
+.colophon dt {
+  font-family: var(--mono);
+  font-size: var(--d-micro);
+  font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--accent);
-  margin: 0 0 var(--s4);
+  color: var(--d-ink-4);
+  margin-bottom: 5px;
 }
 
-.hero h1 {
-  font-size: var(--t-hero);
-  line-height: 1.07;
-  letter-spacing: -0.034em;
-  font-weight: 620;
-  margin: 0 0 var(--s5);
-  max-width: 21ch;
-  text-wrap: balance;
+.colophon dd {
+  margin: 0;
+  font-size: var(--d-small);
+  line-height: 1.5;
+  color: var(--d-ink-2);
 }
 
-/* The turn in the sentence gets the colour, because the second clause is the
-   entire thesis. Not italic: Inter's italic is a separate file we do not ship. */
-.hero h1 em {
-  font-style: normal;
-  color: var(--accent);
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: var(--d-small);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--d-ink);
+  text-decoration: none;
+  margin-bottom: 44px;
+}
+
+.wordmark .thin {
+  color: var(--d-ink-3);
+  font-weight: 400;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  font-size: var(--d-micro);
+  padding-left: 9px;
+  margin-left: 3px;
+  border-left: 1px solid var(--d-line-strong);
+}
+
+/**
+ * The thesis.
+ *
+ * One display moment on the page, and it is the argument rather than the
+ * product name. Set tight -- 1.02 leading and -0.035em tracking -- because at
+ * this size the default leading opens gaps that break it into separate lines
+ * instead of one sentence.
+ *
+ * The second clause drops from 640 to 300 weight rather than changing colour.
+ * A coloured second half is the template's move; a weight change is quieter,
+ * survives being screenshotted in greyscale, and reads as one voice getting
+ * softer rather than two things bolted together.
+ */
+.thesis {
+  font-size: var(--d-display);
+  font-weight: 640;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  color: var(--d-ink);
+  margin: 0 0 34px;
+  max-width: 17ch;
+}
+
+.thesis b {
+  display: block;
+  font-weight: 300;
+  color: var(--d-ink-2);
+  max-width: 22ch;
 }
 
 .lede {
-  font-size: var(--t-lead);
-  line-height: 1.62;
-  color: var(--ink-2);
-  max-width: 62ch;
-  margin: 0 0 var(--s6);
+  font-size: var(--d-lead);
+  line-height: 1.55;
+  color: var(--d-ink-2);
+  max-width: 30em;
+  margin: 0 0 40px;
 }
 
-.cta {
+/**
+ * The two ways in.
+ *
+ * Text with a rule under it, not filled buttons. A filled primary button is the
+ * single most template-shaped element on a landing page, and there is no
+ * conversion funnel here -- these are two links in a document.
+ */
+.ways {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s3);
-  margin-bottom: var(--s4);
+  gap: 30px;
+  margin-bottom: 26px;
 }
 
-.btn {
+.way {
   display: inline-flex;
-  align-items: center;
-  font-family: var(--sans);
-  font-size: var(--t-base);
-  font-weight: 550;
-  padding: 11px var(--s5);
-  border-radius: var(--radius);
-  border: 1px solid var(--line-strong);
-  background: var(--surface);
-  color: var(--ink);
+  align-items: baseline;
+  gap: 10px;
+  font-size: var(--d-body);
+  font-weight: 500;
+  color: var(--d-ink);
   text-decoration: none;
-  cursor: pointer;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--d-line-strong);
+  transition:
+    border-color 140ms linear,
+    color 140ms linear;
 }
 
-.btn:hover {
-  border-color: var(--ink-4);
-  background: var(--raised);
+.way span {
+  font-family: var(--mono);
+  font-size: var(--d-small);
+  color: var(--d-accent);
 }
 
-.btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+.way:hover {
+  color: var(--d-ink);
+  border-bottom-color: var(--d-accent);
 }
 
-.btn.primary:hover {
-  background: var(--accent-deep);
-  border-color: var(--accent-deep);
+.way.lead {
+  color: var(--d-accent);
 }
 
-.cta-note {
-  font-size: var(--t-small);
-  color: var(--ink-3);
-  margin: 0;
-  max-width: 64ch;
+.note {
+  font-size: var(--d-small);
+  color: var(--d-ink-3);
+  max-width: 44em;
 }
 
-/* --------------------------------------------------------------- bands -- */
+/* ============================================================= section head */
 
-.band {
-  padding: var(--s8) 0;
-  border-bottom: 1px solid var(--line);
+/**
+ * A section opening.
+ *
+ * The label repeats the spine's number so the page still reads correctly when
+ * the rail is not on screen -- printed, screenshotted, or on a phone.
+ */
+.head {
+  margin-bottom: var(--gap-block);
+  padding-top: 8px;
+  border-top: 1px solid var(--d-line);
 }
 
-.band.alt {
-  background: var(--sunken);
+.tag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: var(--d-micro);
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--d-ink-4);
+  margin-bottom: 20px;
 }
 
-.band-head {
-  max-width: 64ch;
-  margin-bottom: var(--s6);
+.tag b {
+  font-weight: 500;
+  color: var(--d-accent);
 }
 
-.band-head .label {
-  display: block;
-  margin-bottom: var(--s3);
-  color: var(--accent);
-}
-
-.band-head h2,
-.thesis h2 {
-  font-size: var(--t-title);
-  line-height: 1.36;
-  letter-spacing: -0.019em;
+.head h2 {
+  font-size: var(--d-h2);
   font-weight: 560;
-  color: var(--ink);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--d-ink);
   margin: 0;
-  text-wrap: pretty;
+  max-width: 26ch;
 }
 
-.provenance {
-  font-size: var(--t-small);
-  line-height: 1.7;
-  color: var(--ink-3);
-  max-width: 84ch;
-  margin: var(--s5) 0 0;
-}
-
-.provenance code {
-  color: var(--ink-2);
-}
-
-.landing .hint {
-  margin: 0;
-}
-
-/* ------------------------------------------------------------- metrics -- */
+/* ================================================================= metrics = */
 
 .metrics-scroll {
   overflow-x: auto;
+  margin-bottom: 20px;
 }
 
-.metrics {
-  border-collapse: collapse;
+/**
+ * The headline table, lifted out of the committed eval report.
+ *
+ * Hairlines under rows and nothing else: no zebra, no container, no fill. The
+ * numbers are the content and every added surface competes with them.
+ */
+table.metrics {
   width: 100%;
-  min-width: 620px;
+  min-width: 540px;
+  border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
 
-.metrics th {
-  font-size: var(--t-label);
-  font-weight: 600;
-  letter-spacing: 0.085em;
-  text-transform: uppercase;
-  color: var(--ink-3);
+table.metrics th,
+table.metrics td {
   text-align: left;
-  padding: 0 var(--s5) var(--s3) 0;
-  border-bottom: 1px solid var(--ink);
-  white-space: nowrap;
+  padding: 15px 22px 15px 0;
+  border-bottom: 1px solid var(--d-line);
 }
 
-.metrics th.num {
-  text-align: right;
-}
-
-.metrics td {
-  padding: var(--s3) var(--s5) var(--s3) 0;
-  border-bottom: 1px solid var(--line);
-  font-size: var(--t-lead);
-  white-space: nowrap;
-}
-
-/* The number is the thing being read here, so it is the thing set largest and
-   in the mono -- the metric's name is the caption, not the headline. */
-.metrics td.num {
+table.metrics th {
   font-family: var(--mono);
+  font-size: var(--d-micro);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--d-ink-4);
+  padding-bottom: 11px;
+}
+
+table.metrics th.num,
+table.metrics td.num {
   text-align: right;
-  letter-spacing: -0.025em;
-  color: var(--ink);
+  padding-right: 0;
+  padding-left: 22px;
 }
 
-.metrics td.metric-name {
-  font-family: var(--sans);
-  font-size: var(--t-body);
-  color: var(--ink-2);
-  width: 44%;
-  white-space: normal;
+table.metrics td {
+  font-size: var(--d-small);
+  color: var(--d-ink-2);
 }
 
-/* -------------------------------------------------------------- thesis -- */
+table.metrics td.metric-name {
+  color: var(--d-ink);
+  font-size: var(--d-body);
+}
 
-.thesis {
+table.metrics td.num {
+  font-family: var(--mono);
+  color: var(--d-ink);
+  font-weight: 500;
+}
+
+table.metrics tr:last-child td {
+  border-bottom: none;
+}
+
+.hint {
+  font-size: var(--d-small);
+  color: var(--d-ink-3);
+  max-width: var(--measure);
+}
+
+/**
+ * Where a number came from.
+ *
+ * Small, set apart by a rule rather than a box, and never optional -- every
+ * table on this page carries one, because a metric without its provenance is
+ * exactly the claim the honesty taxonomy exists to prevent.
+ */
+.provenance {
+  font-size: var(--d-small);
+  line-height: 1.6;
+  color: var(--d-ink-3);
+  max-width: var(--measure);
+  padding-left: 18px;
+  border-left: 1px solid var(--d-line-strong);
+  margin-top: 26px;
+}
+
+/* ================================================================= capture = */
+
+.capture-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr);
-  gap: var(--s8);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  gap: clamp(32px, 5vw, 72px);
   align-items: start;
 }
 
-.thesis .label {
-  display: block;
-  margin-bottom: var(--s3);
-  color: var(--accent);
-}
-
-.thesis p {
-  font-size: var(--t-base);
-  line-height: 1.7;
-  color: var(--ink-2);
-  max-width: 58ch;
-  margin: var(--s4) 0 0;
-}
-
-.thesis a {
-  color: var(--accent);
-  text-underline-offset: 3px;
-}
-
+/**
+ * The capture diagram.
+ *
+ * Filled is evidence the merchant still holds; hollow is evidence that lived
+ * with the agent platform and is gone by dispute time. It is the wordmark's
+ * four squares at size -- the logo IS the thesis, so the diagram needed no
+ * second idea.
+ */
 .capture {
   margin: 0;
-  padding: var(--s5);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--d-line);
+  border-radius: 8px;
+  background: var(--d-raised);
+  padding: 26px;
 }
 
-.capture .label {
+.capture-row + .capture-row {
+  margin-top: 22px;
+}
+
+.capture-when {
   display: block;
-  margin-bottom: var(--s3);
+  font-family: var(--mono);
+  font-size: var(--d-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--d-ink-4);
+  margin-bottom: 13px;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s2);
+  gap: 7px;
 }
 
 .chip-ev {
   font-family: var(--mono);
-  font-size: var(--t-small);
-  padding: var(--s1) var(--s3);
-  border-radius: var(--radius);
+  font-size: var(--d-micro);
+  letter-spacing: 0.02em;
+  padding: 6px 10px;
+  border-radius: 4px;
 }
 
 .chip-ev.held {
-  background: var(--accent);
-  color: #fff;
+  background: var(--d-accent-wash);
+  border: 1px solid var(--d-accent-dim);
+  color: var(--d-accent);
 }
 
-/* Hollow, in the mark's own vocabulary: the shape is still there and the
-   content is not. That is what an uncaptured artifact looks like at dispute
-   time -- you know exactly what you needed, and you do not have it. */
 .chip-ev.gone {
   background: transparent;
-  color: var(--ink-4);
-  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+  border: 1px dashed var(--d-line-strong);
+  color: var(--d-ink-4);
   text-decoration: line-through;
-  text-decoration-color: var(--ink-4);
+  text-decoration-color: var(--d-ink-4);
 }
 
-.capture-arrow {
+/* The interval, drawn. A dashed rule reads as elapsed time in a way that an
+   arrow glyph does not, and it costs no glyph. */
+.elapsed {
   display: flex;
   align-items: center;
-  gap: var(--s3);
-  margin: var(--s5) 0;
-  color: var(--ink-4);
-  font-size: var(--t-label);
-  letter-spacing: 0.085em;
+  gap: 12px;
+  margin: 18px 0;
+  font-family: var(--mono);
+  font-size: var(--d-micro);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+  color: var(--d-ink-4);
 }
 
-.capture-arrow::before,
-.capture-arrow::after {
+.elapsed::after {
   content: '';
   flex: 1;
-  height: 1px;
-  background: var(--line);
+  border-top: 1px dashed var(--d-line-strong);
 }
 
 .capture figcaption {
-  margin-top: var(--s5);
-  padding-top: var(--s4);
-  border-top: 1px solid var(--line);
-  font-size: var(--t-small);
-  line-height: 1.6;
-  color: var(--ink-3);
+  font-size: var(--d-small);
+  line-height: 1.55;
+  color: var(--d-ink-3);
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--d-line);
 }
 
-/* ---------------------------------------------------------- properties -- */
-
-.props {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
-  gap: var(--s6) var(--s7);
-}
-
-.prop h3 {
-  font-size: var(--t-base);
-  font-weight: 620;
-  letter-spacing: -0.012em;
-  margin: 0 0 var(--s2);
-  padding-top: var(--s3);
-  border-top: 2px solid var(--accent);
-  color: var(--ink);
-}
-
-.prop p {
-  font-size: var(--t-body);
-  line-height: 1.68;
-  color: var(--ink-3);
-  margin: 0;
-}
-
-/* ------------------------------------------------------------ boundary -- */
+/* ================================================================ boundary = */
 
 .boundary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--s5);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(28px, 4vw, 56px);
+  margin-bottom: 8px;
 }
 
+/**
+ * The two sides of the LLM boundary.
+ *
+ * The model's side carries an accent rule, the deterministic side a plain one.
+ * The asymmetry is the point: the accented column is the small one, and a
+ * reader should be able to see that before reading either list.
+ */
 .side {
-  padding: var(--s5);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  padding-left: 18px;
+  border-left: 1px solid var(--d-line-strong);
 }
 
-.side .label {
-  display: block;
-  margin-bottom: var(--s4);
+.side.llm-side {
+  border-left-color: var(--d-accent);
+}
+
+.side h3 {
+  font-family: var(--mono);
+  font-size: var(--d-micro);
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--d-ink-4);
+  margin: 0 0 16px;
 }
 
 .side ul {
+  list-style: none;
   margin: 0;
   padding: 0;
-  list-style: none;
 }
 
 .side li {
-  font-size: var(--t-body);
+  font-size: var(--d-small);
   line-height: 1.5;
-  padding: var(--s3) 0;
-  border-bottom: 1px solid var(--line);
-  color: var(--ink-2);
+  color: var(--d-ink-2);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--d-line);
 }
 
 .side li:last-child {
-  border-bottom: 0;
+  border-bottom: none;
 }
 
-.llm-side {
-  border-color: #e9d5ff;
+.side.llm-side li {
+  color: var(--d-ink);
 }
 
-.llm-side .label {
-  color: #7e22ce;
+/* =================================================================== trust = */
+
+.props {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
+  gap: 2px;
+  background: var(--d-line);
+  border: 1px solid var(--d-line);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.det-side .label {
-  color: var(--ink-2);
+/* Hairline gutters rather than gaps: the grid reads as one table of properties
+   instead of six floating cards, which is the honest shape -- they are facts
+   about one system, not six features. */
+.prop {
+  background: var(--d-bg);
+  padding: 22px 24px 24px;
 }
 
-/* ---------------------------------------------------------------- foot -- */
-
-.foot {
-  padding: var(--s8) 0;
+.prop h3 {
+  font-size: var(--d-h3);
+  font-weight: 560;
+  letter-spacing: -0.015em;
+  color: var(--d-ink);
+  margin: 0 0 9px;
 }
 
-.foot-cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s3);
-  margin-bottom: var(--s5);
-}
-
-.foot p {
-  font-size: var(--t-small);
-  line-height: 1.7;
-  color: var(--ink-3);
-  max-width: 74ch;
+.prop p {
+  font-size: var(--d-small);
+  line-height: 1.58;
+  color: var(--d-ink-3);
   margin: 0;
 }
 
-/* ------------------------------------------------------------- narrow -- */
+/* ==================================================================== foot = */
 
+.foot {
+  border-top: 1px solid var(--d-line);
+  padding-block: 44px 64px;
+}
+
+.foot .ways {
+  margin-bottom: 30px;
+}
+
+.foot p {
+  font-size: var(--d-small);
+  color: var(--d-ink-4);
+  max-width: var(--measure);
+}
+
+/* ============================================================== narrow ==== */
+
+/**
+ * Under 900px the rail becomes a header strip.
+ *
+ * The section markers go with it rather than reflowing into a horizontal scroll
+ * strip: on a phone the page is short enough to read straight through, and a
+ * navigation aid nobody needs is just something else on screen.
+ */
 @media (max-width: 900px) {
+  .landing {
+    --rail: 0px;
+  }
+
+  .spine {
+    position: sticky;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    width: auto;
+    height: auto;
+    padding: 16px 22px;
+    border-right: none;
+    border-bottom: 1px solid var(--d-line);
+  }
+
+  .spine-nav {
+    display: none;
+  }
+
+  .doc {
+    margin-left: 0;
+    padding-inline: 22px;
+  }
+
+  .masthead {
+    min-height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 44px;
+    padding-block: 56px 0;
+  }
+
+  .capture-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .thesis {
-    grid-template-columns: 1fr;
-    gap: var(--s6);
+    max-width: none;
   }
+}
 
-  .hero {
-    padding: var(--s6) 0 var(--s7);
-  }
-
-  .band,
-  .foot {
-    padding: var(--s7) 0;
+/**
+ * Motion, and the one place it is allowed.
+ *
+ * The console bans it outright. Here the only animated things are the spine's
+ * position indicator and link underlines -- state changes a reader caused, not
+ * decoration that plays at them. Anyone who has asked their system to stop
+ * gets nothing.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .landing *,
+  .landing *::before,
+  .landing *::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

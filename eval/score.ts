@@ -218,6 +218,7 @@ const CAUSE_LABELS: Record<AbstentionCause, string> = {
   capture_gap: 'RECALL LOST — capture gap (structurally unavailable)',
   evidence_absent: 'RECALL LOST — evidence absent from this pack',
   false_negative: 'RECALL LOST — gate declined with full coverage',
+  drafter_veto: 'RECALL LOST — drafter declined a case the gate cleared',
 };
 
 export function renderReport(input: ReportInput): string {
@@ -522,7 +523,10 @@ export function renderReport(input: ReportInput): string {
   ] as const) {
     const lost = cases.filter(
       (c) =>
-        c.cause === 'capture_gap' || c.cause === 'evidence_absent' || c.cause === 'false_negative',
+        c.cause === 'capture_gap' ||
+        c.cause === 'evidence_absent' ||
+        c.cause === 'false_negative' ||
+        c.cause === 'drafter_veto',
     );
     out.push(`**${label} — ${lost.length} winnable disputes not contested**`);
     out.push('');

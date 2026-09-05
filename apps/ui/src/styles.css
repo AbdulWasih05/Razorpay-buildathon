@@ -1279,17 +1279,37 @@ pre.raw {
   background: var(--surface);
 }
 
+/**
+ * The eval report, set as a document.
+ *
+ * This page is the console's one reading surface, and it was being typeset like
+ * the console: 13.5px prose in a 72rem container whose headings ruled off far
+ * past where the text stopped. Density is right for a queue of 102 rows and
+ * wrong for the artifact a judge reads most carefully, which is the same
+ * mistake the landing page was making in the other direction.
+ *
+ * So it keeps the console's light ground, ink steps and hairlines -- D-040
+ * holds -- and takes the landing page's reading measure and rhythm. Two
+ * registers, one grammar: mono for figures and field names, sans for language.
+ */
 .report {
-  max-width: 72rem;
-  padding: 24px 28px 72px;
+  --r-body: 15.5px;
+  --r-small: 13px;
+
+  max-width: 58rem;
+  padding: var(--s6) var(--s7) 96px;
+  font-size: var(--r-body);
+  line-height: 1.68;
 }
 
 .report h2 {
-  font-size: 17px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  margin: 32px 0 10px;
-  padding-bottom: 6px;
+  font-size: 21px;
+  font-weight: 620;
+  letter-spacing: -0.018em;
+  line-height: 1.3;
+  color: var(--ink);
+  margin: var(--s8) 0 var(--s4);
+  padding-bottom: var(--s3);
   border-bottom: 1px solid var(--line-strong);
 }
 
@@ -1298,44 +1318,62 @@ pre.raw {
 }
 
 .report h3 {
-  font-size: 13.5px;
-  font-weight: 650;
-  margin: 22px 0 6px;
-  color: var(--ink-2);
+  font-size: 15px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  margin: var(--s6) 0 var(--s2);
+  color: var(--ink);
 }
 
 .report p,
 .report ul {
-  font-size: 13.5px;
-  line-height: 1.62;
-  max-width: 68ch;
+  font-size: var(--r-body);
+  line-height: 1.68;
+  /* 66 characters. The container is wider than this on purpose -- tables are
+     allowed to use the full width, prose is not. */
+  max-width: 66ch;
   color: var(--ink-2);
+  margin-block: 0 var(--s4);
+}
+
+.report ul {
+  padding-left: var(--s5);
 }
 
 .report li {
-  margin-bottom: 3px;
+  margin-bottom: var(--s2);
 }
 
 .report strong {
   color: var(--ink);
-  font-weight: 650;
+  font-weight: 640;
 }
 
 .report code {
+  font-family: var(--mono);
+  font-size: 0.87em;
   background: var(--sunken);
   border: 1px solid var(--line);
   border-radius: 3px;
-  padding: 0 3px;
+  padding: 0.08em 0.34em;
   color: var(--ink);
 }
 
+/**
+ * Report tables.
+ *
+ * Hairlines under rows and nothing else -- no zebra, no fill, no container.
+ * The numbers are the content and every added surface competes with them. Set
+ * to match the landing page's headline table, because they are the same numbers
+ * out of the same file and a reader who sees both should not have to check.
+ */
 .report table {
   display: block;
   overflow-x: auto;
   width: auto;
   max-width: 100%;
   border-collapse: collapse;
-  margin: 12px 0 18px;
+  margin: var(--s4) 0 var(--s6);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1343,19 +1381,48 @@ pre.raw {
 .report td {
   text-align: left;
   white-space: nowrap;
-  vertical-align: top;
-  padding: 6px 18px 6px 0;
+  vertical-align: baseline;
+  padding: var(--s3) var(--s6) var(--s3) 0;
   border-bottom: 1px solid var(--line);
-  font-size: 12.5px;
 }
 
 .report th {
-  font-weight: 650;
-  color: var(--ink-3);
-  font-size: 11px;
-  letter-spacing: 0.06em;
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: var(--t-label);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+  color: var(--ink-4);
+  padding-bottom: var(--s2);
   border-bottom: 1px solid var(--line-strong);
+}
+
+.report td {
+  font-size: var(--r-small);
+  color: var(--ink-2);
+}
+
+.report td.rowname {
+  color: var(--ink);
+  font-size: var(--r-body);
+}
+
+/* Figures right-aligned in mono, so a column reads down instead of across. */
+.report th.num,
+.report td.num {
+  text-align: right;
+  padding-right: 0;
+  padding-left: var(--s6);
+}
+
+.report td.num {
+  font-family: var(--mono);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.report tr:last-child td {
+  border-bottom: none;
 }
 
 /* ------------------------------------------------------------ narrow -- */
