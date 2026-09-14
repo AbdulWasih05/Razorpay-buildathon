@@ -1,10 +1,10 @@
-# Keep the free Render instance warm (DECISIONS.md D-036, D-042).
+# Keep the free Render instance warm.
 #
 # Render spins a free web service down after 15 minutes without inbound traffic
-# and takes about a minute to wake it. The README's first line is a live link
-# and the first reader is plausibly an automated screener with a timeout, so a
-# cold start lands on the worst possible visitor. This pings `/health` every
-# five minutes, which is inbound traffic, which resets that timer.
+# and takes about a minute to wake it. The README opens with a live link, and
+# a visitor who clicks it should not sit through that cold start. This pings
+# `/health` every five minutes, which is inbound traffic, which resets that
+# timer.
 #
 # Why five and not fourteen. GitHub's scheduled workflows are explicitly
 # best-effort -- runs are delayed under load and five minutes is the shortest
@@ -48,25 +48,12 @@ jobs:
     timeout-minutes: 5
     steps:
       # The URL lives here as a literal rather than in a repository variable so
-      # that it is readable in the repository, like `render.yaml` -- D-036's
-      # argument that a reviewer should not have to take a dashboard on trust.
-      # It carries the same placeholder token as README.md and SUBMISSION.md, so
-      # one grep finds every place the deploy URL has to land (P4.3).
+      # that it is readable in the repository, like `render.yaml`.
       - name: Ping the health endpoint
         env:
-          URL: https://PRAMAN-DEPLOY-URL-PENDING
+          URL: https://praman-zif9.onrender.com
         run: |
           set -euo pipefail
-
-          # A job that pings a placeholder host would fail with a DNS error and
-          # read as a flaky network, which is exactly the wrong diagnosis. Say
-          # what is actually wrong instead.
-          case "$URL" in
-            *PRAMAN-DEPLOY-URL-PENDING*)
-              echo "::error::The deploy URL is still a placeholder. Fill it in here, in README.md and in SUBMISSION.md (TASKS.md P4.3)."
-              exit 1
-              ;;
-          esac
 
           # --max-time is generous on purpose: if the ping is the request that
           # happens to wake a spun-down instance, it pays the ~1 minute cold
@@ -107,7 +94,7 @@ jobs:
 
             // Not a liveness check -- a configuration one. The deployed demo
             // must show the drafts the eval scored, which means replaying the
-            // committed recordings and never making a live model call (D-036,
+            // committed recordings and never making a live model call (see
             // render.yaml). If this ever flips, the demo and the numbers have
             // stopped being the same system.
             if (health.assemblyMode !== "replay") {
