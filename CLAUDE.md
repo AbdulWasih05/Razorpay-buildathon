@@ -44,7 +44,7 @@ Built solo by Abdul Wasih for the Razorpay AI Buildathon (submission Sep 4, 2026
 - **DECISIONS.md:** every non-obvious choice gets an entry: what, why, what was rejected. Include the "Where we deliberately did NOT use AI" section. This file pre-writes the panel defense.
 - **Wasih must understand every line.** He defends this alone at a live panel. If a generated solution is clever but opaque, simplify it until he can explain it from first principles. When completing a task, add a 2–3 line "what to understand here" note in the task file.
 - **Honest history, at most 5 commits a day.** Amended 2026-09-03 (D-039): work in small increments, then fold same-day commits into at most five before pushing. "No squash theater" still holds and is what makes this safe -- folding is only allowed to merge **adjacent** same-day commits, every original message is preserved verbatim inside the folded one, and original author dates are kept. Nothing is reordered, backdated, or rewritten to look like it happened differently. Commit messages state what and why.
-- **Scope discipline:** work TASKS.md top-to-bottom. Do not add features not in TASKS.md. If blocked >30 min, log the blocker in TASKS.md and move to the next task.
+- **Scope discipline:** work `docs/REVAMP.md` phase by phase, top to bottom (it replaces TASKS.md). Do not add features not in it. Before ending a session, tick completed checkboxes, update its Status block, and add a Session log line. If blocked >30 min, record the blocker in its Status block and move to the next task.
 
 ## 6. Definition of done (project level)
 
