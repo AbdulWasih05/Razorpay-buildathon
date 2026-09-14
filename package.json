@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Defense-only dispute evidence responder for India's UPI agentic stack",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "packageManager": "pnpm@10.33.4",
   "scripts": {
