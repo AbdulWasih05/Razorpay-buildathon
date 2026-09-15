@@ -151,7 +151,7 @@ Each incident records what broke, how it was found, and what changed.
 - **F-014: adding an optional field broke every dispute that didn't have it.**
   - After the refund slot landed, 85 of 97 disputes failed to process. The 12 that survived were exactly the disputes that had a refund.
   - The cause: a row-flattening helper identified relations by inspecting values.
-  - All pure tests had passed. That gap is why CI now runs a database round-trip job.
+  - All pure tests had passed. That gap is why a database round-trip CI job was added. It never actually executed on GitHub before F-031's fix.
 - **F-015: a feature was verified against a server I had not started.**
   - My server died with `EADDRINUSE`. A stale process in *live* mode answered every request, and `/health` said `ok`.
   - It surfaced only because fixture recordings appeared that replay mode could not have produced.
@@ -179,6 +179,14 @@ Each incident records what broke, how it was found, and what changed.
   - A helper stripped foreign keys by suffix and dropped `trackingId` on every read-back, so the drafter never saw a tracking number on a "goods not received" dispute.
   - The eval builds packs in memory, so it always saw the tracking id. The product and the eval had been drafting from different evidence.
   - Fixed, and the two paths were verified byte-identical on a sample dispute.
+- **F-031: CI never ran on GitHub, and nobody noticed for twelve days.**
+  - All 8 CI runs, from the first push on 2026-09-03 to 2026-09-15, failed in about 30 seconds at `pnpm/action-setup`, before install, lint or tests.
+  - The workflow pinned `version: 10`, and `package.json` pinned `packageManager: pnpm@10.33.4` (added 2026-09-03). The action refuses to run when both are set.
+  - The keep-warm workflow failed all 75 of its runs over the same period. Its guard was waiting on a deploy URL that nobody ever filled in.
+  - Local `pnpm test` passed the whole time, so nothing in the build loop showed red.
+  - I found it during the revamp by reading `gh run list` after a push, not from any notification.
+  - The fix leaves `packageManager` as the only pnpm pin and gives keep-warm the real URL.
+  - The same false-confidence pattern as D-029, from a different angle: the integration job's own guard, which asserts that at least five tests ran, was sound, but the job never got far enough to run it. A check that never runs gives no signal, green or red.
 
 ## What is not claimed
 

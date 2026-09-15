@@ -12,7 +12,7 @@
 | **Current phase** | Phase 1 done except the repo rename (user action). Next is Phase 2 |
 | **Last completed** | Phase 1 trimmed de-brand: 290 tests pass (7 skipped, DB), lint and typecheck clean, UI builds (2026-09-15) |
 | **Open blocker** | Stripe test-mode account not created yet; it gates how much of Phase 6 is live. The repo rename is the user's to run |
-| **Next action** | Approve and push the Phase 0 and Phase 1 commits. After the push, check `/health` on Render (Node 22). Then start Phase 2: Docker + LLM telemetry |
+| **Next action** | Push the CI fix plus F-031 and confirm the first green CI run and keep-warm run. The user renames the repo. Start Phase 2: Docker + LLM telemetry |
 
 ## Context
 
@@ -79,6 +79,8 @@ Praman was built for the Razorpay AI Buildathon (Sep 2026) and wasn't shortliste
   - *What to understand here:* the guard made every scheduled run fail on purpose until the URL was filled in. Nobody filled it in, so the instance was never actually kept warm.
 - [x] **Node 22 everywhere:** `.node-version`, `engines`, Render `NODE_VERSION`, README and CLAUDE.md (CI already on 22), later Docker. *(Plan said 20; corrected — three tests import `globSync` from `node:fs`, which is Node 22+, and Node 20 reached end-of-life in April 2026.)*
   - *What to understand here:* CI already ran 22, but Render and `engines` said 20. The tests only pass on 22, so production ran a Node version CI never tested. Render picks up `NODE_VERSION` 22 on the next deploy, and that deploy has not been verified yet.
+- [x] **Make CI actually run** *(not in the plan; found after the first push)*. All 8 CI runs since 2026-09-03 failed at `pnpm/action-setup`, because the workflow's `version: 10` conflicts with `packageManager` in package.json. Lint and tests had never run on GitHub. Keep-warm failed all 75 runs on its placeholder guard. The version input is now removed, and the incident is logged as F-031.
+  - *What to understand here:* a pipeline nobody looks at gives no signal. Local `pnpm test` passing said nothing about CI. The fix is only verified once a push shows green on `gh run list`.
 - [ ] **Confirm Stripe test-mode access (user action).** Check each of these and record the results here:
   - An account can be created from India.
   - Test mode works.
@@ -324,3 +326,4 @@ Praman was built for the Razorpay AI Buildathon (Sep 2026) and wasn't shortliste
 - 2026-09-15: plan approved (rev 2, after review). Created the tracker. Phase 0 started, and keep-warm URL fixed.
 - 2026-09-15: Phase 0 hygiene done except the Stripe check (user action). Uncommitted `assembly.json` fixture is not needed. Node aligned to 22, not 20: `globSync` needs 22, and 20 is end-of-life. Committed locally, not pushed.
 - 2026-09-15: Phase 1 done except the repo rename (user action). The case study keeps all 30 cited ids. `results.md` changed by 2 text lines and no metric. 290 tests pass. Committed as two commits (5/day cap) and pushed.
+- 2026-09-15: after pushing, found that CI had never passed: pnpm version pinned twice (F-031). Fixed in `ci.yml`. Render redeploy verified: restarted 09:53Z in replay mode, and the served bundle has no event text.
