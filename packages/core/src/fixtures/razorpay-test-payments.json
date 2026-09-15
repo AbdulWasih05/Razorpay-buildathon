@@ -3,6 +3,6 @@
   "source": "Razorpay test mode, GET https://api.razorpay.com/v1/payments",
   "key_id": null,
   "recorded_at": null,
-  "note": "PLACEHOLDER. TASKS.md P0.2 is deferred: no Razorpay test-mode account exists yet. Run `pnpm tsx scripts/record-test-payments.ts` once RAZORPAY_KEY_ID/SECRET are in .env; it overwrites this file with real captured test-mode payment ids and flips `pending` to false. Until then the simulator mints synthetic pay_ ids, and any claim of real test-mode ids stays out of the README.",
+  "note": "PLACEHOLDER. No Razorpay test-mode account exists yet. Run `pnpm tsx scripts/record-test-payments.ts` once RAZORPAY_KEY_ID/SECRET are in .env; it overwrites this file with real captured test-mode payment ids and flips `pending` to false. Until then the simulator mints synthetic pay_ ids, and any claim of real test-mode ids stays out of the README.",
   "payments": []
 }

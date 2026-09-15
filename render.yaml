@@ -1,4 +1,4 @@
-# Render blueprint (TASKS.md P4.3, DECISIONS.md D-035, D-036).
+# Render blueprint.
 #
 # One web service and one database. The Fastify process serves the API, the
 # Prisma client and the built review UI from a single origin -- there is no

@@ -152,7 +152,7 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
     contestField: 'customer_communication',
     sourceable: false,
     notSourceableReason:
-      'The capture layer records what the agent selected (the orchestration log entry item_selected) but never what the customer requested, so agreement between the two cannot be established from records. The fact exists only as natural language in the conversation trace, and reading it is a model judgement -- which hard rule #4 forbids on the money path. Repairable: capture the requested SKU at selection time. See DECISIONS.md D-026.',
+      'The capture layer records what the agent selected (the orchestration log entry item_selected) but never what the customer requested, so agreement between the two cannot be established from records. The fact exists only as natural language in the conversation trace, and reading it is a model judgement -- which hard rule #4 forbids on the money path. Repairable: capture the requested SKU at selection time. See D-026 in docs/CASE_STUDY.md.',
   },
   refund_settlement_proof: {
     artifact: 'refund_settlement_proof',

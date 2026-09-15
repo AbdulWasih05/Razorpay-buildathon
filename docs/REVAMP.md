@@ -9,10 +9,10 @@
 
 | | |
 |---|---|
-| **Current phase** | Phase 0 — baseline, hygiene, Stripe access check |
-| **Last completed** | Phase 0 hygiene: keep-warm URL fixed, Node pins aligned to 22, fixture checked (2026-09-15) |
-| **Open blocker** | Stripe test-mode account not created yet. This is the user's action, and it gates how much of Phase 6 is live |
-| **Next action** | Push the Phase 0 commits (needs approval; Render redeploys on Node 22). User creates the Stripe test account. Then start Phase 1 |
+| **Current phase** | Phase 1 done except the repo rename (user action). Next is Phase 2 |
+| **Last completed** | Phase 1 trimmed de-brand: 290 tests pass (7 skipped, DB), lint and typecheck clean, UI builds (2026-09-15) |
+| **Open blocker** | Stripe test-mode account not created yet; it gates how much of Phase 6 is live. The repo rename is the user's to run |
+| **Next action** | Approve and push the Phase 0 and Phase 1 commits. After the push, check `/health` on Render (Node 22). Then start Phase 2: Docker + LLM telemetry |
 
 ## Context
 
@@ -71,7 +71,7 @@ Praman was built for the Razorpay AI Buildathon (Sep 2026) and wasn't shortliste
   1. Run `pnpm lint && pnpm typecheck && pnpm test`.
   2. Check whether the uncommitted `packages/llm/fixtures/assembly.json` (+91 recordings) is needed for the byte-identical report.
   3. If it is, commit it on its own.
-  - *Result:* **not needed.** With the committed fixture, `eval/harness.test.ts` (byte-identical report) and `eval/assembly-replay.test.ts` pass 17/17. The +91 uncommitted entries are unused recordings. They stay uncommitted until a decision to discard them.
+  - *Result:* **not needed.** With the committed fixture, `eval/harness.test.ts` (byte-identical report) and `eval/assembly-replay.test.ts` pass 17/17. The +91 uncommitted entries were unused recordings and were discarded (user decision).
   - *Baseline:* typecheck passes; 288 tests pass, 7 skipped (DB-gated). `pnpm lint` fails only on the untracked `scripts/build-og.mjs` (see the OG card item in Phase 1).
 - [x] **Fix `.github/workflows/keep-warm.yml`.**
   - Replace the placeholder URL with `https://praman-zif9.onrender.com`.
@@ -89,41 +89,67 @@ Praman was built for the Razorpay AI Buildathon (Sep 2026) and wasn't shortliste
 
 ## Phase 1 — Trimmed de-brand (~0.5–1 day)
 
-- [ ] **Delete** `razorpay-buildathon-gameplan.md`, `SUBMISSION.md` and `video/`.
-- [ ] **README.md**
+- [x] **Delete** `razorpay-buildathon-gameplan.md`, `SUBMISSION.md` and `video/`.
+- [x] **README.md**
   - Title: "Praman | Agentic Dispute Defense". The first line stays the live link.
   - Remove the "Track 2 bar mapping" section, the footer (line 280) and "The rubric asks for…" (line 138).
   - Rewrite the "last day" paragraphs without the event wording.
   - Fix stale doc counts.
   - Rewrite the thesis using the honest scope wording.
-- [ ] **EVAL.md**
+  - *Also done:*
+    - The D-035/D-036 citations were replaced with the reasoning they stood for.
+    - The test count was corrected to 290 plus 7 DB-gated tests; it had said 233 plus 5.
+    - The EVAL.md weakness count was corrected to thirteen; it had said eleven.
+    - The thesis names only what is modelled today. No Stripe claim appears before Phase 6 exists.
+- [x] **EVAL.md**
   - Remove "a judge" (184), "before submission" (105) and the "last day" wording.
   - Fix the dangling D-006 citation (EVAL.md:158, `packages/simulator/src/configs.ts:17`).
-- [ ] **`apps/ui/src/Landing.tsx`**
-  - The colophon `Submission` row (line 163) becomes `Stack`.
+  - *Also done:*
+    - All task ids (P1.1, P4.0 and so on) were removed.
+    - `DECISIONS.md D-`/`FAILURES.md F-` became bare ids, with a line near the top pointing to the case study.
+    - The D-006 sentence was removed, because that entry never existed. The same citation in `configs.ts:17` is a comment and was left for Phase 7.
+- [x] **`apps/ui/src/Landing.tsx`**
+  - The colophon `Submission` row (line 163) is replaced; see the deviation note below.
   - Remove the footer (line 506).
-  - Section tags become "Trust" and "Boundary".
+  - Section tags become "Trust" and "Boundary". *(The Boundary tag reads "The boundary", to match the section rail.)*
   - The model name (line 385) comes from the results.md header.
-- [ ] **OG card and favicons**
+  - *Deviation:* the colophon row became `Scope`, not `Stack`. It answers "what is this" in the first fifteen seconds, which a stack list does not.
+  - *What to understand here:*
+    - `modelOfRecord()` in `Report.tsx` reads the model name out of the report's header line, so the name now has one source.
+    - The report is fetched once through `loadReport()` and shared by the colophon and the Measured section.
+    - `report.test.ts` checks that the parser returns the real model and returns null rather than guessing.
+- [x] **OG card and favicons**
   - Remove the event text from `scripts/build-og.mjs:207`, then run `pnpm build:og`.
   - Commit the favicons, `og.png`, the `index.html` meta tags and the `build:og` script.
   - `scripts/build-og.mjs` fails `pnpm lint` today with 16 errors: no Node globals are configured for `.mjs`, and there are three unused variables. Fix them before committing it, or CI goes red.
-- [ ] **`docs/CASE_STUDY.md`**
+  - *Result:*
+    - `eslint.config.js` gained a `**/*.mjs` block that declares the Node globals the script uses.
+    - Four unused bindings were removed: `ABSTENTION`, `abstention`, `mark` and `child`.
+    - `og.png` and the favicons were regenerated. The card's lede now reads "Dispute defense for agent-initiated payments."
+- [x] **`docs/CASE_STUDY.md`**
   - Sections: problem, architecture, key decisions, key incidents, eval summary, what is not claimed.
   - Provenance line: "Originally built for the Razorpay AI Buildathon (Sep 2026)."
   - Keep these ids:
     - Decisions: D-005, D-007, D-011, D-019, D-021, D-023, D-025, D-026, D-029, D-030, D-031, D-034, D-043
     - Incidents: F-011, F-013, F-014, F-015, F-024, F-028, F-029, F-030
-- [ ] **Delete `DECISIONS.md`, `FAILURES.md` and `TASKS.md`.** First fix every citation a user can see:
+  - *Deviation:* the case study keeps **every id still cited** by README, EVAL.md, results.md and CLAUDE.md: 19 decisions and 11 incidents. The plan had 13 and 8. Keeping them all was cheaper and more honest than rewriting about 30 citations in docs people read.
+  - *What to understand here:* an id is kept exactly when a surviving document cites it. The full originals are in git history before 2026-09-15.
+- [x] **Delete `DECISIONS.md`, `FAILURES.md` and `TASKS.md`.** First fix every citation a user can see:
   - `packages/core/src/domain/rubric.ts:155` ("See DECISIONS.md D-026", rendered in the console).
   - The `eval/score.ts` literals at lines 232, 250, 372, 401, 425, 481, 483-484, 520 and 577. Then regenerate `eval/results.md` in replay mode; the diff must be text only.
   - `eval/run.ts:46` and `scripts/abstentions.ts:67,74`.
   - `packages/core/src/fixtures/razorpay-test-payments.json:6`.
   - README links: line 3 and the Documents table.
-- [ ] **`CLAUDE.md`**
+  - *Result:*
+    - `results.md` changed by exactly 2 text lines, with no metric moved.
+    - The rubric string does reach the letter prompt (`assemble.ts:129`). The replay tests still passed, because no dispute the gate clears is missing that artifact.
+    - `run.ts` and `abstentions.ts` were left alone, since they cite ids the case study keeps.
+    - Also fixed: the comments in `render.yaml:1` and `ci.yml:47`.
+- [x] **`CLAUDE.md`**
   - Drop the §2 rubric and the event lines in §1, §3.4, §5 and §6.
   - Keep hard rules 1–7.
   - Rule 1 becomes: each provider's live docs are the authority for that provider.
+  - *Result:* §2 became a non-event "what good means" list. Decisions and incidents are now recorded in the case study, and the old §6 Track 2 wording is gone.
 - [ ] **Repo rename (user runs this):** `gh repo rename praman-agentic-dispute-defense`, then update the remote and README links.
 
 ## Phase 2 — Docker + LLM telemetry (~3 days)
@@ -297,3 +323,4 @@ Praman was built for the Razorpay AI Buildathon (Sep 2026) and wasn't shortliste
 
 - 2026-09-15: plan approved (rev 2, after review). Created the tracker. Phase 0 started, and keep-warm URL fixed.
 - 2026-09-15: Phase 0 hygiene done except the Stripe check (user action). Uncommitted `assembly.json` fixture is not needed. Node aligned to 22, not 20: `globSync` needs 22, and 20 is end-of-life. Committed locally, not pushed.
+- 2026-09-15: Phase 1 done except the repo rename (user action). The case study keeps all 30 cited ids. `results.md` changed by 2 text lines and no metric. 290 tests pass. Committed as two commits (5/day cap) and pushed.

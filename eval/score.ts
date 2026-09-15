@@ -229,7 +229,7 @@ export function renderReport(input: ReportInput): string {
   out.push('');
   out.push(
     `Model of record: **\`${input.model}\`** via ${input.provider}, replayed from ` +
-      'committed recordings (DECISIONS.md D-023). ' +
+      'committed recordings (D-023). Decision and incident ids refer to `docs/CASE_STUDY.md`. ' +
       'Reproduce with `pnpm eval` — replay mode, no network, no API key required.',
   );
   out.push('');
@@ -480,8 +480,8 @@ export function renderReport(input: ReportInput): string {
       `**${dev.overLengthDrafts} dev, ${holdout.overLengthDrafts} held-out**. ` +
       'These are not trimmed to fit — an over-length draft abstains (D-003). ' +
       (dev.overLengthDrafts + holdout.overLengthDrafts > 2
-        ? 'This is above the threshold set in TASKS.md P4.1 for adding a single bounded, logged re-prompt.'
-        : 'Below the threshold set in TASKS.md P4.1 for adding a bounded re-prompt, so no re-prompt was added.'),
+        ? 'This is above the pre-set threshold of two for adding a single bounded, logged re-prompt.'
+        : 'Below the pre-set threshold of two for adding a bounded re-prompt, so no re-prompt was added.'),
   );
   out.push('');
 

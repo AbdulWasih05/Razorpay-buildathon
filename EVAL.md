@@ -2,10 +2,13 @@
 
 Design and honest limitations of the Praman evaluation.
 
-Status: measured. The corpus and the two-generator design are built (P1.1–P1.3)
-and the harness that scores them has been run over both sets (P4.1). Every
+Status: measured. The corpus and the two-generator design are built, and the
+harness that scores them has been run over both sets. Every
 number below comes from `eval/results.md`, which `pnpm eval` regenerates from
 committed recordings — no network, no API key, byte-identical across runs.
+
+Decision and incident ids (`D-0xx`, `F-0xx`) refer to entries in
+[`docs/CASE_STUDY.md`](docs/CASE_STUDY.md).
 
 ---
 
@@ -69,7 +72,7 @@ That page carries an explicit **UPI** section alongside Visa, Mastercard, RuPay
 and Amex, grouping UPI codes into Customer Dispute (1061, 1062, 1064), Fraud
 (128), Authorisation Error (108, 1065, 121) and Processing Error (1063, 1084,
 1085, 1081). Every reason code in the corpus is taken from that list. None were
-invented. See `packages/core/src/domain/reason-codes.ts` and DECISIONS.md D-008.
+invented. See `packages/core/src/domain/reason-codes.ts` and D-008.
 
 The evidence guidance for UPI 128 is quoted exactly: *"Internal logs to show
 authorisation was obtained, Invoicing details along with detailed price
@@ -80,7 +83,7 @@ logs.
 ### What is assumption, stated plainly
 
 **The class frequencies are not grounded in published data, because we did not
-find any usable.** A bounded search (~30 min, per TASKS.md P1.2) for a published
+find any usable.** A bounded search (~30 min) for a published
 per-reason-code breakdown of Indian chargeback or UPI dispute volumes did not
 surface one. NPCI publishes UPI ecosystem statistics, and NPCI's chargeback
 rules changed during 2025, but a reason-code-level distribution suitable for
@@ -101,9 +104,8 @@ claimed precisely as *decision quality under our labelling on this corpus* —
 never as a forecast of real-world dispute mix. This limitation is restated in
 the "Known weaknesses" section rather than being left implicit.
 
-Flagged for the P5.4 fact-check pass: if a genuine published distribution
-surfaces before submission, re-weight and re-run rather than keeping an
-assumption that a better source has superseded.
+If a genuine published distribution surfaces, re-weight and re-run rather
+than keep an assumption that a better source has superseded.
 
 ### Realised dev corpus (100 disputes, seed `praman-dev-2026`)
 
@@ -116,11 +118,11 @@ unwinnable or ambiguous   62.0%
 ```
 
 62% of the corpus is a case we should **not** win by bluffing — far above the
-20% floor TASKS.md sets. A corpus of mostly winnable disputes is the
-cherry-picking the track page explicitly calls out; this one leans the other
+20% floor set for it. A corpus of mostly winnable disputes is the
+cherry-picking that flatters an eval; this one leans the other
 way, which makes abstention quality the thing under test. Phases include
 `retrieval` and `pre_arbitration` so the pipeline meets the phases it will
-really see (five documented phases, not three — DECISIONS.md D-002).
+really see (five documented phases, not three — D-002).
 
 ---
 
@@ -155,7 +157,7 @@ axis on which degradation will actually show up.
 Using a different *model family* rather than the same model with different
 prompts is deliberate. Same family means the holdout is not out-of-distribution,
 the OOD delta measures sampling noise, and the credibility claim quietly becomes
-false. See DECISIONS.md D-006.
+false.
 
 ### Exactly what moved, stated precisely
 
@@ -181,8 +183,8 @@ which any template captures.
 **What this costs us, said plainly.** The shift is **compound** -- verticals,
 price band, platforms, protocol versions, class mix, trace length and language
 provenance all move together. That is the right design for asking *"does this
-system survive data it was not built against?"*, which is the question a judge
-cares about. It is the wrong design for asking *"which axis broke it?"* No single
+system survive data it was not built against?"*, which is the question that
+matters most. It is the wrong design for asking *"which axis broke it?"* No single
 axis can be credited for the delta, and this document does not attribute it to
 one. Per-axis ablation would need one holdout per axis; at 30 cases each and a
 free-tier budget, it was not affordable and is not claimed.
@@ -246,7 +248,7 @@ load-bearing: if a server-generated row id or a wall-clock timestamp reached a
 prompt, reseeding would change the hash, every committed fixture would miss, and
 the eval would silently start making live calls with nothing raised. A guard
 test asserts prompt inputs are byte-identical when every server-generated id and
-timestamp differs. See DECISIONS.md D-007.
+timestamp differs. See D-007.
 
 ---
 
@@ -256,7 +258,7 @@ An abstention rate is not a finding. "74% abstained" is equally consistent with
 a gate doing its job on a corpus deliberately loaded with undefendable disputes
 and with a gate too timid to contest anything, and the number cannot tell them
 apart. So every abstention is attributed to a cause (`pnpm abstentions`,
-`eval/abstentions.ts`, DECISIONS.md D-030). Dev corpus, 100 disputes:
+`eval/abstentions.ts`, D-030). Dev corpus, 100 disputes:
 
 | Cause | n | Meaning |
 | --- | --- | --- |
@@ -270,7 +272,7 @@ Recall on winnable: **26/38 = 68%**. False positives on unwinnable: **0**.
 
 ### The distinction the before/after depends on
 
-P4.0 closes two of these gaps and recall moves. That number is only meaningful
+A later capture-layer repair closes two of these gaps and recall moves. That number is only meaningful
 if the gap was **in the product**, and it is worth being explicit about what
 would make it meaningless, because "they fixed their own corpus and recall went
 up" is the obvious attack and it would be a fair one.
@@ -286,7 +288,7 @@ There are two different things that could sit behind a `capture_gap`:
    gap means *editing the test data*. Recall would improve because the exam got
    easier, and reporting that as a product result would be circular.
 
-**Both P4.0 gaps are case 1, and it is checkable in one grep rather than taken
+**Both repaired gaps are case 1, and it is checkable in one grep rather than taken
 on trust.** `packages/core/src/capture/ingest.ts` is the whole capture
 envelope, and it is a `.strict()` Zod schema — meaning the capture endpoint
 **rejects** any key it does not declare:
@@ -299,7 +301,7 @@ envelope, and it is a `.strict()` Zod schema — meaning the capture endpoint
   `POST /evidence-pack`.
 - `duplicate_payment_analysis`: the envelope declares `payment` — **singular**.
   There is no `payments` array and no sibling-payment slot, so a second payment
-  against one order cannot be represented at all. This is FAILURES.md F-010:
+  against one order cannot be represented at all. This is F-010:
   the corpus knew a duplicate existed and the pack had no way to say so.
 
 So in both cases the generator *could not* have populated the field. The repair
@@ -307,7 +309,7 @@ is a schema change to the capture layer first, and a generator change second and
 only because a real merchant's data would contain it. That order of causation is
 the whole argument, and it is why these are counted separately from
 `evidence_absent` — which is the honest name for "this pack happens to lack
-something it could have carried", and which P4.0 does not touch.
+something it could have carried", and which that repair does not touch.
 
 A third gap, `item_selection_confirmation`, is the same shape: the orchestration
 log records what the agent *selected*, and there is no field for what the
@@ -345,7 +347,7 @@ set alone it is mostly evidence about D-011.
 
 Every recording behind every number in this file was produced by
 **`qwen/qwen3.8-27b` via Groq**. Fixed 2026-09-01, before the eval ran, and it
-does not move (DECISIONS.md D-023).
+does not move (D-023).
 
 The intended provider is the Anthropic Messages API and the code uses it
 whenever `ANTHROPIC_API_KEY` is set (CLAUDE.md §4). No such key exists in this
@@ -384,7 +386,7 @@ neither time.** First it fell 7/9 → 6/9 closing a rubric-provenance fidelity
 finding (seven UPI reason codes wrongly marked as having no published evidence
 guidance): held-out lost one case to a new drafter disagreement on a
 gate-cleared, full-coverage dispute — within the drafter's veto-toward-safety
-scope (D-025) but a real, disclosed cost. Full account in FAILURES.md F-025.
+scope (D-025) but a real, disclosed cost. Full account in F-025.
 
 Then it returned 6/9 → 7/9 closing F-029: the drafter was being handed raw
 payment subunits and was stating every amount a hundred times too large
@@ -450,8 +452,8 @@ Stated here before anyone has to ask.
    one in memory. The pipeline after that point is the same code, but the inputs
    travel different routes, and on 2026-09-05 those routes were found to
    disagree: the store read-back was dropping carrier tracking ids, so for every
-   `a1` dispute the eval scored a prompt the product never sent (FAILURES.md
-   F-030). It is fixed, and the two paths are now verified byte-identical on a
+   `a1` dispute the eval scored a prompt the product never sent
+   (F-030). It is fixed, and the two paths are now verified byte-identical on a
    sample dispute — but the structural point stands and is the honest version of
    this limitation: **byte-reproducibility of the eval says nothing about
    whether the eval reproduces the product.** The only complete answer is to run
@@ -481,7 +483,7 @@ Stated here before anyone has to ask.
    even though the *origination* is not. The contest path is built against the
    real documented contract.
 
-8. **Payment ids are synthetic, permanently, and they say so.** P0.2 was cut
+8. **Payment ids are synthetic, permanently, and they say so.** Live test-mode ids were cut
    (D-032): the Disputes API exposes fetch, accept and contest only, so a
    dispute cannot be originated in test mode and `RazorpayClient.contest()` is
    unreachable against a real dispute with or without an account. Ids in
@@ -508,9 +510,9 @@ Stated here before anyone has to ask.
     and the capture envelope holds one payment per order, so a duplicate is
     asserted in corpus metadata rather than visible in the data (F-010). Five
     of the seven dev lost-recall cases and one of the two held-out ones are
-    this. It was scheduled as P4.0(b) and frozen unfinished at a pre-declared
+    this. It was frozen unfinished at a pre-declared
     cutoff (D-033) because the repair perturbs the seeded stream and would have
-    forced a full reseed and re-record on the last day. **Predicted, not
+    forced a full reseed and re-record of every fixture. **Predicted, not
     measured:** closing it takes dev recall 31/38 → 36/38. The five cases are
     named individually in `eval/results.md`.
 

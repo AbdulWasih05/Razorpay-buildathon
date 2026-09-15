@@ -44,7 +44,7 @@ jobs:
   # nothing in that suite round-trips through Prisma. The seam between "the
   # domain is correct" and "the row Postgres returns is the shape the domain
   # expects" needs a database to test, so it gets its own job rather than a
-  # test that skips forever and reports success (DECISIONS.md D-029).
+  # test that skips forever and reports success (D-029, docs/CASE_STUDY.md).
   integration:
     runs-on: ubuntu-latest
     services:

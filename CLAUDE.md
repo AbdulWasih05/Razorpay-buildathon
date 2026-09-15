@@ -1,51 +1,135 @@
-# CLAUDE.md — Praman (Razorpay AI Buildathon, Track 2)
+# CLAUDE.md — Praman | Agentic Dispute Defense
 
-> **STACK NOTE:** Written against the default stack (TS end-to-end). If the Aug 29 architecture session amends the stack, update §4 only — everything else stands.
+> Working instructions for this repository.
+> - Decision ids (`D-0xx`) and incident ids (`F-0xx`) refer to entries in `docs/CASE_STUDY.md`.
+> - Scope and progress for the current work live in `docs/REVAMP.md`.
 
 ## 1. What this project is
 
-Praman is a **defense-only dispute evidence responder**. It handles ordinary e-commerce disputes today; its differentiated module is agent-initiated payments on India's UPI agentic stack (Reserve Pay mandates, UPI Circle, UAP). Core product insight: agentic evidence (agent identifier, mandate reference, protocol metadata, conversation context) is **captured at transaction time** — by dispute time the trace is unrecoverable, since it lives with the agent platform/TPAP, not the merchant. The transaction store IS the capture layer. Praman ingests dispute events in Razorpay's exact Disputes API schema (verified: UPI disputes surface in this system — their submit-evidence docs have an explicit UPI reason-code section; per our own honesty taxonomy, the doc URL and captured wording live in DECISIONS.md, because "we verified this" is itself a checkable claim), assembles evidence from the capture store, decides contest-vs-abstain through an evidence-sufficiency gate, drafts contests mapped to Razorpay's typed evidence fields, and submits only through a human-approved, draft-first, deadline-aware flow.
+Praman is a **defense-only dispute evidence responder for agent-initiated payments**. It handles ordinary e-commerce disputes today. Its differentiated module is agent-initiated payments on India's UPI agentic stack (Reserve Pay mandates, UPI Circle, UAP).
 
-Built solo by Abdul Wasih for the Razorpay AI Buildathon (submission Sep 4, 2026). The judges are Razorpay AI/platform engineers. They will recognize their own API schema on sight. **Schema fidelity is a feature.**
+**Core product insight:** agentic evidence has to be **captured at transaction time**. That evidence is the agent identifier, the mandate reference, protocol metadata, and the conversation context. By dispute time the trace is unrecoverable, because it lives with the agent platform or TPAP, not with the merchant. The transaction store IS the capture layer.
 
-## 2. The rubric this is judged on — optimize every decision against it
+**The pipeline:**
+1. Ingest dispute events in Razorpay's exact Disputes API schema. That UPI disputes surface in this system was verified, and the doc URL and captured wording are recorded under D-008 — "we verified this" is itself a checkable claim.
+2. Assemble evidence from the capture store.
+3. Decide contest-vs-abstain through an evidence-sufficiency gate.
+4. Draft contests mapped to the provider's typed evidence fields.
+5. Submit only through a human-approved, draft-first, deadline-aware flow.
 
-1. **Problem taste** — "did you pick something that actually matters"
-2. **Build quality** — "does it run, is it structured, **would you trust it**"
-3. **AI judgment** — "the right tool in the right place, **and where you chose not to use one**"
-4. **Failure recovery** — "what broke, and what you did about it"
+**Schema fidelity is a feature.** Someone who knows the provider's API should recognise it on sight.
 
-"Would you trust it" means: gates, audit logs, and determinism are the product, not decoration.
+## 2. What "good" means here
+
+1. **The problem matters.** Pick things that actually matter to a merchant defending a dispute.
+2. **You would trust it.** It runs, it is structured, and the gates, audit logs and determinism are the product, not decoration.
+3. **AI judgment.** Use the right tool in the right place, and say where we chose not to use one.
+4. **Failure recovery.** Record what broke and what was done about it, honestly and in the same session.
 
 ## 3. Hard rules — never violate, never "improve"
 
-1. **Razorpay schema fidelity.** Dispute entities, evidence fields, contest payloads, and error states mirror the documented Disputes API exactly. **The live docs are the authority; the summary below is a convenience copy that has already been wrong three times (DECISIONS.md D-002, D-003; FAILURES.md F-005). Where they disagree, the docs win, the code follows the docs, and THIS FILE gets corrected — never the other way round.** Verified against the docs 2026-08-30: `disp_` ids, `payment_id`, `reason_code`, `respond_by`, `status` (`open` / `under_review` / `won` / `lost` / `closed`), `phase` — **five values: `fraud`, `retrieval`, `chargeback`, `pre_arbitration`, `arbitration`** — evidence fields (`summary`, `shipping_proof`, `billing_proof`, `cancellation_proof`, `customer_communication`, `proof_of_service`, `explanation_letter`, `refund_confirmation`, `access_activity_log`, `refund_cancellation_policy`, `term_and_conditions`, `others`), `action: draft|submit`, **`summary` ≤1000 chars — the cap is on `summary`; `explanation_letter` is a list of document ids like every other typed field**, Documents API with `purpose: dispute_evidence`. When unsure about a field, check https://razorpay.com/docs/api/disputes/ — never invent fields, and never omit documented ones.
-2. **The submit path has exactly one door.** In the product, the approve action in the review UI is the sole path to submit — no other code path may call submit. Eval mode scores gate decisions and draft outputs only and NEVER touches the submission adapter (a test enforces this). This precise invariant replaces "never auto-submit, always" — it names what actually matters and makes the eval batch run legitimate rather than an undocumented exception.
-3. **Defense-only.** Nothing offense-capable, ever. No fraud-generation tooling, no dispute-abuse tooling, not even for testing — the synthetic generator creates *dispute scenarios*, not attack tools.
-4. **LLM boundary (the AI-judgment criterion).** LLM is used ONLY for: conversation-trace summarization, explanation-letter drafting, ambiguity flagging. LLM is NEVER used for: schema/field mapping, gate thresholds, metrics computation, submission decisions, anything on the money path. Reason (state it in DECISIONS.md): a money action must never depend on a stochastic step; evals must be reproducible. **Runtime failure policy:** any LLM step that (1) fails/errors, (2) times out, (3) refuses, or (4) returns output failing schema validation routes the dispute to abstain with reason "assembly failure, manual review required" — logged in the audit trail, never silently retried into the money path. Tests cover all FOUR failure paths: error, timeout, refusal, schema-validation failure. (This engineered fallback is the pre-built "what broke" story; a real instance will almost certainly occur during the batch run, and the fallback will already exist.)
-5. **Eval integrity.** Corpus generation is seeded and deterministic, with reason-code distribution grounded in cited published data where available (assumption stated explicitly where not). The held-out set is **out-of-distribution by construction**: generated with a different model and different prompt/persona set than the dev corpus, created at generation time, NEVER read during feature development (guard test enforces this). **Reproducibility via record/replay:** `packages/llm` records LLM responses keyed by request hash on the first eval run, committed as fixtures; eval runs replay by default (`--live` regenerates). Gate decisions, precision/recall, and FP cost are byte-reproducible; the README states the replay design plainly — never claim unqualified byte-reproducibility of live LLM output. Report ALL metrics including bad ones: precision, recall, false-positive cost in ₹, abstention rate, per-case exception reasons, and the **dev-vs-OOD distribution-shift delta**. No cherry-picking. If a metric is ugly, it ships ugly — the ugly OOD delta is the credibility proof.
-6. **Honesty taxonomy.** Every claim in README/docs is measured, structural, or scoped. Never claim "first ever" — the verified claim is "first for India's UPI agentic stack." Simulated won/lost outcomes are tagged `simulated: true` at the data level and labeled "simulated" wherever rendered; no outcome number appears in UI, README, or video without its provenance. Headline metrics are precision/recall vs labels and false-positive cost — never simulated wins. "₹ protected" is banned phrasing; use "₹ at stake in drafted contests" / "₹ in correctly abstained disputes."
-7. **Abstention over bluffing.** Insufficient evidence → abstain with a stated reason. A bluffed contest that loses costs fees + time; that IS the false-positive cost we measure.
+1. **Provider schema fidelity.** Dispute entities, evidence fields, contest payloads and error states mirror each provider's documented API exactly. Each provider's live docs are the authority for that provider.
+   - The Razorpay summary below is a convenience copy, and it has already been wrong (D-002, D-003). Where it disagrees with the docs, the docs win, the code follows the docs, and THIS FILE gets corrected — never the other way round.
+   - **Razorpay, verified against the docs 2026-08-30:**
+     - `disp_` ids, `payment_id`, `reason_code`, `respond_by`
+     - `status`: `open` / `under_review` / `won` / `lost` / `closed`
+     - `phase`, **five values**: `fraud`, `retrieval`, `chargeback`, `pre_arbitration`, `arbitration`
+     - evidence fields: `summary`, `shipping_proof`, `billing_proof`, `cancellation_proof`, `customer_communication`, `proof_of_service`, `explanation_letter`, `refund_confirmation`, `access_activity_log`, `refund_cancellation_policy`, `term_and_conditions`, `others`
+     - `action: draft|submit`
+     - **`summary` ≤1000 chars.** The cap is on `summary`; `explanation_letter` is a list of document ids like every other typed field.
+     - Documents API with `purpose: dispute_evidence`
+   - When unsure about a field, check https://razorpay.com/docs/api/disputes/. Never invent fields, and never omit documented ones.
+   - The same discipline applies to any provider added later, against that provider's own docs.
+2. **The submit path has exactly one door.** In the product, the approve action in the review UI is the only path to submit; no other code path may call submit.
+   - This includes any write to a provider, such as staging evidence.
+   - Eval mode scores gate decisions and draft outputs only, and NEVER touches the submission adapter. A test enforces this.
+3. **Defense-only.** Nothing offense-capable, ever.
+   - No fraud-generation tooling and no dispute-abuse tooling, not even for testing.
+   - The synthetic generator creates *dispute scenarios*, not attack tools.
+4. **LLM boundary.**
+   - **LLM is used ONLY for:** conversation-trace summarization, explanation-letter drafting, ambiguity flagging.
+   - **LLM is NEVER used for:** schema/field mapping, gate thresholds, metrics computation, submission decisions, or anything else on the money path.
+   - **Reason** (recorded in `docs/CASE_STUDY.md`): a money action must never depend on a stochastic step, and evals must be reproducible.
+   - **Runtime failure policy:** if any LLM step (1) fails or errors, (2) times out, (3) refuses, or (4) returns output that fails schema validation, the dispute is routed to abstain with reason "assembly failure, manual review required". That is logged in the audit trail and never silently retried into the money path.
+   - Tests cover all FOUR failure paths.
+5. **Eval integrity.**
+   - **Corpus generation** is seeded and deterministic. Reason-code distribution is grounded in cited published data where available, with the assumption stated explicitly where not.
+   - **The held-out set is out-of-distribution by construction.** It is generated with a different model and a different prompt/persona set than the dev corpus, created at generation time, and NEVER read during feature development. A guard test enforces this.
+   - **Reproducibility via record/replay.** `packages/llm` records LLM responses keyed by request hash and commits them as fixtures. Eval runs replay by default; `--live` regenerates. Gate decisions, precision/recall and FP cost are byte-reproducible.
+   - **The README states the replay design plainly.** Never claim unqualified byte-reproducibility of live LLM output.
+   - **Report ALL metrics, including bad ones:** precision, recall, false-positive cost in ₹, abstention rate, per-case exception reasons, and the **dev-vs-OOD distribution-shift delta**.
+   - **No cherry-picking.** If a metric is ugly, it ships ugly.
+6. **Honesty taxonomy.** Every claim in README/docs is measured, structural, or scoped.
+   - Never claim "first ever". The verified claim is "first for India's UPI agentic stack."
+   - Simulated won/lost outcomes are tagged `simulated: true` at the data level and labeled "simulated" wherever rendered. No outcome number appears in the UI or docs without its provenance.
+   - Headline metrics are precision/recall against labels and false-positive cost, never simulated wins.
+   - "₹ protected" is banned phrasing. Use "₹ at stake in drafted contests" or "₹ in correctly abstained disputes."
+   - Supporting several dispute providers is never offered as evidence of supporting several agentic protocols.
+7. **Abstention over bluffing.** Insufficient evidence means abstain with a stated reason. A bluffed contest that loses costs fees and time, and that IS the false-positive cost we measure.
 
 ## 4. Stack & structure
 
-- **Runtime:** Node 22+, TypeScript strict, pnpm monorepo
-- **API:** Fastify · **DB:** PostgreSQL via Prisma · **UI:** React (Vite). **Dense risk-ops console, not a product page (amended 2026-09-03, D-040).** Colour encodes state and is never decoration; hairlines and background steps, never shadows; sans for language, mono for identity (ids, amounts, codes, field names, timestamps); no motion; one register, committed (light). Clarity over polish still governs — the amendment exists because "plain" was being read as "unstyled", and unstyled was costing legibility rather than buying honesty. Nothing on this screen exists to look impressive; every panel is marked `deterministic` or `llm`, and evidence the core computes gets rendered rather than discarded.
-- **LLM:** structured outputs, **single-shot calls — deliberately NOT the Claude Agent SDK (DECISIONS.md D-019)**; model calls isolated in `packages/llm` behind one interface. Intended provider is the Anthropic Messages API and it is used whenever `ANTHROPIC_API_KEY` is set; **no such key exists in this environment, so committed recordings were produced by `qwen/qwen3.8-27b` via Groq — deliberately NOT `openai/gpt-oss-120b`, which wrote the held-out corpus and would contaminate the OOD delta (DECISIONS.md D-021, enforced by `assertNotHoldoutFamily`)**
-- **Routes (D-041):** `/` overview, `/app` review console, `/eval` console on its eval page. Hand-rolled routing, no router dependency; the API SPA fallback already serves extensionless GETs. Typefaces are vendored latin-subset woff2 in `apps/ui/src/fonts/` (Inter, JetBrains Mono, both SIL OFL 1.1) — self-hosted, never a CDN. **No number on the landing page is written by hand:** it renders the `Headline` table out of the committed `eval/results.md` verbatim, and a test forbids `%` and `₹` in its source.
-- **The demo clock is simulated too (D-043).** Every `respond_by` is a fixed offset from the seeded `CORPUS_EPOCH`, so deadlines are read against `CORPUS_NOW` — served by the API as `/health`'s `simulatedNow`, never `Date.now()` — and labelled `clock: simulated` in the console. Reading seeded rows against a real clock measures the corpus's age, not a reviewer's urgency (F-024). **Never move `CORPUS_EPOCH` to fix a date problem**: it is the replay-fixture hash base (D-007).
-- **Deploy:** Render, one web service + one free Postgres, from `render.yaml`. The Fastify process serves the API and the built UI from a single origin, so there is no separate front-end deploy and no CORS allowlist (D-035); Render was chosen over Railway and AWS on free tier and on fewest-ways-to-break (D-036). Free-plan costs are stated in the README first line, not hidden: 15-minute sleep, ~1-minute cold start, 30-day Postgres expiry. A committed GitHub Actions schedule pings `/health` every five minutes to keep the instance awake (D-042); it is best-effort, so the cold-start note stays — **never upgrade the ping into a promise of uptime**, which is the error F-023 logs.
-- Layout: `packages/core` (domain: dispute entities, gate, mapping — zero LLM imports), `packages/simulator` (seeded corpus generator + webhook emitter), `packages/llm`, `packages/adapter` (Disputes API contract; simulator client + real client behind one interface), `apps/api` (includes the `POST /evidence-pack` capture endpoint — ALL seeding flows through it, never direct DB writes for evidence packs), `apps/ui`, `eval/` (harness + EVAL.md), docs: `DECISIONS.md`, `FAILURES.md`, `README.md`
+- **Runtime:** Node 22+, TypeScript strict, pnpm monorepo.
+- **API:** Fastify. **DB:** PostgreSQL via Prisma. **UI:** React (Vite), a dense risk-ops console, not a product page.
+  - Colour encodes state and is never decoration.
+  - Hairlines and background steps, never shadows.
+  - Sans for language; mono for identity (ids, amounts, codes, field names, timestamps).
+  - No motion. One register, committed (light).
+  - Clarity over polish; nothing on this screen exists to look impressive.
+  - Every panel is marked `deterministic` or `llm`, and evidence the core computes gets rendered rather than discarded.
+- **LLM:** structured outputs and **single-shot calls — deliberately NOT the Claude Agent SDK (D-019)**. Model calls are isolated in `packages/llm` behind one interface.
+  - The intended provider is the Anthropic Messages API, used whenever `ANTHROPIC_API_KEY` is set.
+  - **No such key exists in this environment, so the committed recordings were produced by `qwen/qwen3.8-27b` via Groq.**
+  - **Deliberately NOT `openai/gpt-oss-120b`.** It wrote the held-out corpus and would contaminate the OOD delta (D-021, enforced by `assertNotHoldoutFamily`).
+- **Routes:** `/` overview, `/app` review console, `/eval` eval page.
+  - Hand-rolled routing, no router dependency. The API SPA fallback serves extensionless GETs.
+  - Typefaces are vendored latin-subset woff2 in `apps/ui/src/fonts/` (Inter, JetBrains Mono, both SIL OFL 1.1), self-hosted and never from a CDN.
+  - **No number on the landing page is written by hand.** It renders the `Headline` table out of the committed `eval/results.md` verbatim, and a test forbids `%` and `₹` in its source.
+- **The demo clock is simulated too (D-043).**
+  - Every `respond_by` is a fixed offset from the seeded `CORPUS_EPOCH`, so deadlines are read against `CORPUS_NOW`, never `Date.now()`.
+  - `CORPUS_NOW` is served by the API as `/health`'s `simulatedNow` and labelled `clock: simulated` in the console.
+  - Reading seeded rows against a real clock measures the corpus's age, not a reviewer's urgency (F-024).
+  - **Never move `CORPUS_EPOCH` to fix a date problem.** It is the replay-fixture hash base (D-007).
+- **Deploy:** Render, from `render.yaml`: one web service plus one free Postgres.
+  - The Fastify process serves the API and the built UI from a single origin, so there is no separate front-end deploy and no CORS allowlist.
+  - Free-plan costs are stated in the README's first line, not hidden: 15-minute sleep, ~1-minute cold start, 30-day Postgres expiry.
+  - A committed GitHub Actions schedule pings `/health` every five minutes to keep the instance awake. It is best-effort, so the cold-start note stays. **Never upgrade the ping into a promise of uptime.**
+- **Layout:**
+  - `packages/core`: domain (dispute entities, gate, mapping), with zero LLM imports.
+  - `packages/simulator`: seeded corpus generator and webhook emitter.
+  - `packages/llm`
+  - `packages/adapter`: the Disputes API contract, with a simulator client and a real client behind one interface.
+  - `apps/api`: includes the `POST /evidence-pack` capture endpoint. ALL seeding flows through it, never through direct DB writes for evidence packs.
+  - `apps/ui`
+  - `eval/`: harness, plus `EVAL.md`.
+  - Docs: `README.md`, `EVAL.md`, `docs/CASE_STUDY.md`, `docs/REVAMP.md`.
 
 ## 5. Working discipline (every session)
 
-- **TDD on core:** the gate, mapping, and metrics are test-first. Contract tests pin the Razorpay schema.
-- **FAILURES.md:** when anything breaks — a test, a schema assumption, an LLM behaving badly — log it SAME SESSION: what broke, how diagnosed, what the fix/fallback was. This file is a first-class deliverable (rubric #4). Never backfill from memory.
-- **DECISIONS.md:** every non-obvious choice gets an entry: what, why, what was rejected. Include the "Where we deliberately did NOT use AI" section. This file pre-writes the panel defense.
-- **Wasih must understand every line.** He defends this alone at a live panel. If a generated solution is clever but opaque, simplify it until he can explain it from first principles. When completing a task, add a 2–3 line "what to understand here" note in the task file.
-- **Honest history, at most 5 commits a day.** Amended 2026-09-03 (D-039): work in small increments, then fold same-day commits into at most five before pushing. "No squash theater" still holds and is what makes this safe -- folding is only allowed to merge **adjacent** same-day commits, every original message is preserved verbatim inside the folded one, and original author dates are kept. Nothing is reordered, backdated, or rewritten to look like it happened differently. Commit messages state what and why.
-- **Scope discipline:** work `docs/REVAMP.md` phase by phase, top to bottom (it replaces TASKS.md). Do not add features not in it. Before ending a session, tick completed checkboxes, update its Status block, and add a Session log line. If blocked >30 min, record the blocker in its Status block and move to the next task.
+- **TDD on core.** The gate, mapping and metrics are test-first. Contract tests pin each provider's schema.
+- **Incidents.** When anything breaks — a test, a schema assumption, an LLM behaving badly — record it in `docs/CASE_STUDY.md` under Incidents in the SAME session: what broke, how it was diagnosed, and what the fix or fallback was. Never backfill from memory.
+- **Decisions.** Every non-obvious choice gets an entry in `docs/CASE_STUDY.md` under Decisions: what, why, and what was rejected. Keep the README's "Where we deliberately did NOT use AI" section current.
+- **Wasih must understand every line.** He has to explain it from first principles, unaided.
+  - If a generated solution is clever but opaque, simplify it until it can be explained that way.
+  - When completing a task, add a 2–3 line "what to understand here" note under it in `docs/REVAMP.md`.
+- **Honest history, at most 5 commits a day.**
+  - Work in small increments, then fold same-day commits into at most five before pushing.
+  - Folding may only merge **adjacent** same-day commits. Every original message is preserved verbatim inside the folded one, and original author dates are kept.
+  - Nothing is reordered, backdated, or rewritten to look like it happened differently.
+  - Commit messages state what and why.
+- **Scope discipline.** Work `docs/REVAMP.md` phase by phase, top to bottom.
+  - Do not add features that aren't in it.
+  - Before ending a session, tick completed checkboxes, update its Status block, and add a Session log line.
+  - If blocked for more than 30 minutes, record the blocker in its Status block and move to the next task.
 
 ## 6. Definition of done (project level)
 
-Live deploy link in the FIRST LINE of README (never-cut — the first reader is likely an AI screener, and a responding link is the cheapest strong signal). Plain-text metrics table near the top of README with dev AND OOD held-out numbers including the shift delta. Explicit "Track 2 bar mapping" README section in their vocabulary (defense-only, held-out set, false-positive cost in ₹, abstention). "Where we deliberately did NOT use AI" as a visible README section. One-command local run. Seeded eval a stranger can reproduce. 100+ dispute batch across both rails processed with full metrics + exception list. One demoable abstention case. Fact-check pass on every checkable claim. All four docs (README, EVAL, DECISIONS, FAILURES) complete and honest.
+- The live deploy link is in the first line of the README.
+- A plain-text metrics table sits near the top of the README, with dev AND OOD held-out numbers and the shift delta.
+- "Where we deliberately did NOT use AI" is a visible README section.
+- The project runs locally with one command.
+- A stranger can reproduce the seeded eval.
+- A batch of 100+ disputes is processed with full metrics and an exception list.
+- There is one demoable abstention case.
+- Every checkable claim has passed a fact-check.
+- README, EVAL.md and `docs/CASE_STUDY.md` are complete and honest.
