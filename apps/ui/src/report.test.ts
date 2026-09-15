@@ -5,7 +5,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { ReportView, parseReport } from './Report.js';
+import { ReportView, modelOfRecord, parseReport } from './Report.js';
 
 /**
  * The metrics page, tested against the real report rather than a sample.
@@ -88,5 +88,15 @@ describe('the numbers arrive with the sentences that qualify them', () => {
     // never appear unlabelled, and the simplest guarantee is that neither
     // surface has anywhere to put one.
     expect(render()).not.toMatch(/\bsimulated win/i);
+  });
+});
+
+describe('the model of record is read from the report, not restated', () => {
+  it('parses the model and provider out of the report header', () => {
+    expect(modelOfRecord(markdown)).toEqual({ model: 'qwen/qwen3.8-27b', provider: 'groq' });
+  });
+
+  it('returns null rather than guessing when the header is missing', () => {
+    expect(modelOfRecord('# a report with no header line')).toBeNull();
   });
 });

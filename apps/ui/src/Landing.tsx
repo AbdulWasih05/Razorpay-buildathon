@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { fetchEvalReport } from './api.js';
-import { parseReport } from './Report.js';
+import { modelOfRecord, parseReport } from './Report.js';
 import { Mark } from './ui.js';
 import { linkTo } from './router.js';
 import './landing.css';
@@ -9,8 +9,8 @@ import './landing.css';
 /**
  * The overview page, at `/`.
  *
- * It exists because the README's first line is a live link and the first reader
- * is plausibly an automated screener. A link that opens straight into a review
+ * It exists because the README's first line is a live link.
+ * A link that opens straight into a review
  * queue proves the thing runs but says nothing about what it is; this page says
  * what it is in about fifteen seconds and then gets out of the way.
  *
@@ -25,7 +25,7 @@ import './landing.css';
  * written by hand.** The metrics table is the `Headline` section of the
  * committed `eval/results.md`, selected and rendered verbatim by the same
  * parser the eval page uses. Selecting a section is not computing one, so
- * P4.2's invariant survives -- there is still exactly one place a number can be
+ * the single-source invariant survives -- there is still exactly one place a number can be
  * wrong, and it is the report. A test asserts this file contains no percent
  * sign and no rupee sign, which are the units every headline metric is reported
  * in, so a hand-typed figure fails CI rather than shipping.
@@ -37,6 +37,40 @@ const SECTIONS = [
   { id: 'boundary', num: '03', name: 'The boundary' },
   { id: 'trust', num: '04', name: 'Trust' },
 ] as const;
+
+/**
+ * The committed eval report, fetched once and shared. The colophon and the
+ * Measured section both read it, and neither restates what it says -- including
+ * which model produced the recordings, so a change of model of record never
+ * needs an edit here.
+ */
+let reportRequest: Promise<string> | null = null;
+
+function loadReport(): Promise<string> {
+  if (reportRequest === null) reportRequest = fetchEvalReport();
+  return reportRequest;
+}
+
+function useReport(): { markdown: string | null; failed: boolean } {
+  const [markdown, setMarkdown] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    loadReport()
+      .then((text) => {
+        if (live) setMarkdown(text);
+      })
+      .catch(() => {
+        if (live) setFailed(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  return { markdown, failed };
+}
 
 export function Landing() {
   const active = useActiveSection();
@@ -150,27 +184,36 @@ function Spine({ active }: { active: string }) {
  * The colophon.
  *
  * A paper's masthead metadata, and it earns its place twice: it answers the
- * four questions a judge asks in the first fifteen seconds -- which track, which
+ * four questions a reader asks in the first fifteen seconds -- what it is, which
  * rails, which model, and can it submit on its own -- and it balances a
  * composition that was otherwise a narrow column against half a screen of dead
  * space.
  *
  * Deliberately no metrics here. Those live in section 02, rendered from the
  * committed report; a number typed into this list would be exactly the second
- * source of truth the guard test exists to prevent.
+ * source of truth the guard test exists to prevent. The model name is read out
+ * of the same report, for the same reason.
  */
-const COLOPHON = [
-  { k: 'Submission', v: 'Track 2 · Razorpay AI Buildathon' },
-  { k: 'Rails', v: 'Ordinary and agentic (UPI Reserve Pay)' },
-  { k: 'Model of record', v: 'qwen/qwen3.8-27b, replayed from committed recordings' },
-  { k: 'Submit path', v: 'One door, and a named human opens it' },
-  { k: 'Demo data', v: 'Seeded simulator, labelled on every screen' },
-];
+function colophonRows(model: string | null) {
+  return [
+    { k: 'Scope', v: 'Dispute defense for agent-initiated payments' },
+    { k: 'Rails', v: 'Ordinary and agentic (UPI Reserve Pay)' },
+    {
+      k: 'Model of record',
+      v: model ? `${model}, replayed from committed recordings` : 'Named in the committed eval report',
+    },
+    { k: 'Submit path', v: 'One door, and a named human opens it' },
+    { k: 'Demo data', v: 'Seeded simulator, labelled on every screen' },
+  ];
+}
 
 function Colophon() {
+  const { markdown } = useReport();
+  const record = markdown ? modelOfRecord(markdown) : null;
+
   return (
     <dl className="colophon">
-      {COLOPHON.map((row) => (
+      {colophonRows(record ? record.model : null).map((row) => (
         <div key={row.k}>
           <dt>{row.k}</dt>
           <dd>{row.v}</dd>
@@ -314,23 +357,20 @@ function Gap() {
  * `eval/results.md` ever disagree, that is a bug in the parser rather than a
  * second set of numbers drifting from the first.
  */
-function Measured() {
-  const [table, setTable] = useState<{ header: string[]; rows: string[][] } | null>(null);
-  const [failed, setFailed] = useState(false);
+function headlineTable(markdown: string): { header: string[]; rows: string[][] } | null {
+  const blocks = parseReport(markdown);
+  const at = blocks.findIndex(
+    (block) => block.kind === 'heading' && /^headline$/i.test(block.text.trim()),
+  );
+  const found = at === -1 ? undefined : blocks.slice(at + 1).find((b) => b.kind === 'table');
+  return found && found.kind === 'table' ? { header: found.header, rows: found.rows } : null;
+}
 
-  useEffect(() => {
-    fetchEvalReport()
-      .then((markdown) => {
-        const blocks = parseReport(markdown);
-        const at = blocks.findIndex(
-          (block) => block.kind === 'heading' && /^headline$/i.test(block.text.trim()),
-        );
-        const found = at === -1 ? undefined : blocks.slice(at + 1).find((b) => b.kind === 'table');
-        if (found && found.kind === 'table') setTable({ header: found.header, rows: found.rows });
-        else setFailed(true);
-      })
-      .catch(() => setFailed(true));
-  }, []);
+function Measured() {
+  const report = useReport();
+  const table = report.markdown ? headlineTable(report.markdown) : null;
+  const record = report.markdown ? modelOfRecord(report.markdown) : null;
+  const failed = report.failed || (report.markdown !== null && table === null);
 
   return (
     <section id="measured">
@@ -382,7 +422,9 @@ function Measured() {
 
       <p className="provenance">
         Rendered verbatim from the committed <code>eval/results.md</code>. Model of record{' '}
-        <code>qwen/qwen3.8-27b</code> via Groq, replayed from committed recordings.{' '}
+        <code>{record ? record.model : 'named in the report'}</code>
+        {record ? ` via ${record.provider.charAt(0).toUpperCase()}${record.provider.slice(1)}` : ''},
+        replayed from committed recordings.{' '}
         <code>pnpm eval</code> reproduces the file byte for byte with no network and no API key.
         Headline metrics are precision and recall against corpus labels and false-positive cost in
         rupees; no simulated outcome is reported as a result anywhere.
@@ -398,7 +440,7 @@ function Boundary() {
     <section id="boundary">
       <div className="head">
         <span className="tag">
-          <b>03</b> Where we deliberately did not use AI
+          <b>03</b> The boundary
         </span>
         <h2>
           A money action must never depend on a stochastic step, and an eval must be reproducible.
@@ -472,7 +514,7 @@ function Trust() {
     <section id="trust">
       <div className="head">
         <span className="tag">
-          <b>04</b> Would you trust it
+          <b>04</b> Trust
         </span>
         <h2>The gates, the audit log and the determinism are the product, not decoration.</h2>
       </div>
@@ -503,7 +545,7 @@ function Foot() {
         </a>
       </div>
       <p>
-        Built for the Razorpay AI Buildathon, Track 2. Every dispute, payment and mandate in the
+        Every dispute, payment and mandate in the
         demo is generated by a seeded simulator and labelled as simulated wherever it is rendered.
       </p>
     </footer>

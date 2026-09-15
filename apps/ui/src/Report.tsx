@@ -43,6 +43,17 @@ function cells(line: string): string[] {
     .map((cell) => cell.trim());
 }
 
+/**
+ * Which model produced the recordings behind the report, read from its header
+ * line ("Model of record: **`model`** via provider, ..."). Pages that name the
+ * model use this rather than a literal, so the name has one source. Returns
+ * null rather than guessing when the header is not there.
+ */
+export function modelOfRecord(markdown: string): { model: string; provider: string } | null {
+  const match = /Model of record: \*\*`([^`]+)`\*\* via ([^,\s]+),/.exec(markdown);
+  return match ? { model: match[1] ?? '', provider: match[2] ?? '' } : null;
+}
+
 export function parseReport(markdown: string): Block[] {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
   const blocks: Block[] = [];

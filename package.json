@@ -27,7 +27,8 @@
     "record:demo": "tsx scripts/record-demo.ts",
     "start": "prisma migrate deploy --schema prisma/schema.prisma && tsx apps/api/src/index.ts",
     "ui:dev": "pnpm --filter @praman/ui dev",
-    "ui:build": "pnpm --filter @praman/ui build"
+    "ui:build": "pnpm --filter @praman/ui build",
+    "build:og": "node scripts/build-og.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

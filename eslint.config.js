@@ -14,6 +14,23 @@ export default tseslint.config(
     },
   },
 
+  // Plain .mjs Node scripts (scripts/build-og.mjs) are not type-checked, so
+  // ESLint has to be told which globals Node provides.
+  {
+    files: ['**/*.mjs'],
+    languageOptions: {
+      globals: {
+        URL: 'readonly',
+        Buffer: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        setTimeout: 'readonly',
+        WebSocket: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
+
   // --- Architectural boundary, enforced by the linter, not by discipline ---
   // CLAUDE.md hard rule #4: the LLM never touches the money path. packages/core
   // holds the domain (dispute entities, gate, mapping) and must stay deterministic,
