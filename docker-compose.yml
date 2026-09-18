@@ -1,6 +1,25 @@
-# Local Postgres for development. Port 5433 to avoid colliding with any
-# system Postgres already on 5432.
+# `docker compose up` runs the whole product: Postgres plus the app image
+# (API + built UI on one origin), seeded through the capture API on first boot
+# and replaying committed model recordings. No API key is needed.
+#
+# `pnpm db:up` starts only `db`, for local development against `pnpm api:dev`.
+# Postgres is published on 5433 to avoid colliding with a system Postgres on 5432.
 services:
+  app:
+    build: .
+    container_name: praman-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Inside the compose network the database is `db` on its own port, 5432.
+      DATABASE_URL: postgresql://praman:praman@db:5432/praman?schema=public
+      DEMO_MODE: 'true'
+      SEED_ON_BOOT: 'true'
+      SEED_SIZE: '100'
+    ports:
+      - '3000:3000'
+
   db:
     image: postgres:16-alpine
     container_name: praman-db

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import {
   SCENARIOS,
   collectEvidence,
@@ -10,12 +12,15 @@ import {
 } from '@praman/core';
 import {
   AssemblyClient,
+  OpenAiCompatibleProvider,
   ResponseCache,
   assembleDispute,
+  assertNotHoldoutFamily,
   providerFromEnv,
   type AbstentionClass,
   type AssembledDispute,
   type AssemblyFailureKind,
+  type ModelCallTelemetry,
   type ModelProvider,
 } from '@praman/llm';
 import {
@@ -136,7 +141,12 @@ const OOD_LANGUAGE_CACHE = new URL(
 async function applyOodLanguage(corpus: GeneratedCorpus): Promise<void> {
   const generator = new OodLanguageGenerator({
     apiKey: '',
-    model: process.env['GROQ_MODEL'] ?? 'openai/gpt-oss-120b',
+    // The holdout's own manifest names the model that wrote it. Reading it from
+    // `GROQ_MODEL` (as this did) meant pointing that variable at any other model
+    // -- which a matrix run does -- silently changed the replay key and missed
+    // every cached held-out turn. The writer of the holdout is a property of the
+    // holdout, not of whatever the assembler happens to be running on.
+    model: holdoutLanguageModel(),
     cachePath: fileFromUrl(OOD_LANGUAGE_CACHE),
     allowLive: false,
   });
@@ -159,6 +169,17 @@ async function applyOodLanguage(corpus: GeneratedCorpus): Promise<void> {
 /** Windows-safe `file:` URL to path. `new URL(...).pathname` yields `/C:/...`. */
 function fileFromUrl(url: URL): string {
   return decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)/, '$1');
+}
+
+/** Which model wrote the held-out conversation language, from the holdout manifest. */
+function holdoutLanguageModel(): string {
+  const manifest = JSON.parse(
+    readFileSync(fileFromUrl(new URL('./holdout.json', import.meta.url)), 'utf8'),
+  ) as { languageModel?: string };
+  if (!manifest.languageModel) {
+    throw new Error('eval/holdout.json has no languageModel: cannot replay held-out language');
+  }
+  return manifest.languageModel;
 }
 
 export async function loadSet(spec: EvalSetSpec): Promise<GeneratedCorpus> {
@@ -201,6 +222,11 @@ export interface EvalCase {
   ambiguityFlags: number;
   /** True when a model was called at all for this dispute. */
   modelCalled: boolean;
+  /**
+   * The calls themselves, with the tokens and latency their recordings carry.
+   * Empty when the gate declined. Reporting only: nothing here is scored.
+   */
+  modelCalls: ModelCallTelemetry[];
 }
 
 function failureDetail(assembled: AssembledDispute): string | undefined {
@@ -259,6 +285,7 @@ function toCase(
     // The gate declining means no model was called at all (D-025). That turns
     // the LLM boundary into a measurable quantity rather than a claim.
     modelCalled: gate.decision === 'contest',
+    modelCalls: assembled.modelCalls,
   };
 }
 
@@ -314,9 +341,14 @@ export async function runSet(options: RunOptions): Promise<EvalCase[]> {
 export function buildClient(
   live: boolean,
   env: NodeJS.ProcessEnv,
+  choice?: MatrixModel,
 ): { client: AssemblyClient; provider: ModelProvider; cache: ResponseCache } {
-  const provider = live ? providerFromEnv(env) : providerFromEnv({ GROQ_API_KEY: 'replay-only' });
-  const cache = new ResponseCache();
+  const provider = choice
+    ? matrixProvider(choice, live, env)
+    : live
+      ? providerFromEnv(env)
+      : providerFromEnv({ GROQ_API_KEY: 'replay-only' });
+  const cache = new ResponseCache(fixturePathFor(choice));
   const client = new AssemblyClient({
     provider,
     cache,
@@ -324,4 +356,40 @@ export function buildClient(
     timeoutMs: 60_000,
   });
   return { client, provider, cache };
+}
+
+/** One entry of the pinned matrix: a provider and an exact model id. */
+export interface MatrixModel {
+  provider: string;
+  model: string;
+}
+
+/**
+ * Where a model's recordings live.
+ *
+ * The model of record keeps the original fixture file, untouched, because the
+ * committed report is replayed from it and D-023 freezes it. Every matrix model
+ * -- including a fresh sample of the model of record -- gets its own file, so a
+ * comparison run can never overwrite the recordings the headline numbers came
+ * from.
+ */
+export function fixturePathFor(choice?: MatrixModel): string | undefined {
+  if (!choice) return undefined;
+  const slug = `${choice.provider}__${choice.model}`.replace(/[^a-z0-9.-]+/gi, '-');
+  return fileFromUrl(new URL(`../packages/llm/fixtures/assembly/${slug}.json`, import.meta.url));
+}
+
+function matrixProvider(choice: MatrixModel, live: boolean, env: NodeJS.ProcessEnv): ModelProvider {
+  assertNotHoldoutFamily(choice.model);
+  if (choice.provider !== 'groq') {
+    throw new Error(`matrix provider ${choice.provider} is not wired up; only groq is`);
+  }
+  const apiKey = live ? env['GROQ_API_KEY'] : 'replay-only';
+  if (!apiKey) throw new Error('a live matrix run needs GROQ_API_KEY');
+  return new OpenAiCompatibleProvider(
+    'groq',
+    choice.model,
+    apiKey,
+    'https://api.groq.com/openai/v1',
+  );
 }

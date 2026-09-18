@@ -137,6 +137,7 @@ export async function processDispute(
         steps: assembled.audit,
         ambiguityFlags: assembled.ambiguityFlags,
         ...(assembled.confirmation ? { confirmation: assembled.confirmation } : {}),
+        modelCalls: assembled.modelCalls,
       },
       occurredAt: stepTime(raisedAt, 3),
     });
@@ -151,6 +152,9 @@ export async function processDispute(
         abstentionClass: assembled.abstentionClass,
         ...(assembled.failureKind ? { failureKind: assembled.failureKind } : {}),
         steps: assembled.audit,
+        // Empty on a gate abstention -- no model was called -- and left out so
+        // that row does not look like it had anything to report.
+        ...(assembled.modelCalls.length > 0 ? { modelCalls: assembled.modelCalls } : {}),
       },
       occurredAt: stepTime(raisedAt, 3),
     });

@@ -25,7 +25,8 @@ export function DecisionBar({
 }: {
   detail: DisputeDetail | null;
   busy: boolean;
-  reviewer: string;
+  /** Null when nobody is signed in: then there is no door to open. */
+  reviewer: string | null;
   /** The instant deadlines count from; null means wall-clock time (F-024). */
   now: string | null;
   onApprove: () => void;
@@ -120,10 +121,21 @@ function Door({
 }: {
   detail: DisputeDetail;
   busy: boolean;
-  reviewer: string;
+  reviewer: string | null;
   onApprove: () => void;
 }) {
   if (detail.state === 'drafted') {
+    // No session, no door. The server refuses an unauthenticated approval
+    // anyway; showing a button that cannot work would just move the refusal
+    // to after the click.
+    if (!reviewer) {
+      return (
+        <div className="door">
+          <span className="settled">Sign in to approve. An approval is recorded against a named reviewer.</span>
+        </div>
+      );
+    }
+
     return (
       <div className="door">
         <button disabled={busy} onClick={onApprove}>

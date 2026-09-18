@@ -2085,3 +2085,36 @@ pre.raw {
   outline-offset: 2px;
   border-radius: 2px;
 }
+
+/* --- sign in ----------------------------------------------------------- */
+
+/* The identity control in the top bar. It replaced a reviewer dropdown: who
+   you are is now a session the server owns, so this either states it or
+   offers a way to establish it. Sized to sit in the bar without becoming a
+   form people fill in by habit. */
+.signin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.signin input {
+  width: 9rem;
+  padding: 3px 6px;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+
+.signin input:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.signin .label {
+  font-family: var(--mono);
+}

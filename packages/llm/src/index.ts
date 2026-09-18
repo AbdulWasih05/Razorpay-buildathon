@@ -5,3 +5,4 @@ export * from './client.js';
 export * from './assemble.js';
 export * from './pipeline.js';
 export * from './config.js';
+export * from './pricing.js';

@@ -136,6 +136,10 @@ describe('approveAndSubmit refuses a spoofed actor before any side effect', () =
           auditLogs: [],
         }),
         update: vi.fn(),
+        // The conditional claim the approve path now makes: `updateMany` with
+        // `state: 'drafted'` in its WHERE, so two racing approvals cannot both
+        // proceed. See approve-race.test.ts.
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       auditLog: {
         count: vi.fn().mockResolvedValue(0),
@@ -173,6 +177,8 @@ describe('approveAndSubmit refuses a spoofed actor before any side effect', () =
       expect(adapter.submit).not.toHaveBeenCalled();
       expect((prisma.auditLog.createMany as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
       expect((prisma.dispute.update as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+      // Not even the claim: a spoofed identity never reaches a write at all.
+      expect((prisma.dispute.updateMany as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
     },
   );
 

@@ -1,0 +1,1138 @@
+{
+  "entries": [
+    {
+      "key": "0da2c9f81e16f92998d1c59e45ecb8a0abc3cd2ed466b50ef58ef590c20b8315",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The dispute is based on UPI code 1064, which requires specific evidence. We have delivery proof (delivered at 2026-06-23T00:07:00.000Z) and shipment record (delivered, shipped on 2026-06-22T08:41:00.000Z). The required evidence is not captured, such as customer communication and merchant terms and conditions. These are merchant-level artifacts and not transaction-time captures. The dispute will be escalated to a human reviewer due to insufficient evidence.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 849,
+          "outputTokens": 147
+        },
+        "attempts": 1,
+        "latencyMs": 456
+      },
+      "recordedAt": "2026-09-30T15:51:02.770Z"
+    },
+    {
+      "key": "0e4f4d2e187f233a5aa1a683adb54c8a3a64d3504f1c2f6e325b901ea1e28123",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer inquires about cotton kurta set reorder, agent confirms and proceeds with payment.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"customer confirmation recorded against the mandate\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 707,
+          "outputTokens": 59
+        },
+        "attempts": 2,
+        "latencyMs": 5729
+      },
+      "recordedAt": "2026-09-30T15:47:36.875Z"
+    },
+    {
+      "key": "1228d0964aa85b9ead11f603ebc9d57f81b888a3c39664dd1d72fce451b52dca",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer requests agent to pay gym membership, trusting agent to do so.\",\n  \"confirmation\": \"implied\",\n  \"ambiguityFlags\": [\"no explicit approval of the specific purchase\", \"no direct objection or cancellation mentioned\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 748,
+          "outputTokens": 62
+        },
+        "attempts": 2,
+        "latencyMs": 8768
+      },
+      "recordedAt": "2026-09-30T15:49:21.485Z"
+    },
+    {
+      "key": "1244512f8e76695f38b6ca012c69d3f1dfe2f9f6e78c2b376340273997c81263",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer is disputing a payment made on 2026-06-22T12:05:00.000Z for goods delivered on 2026-06-24T15:03:00.000Z. The evidence provided supports the transaction being valid.\",\n  \"reason\": \"Delivery Confirmed\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 851,
+          "outputTokens": 96
+        },
+        "attempts": 1,
+        "latencyMs": 249
+      },
+      "recordedAt": "2026-09-30T15:40:30.467Z"
+    },
+    {
+      "key": "13425bd0dccc4b2cb25e764f99b8fb9409d2a79e0d756a50963188c5641d4f8b",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer asks about reordering a dinner order, agrees to the cost and method of payment.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"nothing\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 705,
+          "outputTokens": 53
+        },
+        "attempts": 2,
+        "latencyMs": 10988
+      },
+      "recordedAt": "2026-09-30T15:47:59.353Z"
+    },
+    {
+      "key": "2291ec60418a5fe02df1781776feb79fd6fe251ef7701f16c2cc72f9537dbe09",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer inquires about reordering wireless earbuds, allowing agent to proceed.\",\n  \"confirmation\": \"implied\",\n  \"ambiguityFlags\": [\"customer did not explicitly approve the specific purchase\", \"agent had broad authority\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 688,
+          "outputTokens": 65
+        },
+        "attempts": 2,
+        "latencyMs": 13050
+      },
+      "recordedAt": "2026-09-30T15:45:54.347Z"
+    },
+    {
+      "key": "24b8b013148c4f4de6188a512b0b6c4e997e07f4c0dae35ecd75a3c606a7a932",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer placed an order for a family dinner on 2026-06-09T21:49:00.000Z. The payment was authorized and captured for ₹1,654 of the ₹2,456.35 cap. The customer's consent was recorded before the payment, and the transaction occurred within the validity window and payment limit. The dispute is related to the delivery proof, which is marked as delivered but lacks signature, OTP, or carrier proof reference. The merchant's role in this transaction was to process the payment, not provide delivery proof. The customer initiated the conversation and agreed to the cost. The merchant has provided all required evidence as per the mandate details and merchant communication. The dispute should be resolved in favor of the merchant.\"}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1033,
+          "outputTokens": 184
+        },
+        "attempts": 3,
+        "latencyMs": 11217
+      },
+      "recordedAt": "2026-09-30T15:45:20.850Z"
+    },
+    {
+      "key": "2925be4cd8b026137a9d386423714ce3b5f1540389166545eda8183f54d7caf8",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"disputeSummary\": \"Customer initiated a payment for wireless earbuds on 2026-06-21T04:28:00.000Z. The payment was captured on 2026-06-21T17:56:00.000Z. The customer authorized the payment before the amount was charged. The merchant's platform did not hold any additional evidence. The dispute is invalid.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1073,
+          "outputTokens": 110
+        },
+        "attempts": 2,
+        "latencyMs": 14045
+      },
+      "recordedAt": "2026-09-30T15:46:08.394Z"
+    },
+    {
+      "key": "2d9b0963bf046d9ee64bfce9afd870ed0f35eaed5420eb9e034656dbb83e8bd8",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"disputeReasonCode\": \"upi 1061\",\n  \"evidence\": [\n    {\n      \"artifact\": \"refund_record\",\n      \"description\": \"Order status is 'refunded' and the amount is ₹3,007\",\n      \"value\": \"{\\\"orderStatus\\\":\\\"refunded\\\",\\\"amount\\\":\\\"₹3,007\\\",\\\"currency\\\":\\\"INR\\\",\\\"status\\\":\\\"refunded\\\",\\\"itemCount\\\":1,\\\"placedAt\\\":\\\"2026-06-21T06:08:00.000Z\\\"}\"\n    },\n    {\n      \"artifact\": \"refund_settlement_proof\",\n      \"description\": \"Utr: utr_1EJ0v4TqJM56PG, refund amount: ₹3,007, settled at: {}\",\n      \"value\": \"{\\\"utr\\\":\\\"utr_1EJ0v4TqJM56PG\\\",\\\"amount\\\":\\\"₹3,007\\\",\\\"settledAt\\\":{}}\"\n    },\n    {\n      \"artifact\": \"order_record\",\n      \"description\": \"Order amount: ₹3,007, currency: INR, status: refunded, item count: 1, placed at: 2026-06-21T06:08:00.000Z\",\n      \"value\": \"{\\\"amount\\\":\\\"₹3,007\\\",\\\"currency\\\":\\\"INR\\\",\\\"status\\\":\\\"refunded\\\",\\\"itemCount\\\":1,\\\"placedAt\\\":\\\"2026-06-21T06:08:00.000Z\\\",\\\"orderId\\\":\\\"order_1234567890\\\"}\"\n    }\n  ]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 891,
+          "outputTokens": 523
+        },
+        "attempts": 3,
+        "latencyMs": 10858
+      },
+      "recordedAt": "2026-09-30T15:41:53.344Z"
+    },
+    {
+      "key": "2e43617c7078d4903b69ff55be28e299060220f80deb8356c278cf8cb77d3b08",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The dispute is based on UPI code 1064, which outlines the required evidence. We have the delivery proof and shipment record, but not customer communication. The delivery proof shows the item was delivered on 2026-06-18T08:23:00.000Z. The shipment record confirms the item was shipped on 2026-06-15T09:02:00.000Z. The customer did not communicate with us during checkout, so we cannot provide customer communication. We do not have the merchant terms and conditions either, as they are merchant-level documents and not transaction-time captures. The dispute will be escalated to a human review for further assessment.\",\n  \"reason\": \"insufficientEvidence\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 849,
+          "outputTokens": 189
+        },
+        "attempts": 3,
+        "latencyMs": 15561
+      },
+      "recordedAt": "2026-09-30T15:40:46.031Z"
+    },
+    {
+      "key": "2e438cb533ec15a062b1b715a14cac2a50318f107dd0dbd578087b26b5c1a301",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer asks about reordering a dinner order, agrees to the cost and method of payment.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"nothing\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 705,
+          "outputTokens": 53
+        },
+        "attempts": 2,
+        "latencyMs": 12324
+      },
+      "recordedAt": "2026-09-30T15:47:00.402Z"
+    },
+    {
+      "key": "3b7b361a1d8bd63afca8ef892b5715405cc2672e7cd9c809d83071dd91d2740f",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer made a valid payment for a dinner order on 2026-06-14T01:31:00.000Z. The payment was captured within the mandate's validity window and the customer provided consent before the payment. The dispute is not supported by the evidence provided.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1072,
+          "outputTokens": 78
+        },
+        "attempts": 2,
+        "latencyMs": 8694
+      },
+      "recordedAt": "2026-09-30T15:47:09.099Z"
+    },
+    {
+      "key": "41e2b1d408daa919aebd658f16414ab6ff86b6c76f493f45ecc997bccca32b65",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer requests reorder of monthly grocery bundle, agent confirms and proceeds with payment.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"customer confirms order\", \"agent confirms payment\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 707,
+          "outputTokens": 57
+        },
+        "attempts": 2,
+        "latencyMs": 8103
+      },
+      "recordedAt": "2026-09-30T15:46:16.500Z"
+    },
+    {
+      "key": "4282224e1820c7c9275c67068755736e7144f73b0c4dae2960d0131863bed0ef",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested to reorder a monthly grocery bundle and confirmed the order and payment.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"nothing\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 707,
+          "outputTokens": 50
+        },
+        "attempts": 3,
+        "latencyMs": 11146
+      },
+      "recordedAt": "2026-09-30T15:46:36.398Z"
+    },
+    {
+      "key": "4440a78bd59bd1b9f8b764ed73e1d335d4726bee361bcd4d348cd6ea3196d742",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer is disputing a refund for a transaction that took place on 2026-06-05T03:54:00.000Z, amount ₹19,220, and the refund was settled on 2026-06-05T03:54:00.000Z. The refund was initiated by the merchant and recorded in the refund_record and refund_settlement_proof artifacts.\",\n  \"reason\": \"Evidence supports merchant action: refund initiated and settled\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 892,
+          "outputTokens": 136
+        },
+        "attempts": 2,
+        "latencyMs": 10266
+      },
+      "recordedAt": "2026-09-30T15:49:12.713Z"
+    },
+    {
+      "key": "4cc833517f85f3439c4d1009561aad45b1d18828375560601facdd0647cd516a",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer placed an order for a family dinner on 2026-06-20T10:45:00.000Z. The payment of INR 682 was authorized and captured within the mandated limits and timeframe. The merchant's communication with the customer clearly shows agreement to the cost. However, there is no delivery proof provided, such as a signature, OTP, or carrier proof reference. The dispute is related to the delivery proof, which is missing. The merchant is not at fault for the lack of delivery proof as it was not required during the authorization process. The merchant has met all other mandated criteria for a valid transaction.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1026,
+          "outputTokens": 155
+        },
+        "attempts": 2,
+        "latencyMs": 6758
+      },
+      "recordedAt": "2026-09-30T15:43:56.778Z"
+    },
+    {
+      "key": "4ce7d849263a2550409898df5e1ba136d96d481c0cb0b7f5a167fc05cdad2d00",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer inquires about reordering a prescription refill, agent confirms and proceeds with the payment.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"nothing\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 701,
+          "outputTokens": 55
+        },
+        "attempts": 2,
+        "latencyMs": 9592
+      },
+      "recordedAt": "2026-09-30T15:42:27.696Z"
+    },
+    {
+      "key": "568c5f77babe4792924d070b4a1439a2dba91ed75fb5def7f525a8c596d5dadc",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer initiated a payment for a deep cleaning service on 2026-06-11T14:03:00.000Z. The merchant provided the requested service on 2026-06-14T12:47:00.000Z. The customer agreed to the service cost of ₹1,958 (out of a total of ₹5,607.33 cap. The merchant followed all mandated processes, including obtaining consent before charging. The dispute is invalid.\"}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1086,
+          "outputTokens": 136
+        },
+        "attempts": 2,
+        "latencyMs": 5047
+      },
+      "recordedAt": "2026-09-30T15:51:07.879Z"
+    },
+    {
+      "key": "56f13cf6f4e414234d0d5e26cc8869706089259d0aaafb72b4d5d50e9027aa10",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The dispute is based on UPI code 1064, which outlines the required evidence. Here is the evidence we have:\\n\\n1. delivery_proof: A proof of delivery with reference 'pod_RipAlgrOFiH8d2', delivered on '2026-06-21T08:38:00.000Z'.\\n2. shipment_record: The shipment status is 'delivered', carrier is 'Bluedart', and tracking ID is 'trk_7QtWZYj43apCl2', shipped on '2026-06-20T06:00:00.000Z'.\\n\\nWe do not have the following evidence:\\n3. customer_communication: There is no captured conversation with the customer during the checkout process.\\n4. merchant_terms_conditions: A merchant-level terms and conditions document is not a transaction-time capture, and there is no dedicated slot for it in the payment envelope.\\n\\nBased on the evidence provided, the transaction was completed as per the customer's request and our records show the item was delivered on time. The customer has not disputed the delivery status or the shipping details provided. The absence of customer communication and merchant terms & conditions does not impact the transaction validity as per Razorpay's dispute resolution process.\",\n\n\"reason\": \"disputeResolution:invalidEvidence\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 850,
+          "outputTokens": 331
+        },
+        "attempts": 2,
+        "latencyMs": 3928
+      },
+      "recordedAt": "2026-09-30T15:40:49.994Z"
+    },
+    {
+      "key": "58f878f9b339071b865db08f652278ae30ef374d88dfab4ec2a6ce15c3a013ab",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer is disputing a delivery confirmation and shipment status, but the provided evidence meets the requirements for both. The item was delivered according to the delivery proof and the shipment was marked as delivered in the shipment record. There is no evidence of fraud or dishonesty on our part.\",\n  \"reason\": \"customer_fraud\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 851,
+          "outputTokens": 84
+        },
+        "attempts": 1,
+        "latencyMs": 197
+      },
+      "recordedAt": "2026-09-30T15:40:29.429Z"
+    },
+    {
+      "key": "59f4e92c6976071560a567404c9ff30125c943a842dad554568c09bc14d01752",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer placed an order for wireless earbuds on 2026-06-10T19:09:00.000Z, and the merchant fulfilled the order as per the customer's request.\",\n  \"reason\": \"The customer authorized the payment and the transaction falls within the mandate's limits and validity window.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1034,
+          "outputTokens": 88
+        },
+        "attempts": 2,
+        "latencyMs": 10808
+      },
+      "recordedAt": "2026-09-30T15:45:01.749Z"
+    },
+    {
+      "key": "5aa6db5a1732942ce9c261651eb03b37d8a67128f1412c11371f7aab8de2a873",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested to reorder a cotton kurta set and agreed to the cost of Rs 1,718 when asked if they wanted the item.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"customer confirms order\", \"using saved mandate\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 713,
+          "outputTokens": 73
+        },
+        "attempts": 2,
+        "latencyMs": 9916
+      },
+      "recordedAt": "2026-09-30T15:44:06.698Z"
+    },
+    {
+      "key": "5f99ff0946557da612390888fdd5294eec238c2f9586b571d934a655b6459798",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"disputeReasonCode\": \"upi 1061\",\n  \"evidence\": [\n    {\n      \"evidenceName\": \"refund_record\",\n      \"description\": \"Record of refund initiated\",\n      \"data\": {\n        \"orderStatus\": \"refunded\",\n        \"amount\": \"₹796\"\n      }\n    },\n    {\n      \"evidenceName\": \"refund_settlement_proof\",\n      \"description\": \"Refund settlement proof\",\n      \"data\": {\n        \"utr\": \"utr_EBirIXAjEx6jOr\",\n        \"amount\": \"₹796\",\n        \"settledAt\": {},\n        \"initiatedAt\": {}\n      }\n    },\n    {\n      \"evidenceName\": \"order_record\",\n      \"description\": \"Order details\",\n      \"data\": {\n        \"amount\": \"₹796\",\n        \"currency\": \"INR\",\n        \"status\": \"refunded\",\n        \"itemCount\": 1,\n        \"placedAt\": \"2026-06-06T21:33:00.000Z\"\n      }\n    }\n  ]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 881,
+          "outputTokens": 427
+        },
+        "attempts": 2,
+        "latencyMs": 16024
+      },
+      "recordedAt": "2026-09-30T15:41:29.396Z"
+    },
+    {
+      "key": "6248b3b21ffffa3a561d27427702f741c0d8cf772bb7c44f24ba3fd14a2a6db5",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"disputeSummary\": \"Customer made a valid payment for a flight booking using a saved UPI mandate. The customer initiated the payment process and provided consent before the payment was captured. The dispute is not supported by the evidence provided.\",\n  \"evidence\": [\n    {\n      \"evidenceName\": \"authorisation_evidence\",\n      \"evidenceValue\": {\n        \"agentId\": \"agt_wayfinder_0016\",\n        \"agentPlatform\": \"Wayfinder\",\n        \"consentAt\": \"2026-06-02T14:38:00.000Z\",\n        \"mandateId\": \"mandate_3456789\",\n        \"mandateName\": \"Razorpay Flight Booking Mandate\",\n        \"mandateStatus\": \"active\",\n        \"protocol\": \"uap\",\n        \"protocolVersion\": \"1.1\",\n        \"transactionAmount\": \"13894.68\",\n        \"transactionDate\": \"2026-06-08T21:10:00.000Z\",\n        \"transactionCurrency\": \"INR\",\n        \"transactionId\": \"txn_160608111010Z\",\n        \"transactionReference\": \"flight_booking_160608111010Z\"\n    }},\n    {\n      \"evidenceName\": \"invoice_160608111010Z\",\n      \"invoiceId\": \"invoice_160608111010Z\",\n      \"invoiceAmount\": \"13894.68\",\n      \"invoiceDate\": \"2026-06-08T21:10:00.000Z\",\n      \"invoiceCurrency\": \"INR\",\n      \"invoiceReference\": \"flight_booking_160608111010Z\",\n      \"invoiceStatus\": \"completed\"\n    },\n    {\n      \"evidenceName\": \"delivery_proof_160608111010Z\",\n      \"proofId\": \"delivery_proof_160608111010Z\",\n      \"proofDate\": \"2026-06-10T21:10:00.000Z\",\n      \"proofCurrency\": \"INR\",\n      \"proofReference\": \"flight_booking_160608111010Z\",\n      \"proofStatus\": \"completed\"\n    }]\n}\n",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1070,
+          "outputTokens": 800
+        },
+        "attempts": 2,
+        "latencyMs": 9371
+      },
+      "recordedAt": "2026-09-30T15:49:52.928Z"
+    },
+    {
+      "key": "64bfeace1f7e76dcf7e33b00c54220d03b685e32a838ef4cc283831b671d91d7",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer asks about reordering a dinner order, agrees to the cost.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"customer confirms order and payment method\", \"no explicit refusal\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 699,
+          "outputTokens": 59
+        },
+        "attempts": 3,
+        "latencyMs": 11329
+      },
+      "recordedAt": "2026-09-30T15:43:50.018Z"
+    },
+    {
+      "key": "669e3ca2228789418ffbda2621c9f3b02d99e7cab09b943b2565c6ce7fa9ebad",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"disputeReason\": \"upi 128\",\n  \"customerInquiry\": \"Customer asks about reordering a dinner order, agrees to the cost and method of payment.\",\n  \"mandateFacts\": {\n    \"amountCharged\": \"₹1,263\",\n    \"withinLimit\": true,\n    \"withinValidityWindow\": true,\n    \"consentRecordedBeforePayment\": true\n  },\n  \"evidence\": {\n    \"authorisationEvidence\": {\n      \"agentId\": \"agt_shop_0072\",\n      \"agentPlatform\": \"ShopAgent\",\n      \"consentAt\": \"2026-06-18T09:55:00.000Z\",\n      \"roles\": [\"customer\", \"agent\", \"customer\", \"agent\", \"system\"]\n    },\n    \"invoiceBreakdown\": {\n      \"lineItems\": [\n        {\n          \"name\": \"Family dinner order\",\n          \"quantity\": 2,\n          \"amount\": \"₹1,263\"\n        }\n      ],\n      \"total\": \"₹2,830.73\",\n      \"paid\": \"₹1,263\"\n    },\n    \"deliveryProof\": {\n      \"proofRef\": \"pod_oDunyfqTyH\",\n      \"deliveredAt\": \"2026-06-21T03:56:00.000Z\",\n      \"deliveredItem\": \"Family dinner order\"\n    }\n  }\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1075,
+          "outputTokens": 496
+        },
+        "attempts": 2,
+        "latencyMs": 8684
+      },
+      "recordedAt": "2026-09-30T15:48:08.039Z"
+    },
+    {
+      "key": "6bc558e46430da6705f2aae7a694243586b6b070392b08ba26457c7f2f4d4db8",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer inquires about reordering wireless earbuds, agent confirms order and payment details.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"customer confirms order and payment\", \"agent confirms using saved mandate\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 708,
+          "outputTokens": 65
+        },
+        "attempts": 2,
+        "latencyMs": 14528
+      },
+      "recordedAt": "2026-09-30T15:48:22.569Z"
+    },
+    {
+      "key": "6c5a57c15ea3f8702181ebed18b284954384f60262bfb0ffa42040e42ae8bc95",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The dispute is about a delivery issue, but the evidence provided only covers shipping details. The delivery proof shows the item was delivered on 2026-06-25T03:15:00.000Z, while the shipment record confirms the item was shipped on 2026-06-22T09:29:00.000Z. The customer has not disputed the transaction amount or any other aspect of the purchase. The dispute is about delivery, but the evidence does not address it. The merchant is not responsible for the customer's failure to provide the required communication with the customer during checkout. The merchant's terms and conditions are not transaction-specific and are not included in the capture envelope. This is a dispute about delivery, but the evidence provided only covers shipping. The customer has not disputed the transaction amount or any other aspect of the purchase.\",\n  \"reason\": \"incompleteEvidence\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 854,
+          "outputTokens": 217
+        },
+        "attempts": 1,
+        "latencyMs": 374
+      },
+      "recordedAt": "2026-09-30T15:40:30.215Z"
+    },
+    {
+      "key": "6ec585cfeebb5e45afbf87f568d17dcb10f589ccde71aee22599c201c27c4dc3",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer is disputing a payment made on 2026-06-09T21:12:00.000Z for a product delivered on 2026-06-09T21:12:00.000Z as confirmed by the 'delivery_proof' artifact. The 'shipment_record' confirms the product was shipped on 2026-06-07T14:53:00.000Z and delivered by Ekart. The customer has not provided any communication with them during checkout, so we have no evidence of any issue at the time of purchase. The merchant's terms and conditions are not transaction-specific documents and are not included in the capture envelope. The dispute is not supported by the evidence provided.\",\n  \"reason\": \"disputeNotSupportedByEvidence\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 852,
+          "outputTokens": 208
+        },
+        "attempts": 2,
+        "latencyMs": 17468
+      },
+      "recordedAt": "2026-09-30T15:41:07.464Z"
+    },
+    {
+      "key": "71a922e956d5f68794a08e5388e20138eda04fc16d2b933b8f486f8732edb35f",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer inquires about reordering wireless earbuds, agent confirms order and payment details.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"customer confirms order\", \"agent confirms payment details\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 708,
+          "outputTokens": 62
+        },
+        "attempts": 2,
+        "latencyMs": 11006
+      },
+      "recordedAt": "2026-09-30T15:44:29.490Z"
+    },
+    {
+      "key": "743607d1aeb9fc36fee11f84929eea50f4f02c16c532a669b306ed0399c523b1",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer initiated a payment for a cotton kurta set on 2026-06-14T23:42:00.000Z. The merchant's agent confirmed the order details and the customer agreed to the cost of Rs 2,681. The payment was captured on 2026-06-16T06:01:00.000Z. The transaction is within the payment limit and validity window. The merchant's agent recorded the customer's consent before the payment was initiated.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1086,
+          "outputTokens": 134
+        },
+        "attempts": 3,
+        "latencyMs": 14222
+      },
+      "recordedAt": "2026-09-30T15:47:31.142Z"
+    },
+    {
+      "key": "77b50592da296a2cfe9b33b0f59fdf1fe2256f75c5740b113848770040cbec20",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer asks about cotton kurta set reorder and agrees to an order of Rs 1,336.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"customer confirms order\", \"payment method: saved mandate\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 713,
+          "outputTokens": 68
+        },
+        "attempts": 2,
+        "latencyMs": 9603
+      },
+      "recordedAt": "2026-09-30T15:42:47.382Z"
+    },
+    {
+      "key": "7baf020a02d946b1565f95d3ad24e9ea979b4ce1df69ecdada70377bd0437ba3",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The dispute is related to a refund of ₹1,196, which is evident from the refund_record and order_record artifacts. The refund was initiated on 2026-06-18T14:53:00.000Z and settled on 2026-06-18T14:53:00.000Z. The refund was processed successfully as per refund_settlement_proof. The customer did not communicate with us during checkout, as indicated by the absence of customer_communication. The merchant refund policy is not available at the time of transaction, as it is not captured in the checkout process. The dispute is valid based on the provided evidence.\",\n  \"reason\": \"disputeResolved\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 892,
+          "outputTokens": 184
+        },
+        "attempts": 2,
+        "latencyMs": 13086
+      },
+      "recordedAt": "2026-09-30T15:41:42.484Z"
+    },
+    {
+      "key": "84b378e0b1afd81fae1c7fdca48d2935940276db48fade3147d8128b1b38f232",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The provided evidence supports the successful delivery of the purchased item. The delivery proof (`delivery_proof`) shows that the item was delivered on June 21st, 2026 at 7:44 PM. Additionally, the shipment record (`shipment_record`) confirms that the item was shipped on June 20th, 2026 at 2:41 AM and in good condition. There is no evidence of any issue or dispute raised by the customer during the checkout process (`customer_communication`). Furthermore, the merchant's terms and conditions (`merchant_terms_conditions`) and refund policy (`merchant_refund_policy`) are merchant-level documents and not transaction-time captures. As per the evidence, the dispute is unfounded and should be resolved in favor of the merchant.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 850,
+          "outputTokens": 199
+        },
+        "attempts": 2,
+        "latencyMs": 12102
+      },
+      "recordedAt": "2026-09-30T15:48:43.759Z"
+    },
+    {
+      "key": "8d57a6c19d0d25e2850dadecb90cc3bad4d77d02ad4253cc9f9335b4658d07ac",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer inquires about reordering monthly grocery bundle, agent confirms and proceeds with payment.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"nothing\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 707,
+          "outputTokens": 53
+        },
+        "attempts": 2,
+        "latencyMs": 11187
+      },
+      "recordedAt": "2026-09-30T15:43:08.871Z"
+    },
+    {
+      "key": "9666ddea85ec32ae022cd6ec69228ed383357510fcef1f6d335dd68d8baa8305",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer requests reorder of wireless earbuds and delegates decision to agent.\",\n  \"confirmation\": \"implied\",\n  \"ambiguityFlags\": [\"customer did not explicitly approve the specific purchase\", \"agent took more decision-making than customer delegated\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 688,
+          "outputTokens": 68
+        },
+        "attempts": 2,
+        "latencyMs": 13261
+      },
+      "recordedAt": "2026-09-30T15:44:50.940Z"
+    },
+    {
+      "key": "97682596675e53bbcb43bd9590e0c3ce1e9779a0292479113273f544f01a099e",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer asked to reorder a cotton kurta set and agreed to the cost of Rs 2,681 when asked.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"customer confirms order\", \"using saved mandate\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 713,
+          "outputTokens": 68
+        },
+        "attempts": 2,
+        "latencyMs": 7817
+      },
+      "recordedAt": "2026-09-30T15:47:16.918Z"
+    },
+    {
+      "key": "9d5cce18c33738980197cf1f3876c7804ddd18edaef11aaf0da938aa508071b3",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer initiated a payment for a Monthly Grocery Bundle on 2026-06-24T00:15:00.000Z. The payment was authorized, captured, and the transaction details match the provided evidence. The customer's consent was recorded before the payment, and the transaction amount is within the authorized limit and validity window. The merchant has provided delivery proof (proofRef: pod_SHOvoPsLAfWhMZ) showing the product was delivered on 2026-06-28T09:20:00.000Z. The customer has not disputed the payment amount or claimed the product was not delivered. The merchant has complied with all mandate rules and provided all required evidence. There is no evidence of fraud or unauthorized payment. The dispute should be closed in favor of the merchant.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1075,
+          "outputTokens": 198
+        },
+        "attempts": 2,
+        "latencyMs": 9093
+      },
+      "recordedAt": "2026-09-30T15:43:17.967Z"
+    },
+    {
+      "key": "a1162fdacc0a66507e6af5232e86ee45e9fad38733ecc5f9043da9ab19ff8c69",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer is disputing a payment made on 2026-06-21T15:36:00.000Z for a product that was delivered on 2026-06-21T15:36:00.000Z according to the delivery proof (proofRef: pod_LuXQ1OH2PujQvM). The shipment was also marked as delivered according to the shipment_record (status: delivered, carrier: Delhivery, trackingId: trk_1cbmpG9i9mHY3M, shippedAt: 2026-06-18T23:26:00.000Z).\\n\\nThe merchant_terms_conditions and merchant_refund_policy documents are merchant-level artifacts and not transaction-time captures. As per the evidence provided, the payment was for a delivered product, and there is no dispute regarding the product delivery. The payment dispute should be closed in favor of the merchant.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 852,
+          "outputTokens": 241
+        },
+        "attempts": 2,
+        "latencyMs": 5876
+      },
+      "recordedAt": "2026-09-30T15:41:13.347Z"
+    },
+    {
+      "key": "a15dcb431392699dae0ad941a3266ee4a17cc34e04c50843f5bf0379fffc70e4",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"disputeSummary\": \"The customer requested a reorder of a monthly grocery bundle, confirmed the order, and authorized the payment.\",\n  \"disputeEvidence\": [\n    {\n      \"evidence\": \"authorisation_evidence\",\n      \"description\": \"The customer authorized the payment through our UPI-based platform.\",\n      \"facts\": {\n        \"amountCharged\": \"2335\",\n        \"withinLimit\": true,\n        \"withinValidityWindow\": true,\n        \"consentRecordedBeforePayment\": true\n      }\n    },\n    {\n      \"evidence\": \"invoice_breakdown\",\n      \"description\": \"The customer purchased a monthly grocery bundle for 2335/INR.\",\n      \"facts\": {\n        \"amountCharged\": \"2335\",\n        \"currency\": \"INR\",\n        \"orderTotal\": \"5318.33\",\n        \"orderItems\": [\n          {\n            \"name\": \"Monthly grocery bundle\",\n            \"quantity\": 1,\n            \"price\": \"2335\"\n          }\n        ]\n      }\n    },\n    {\n      \"evidence\": \"delivery_proof\",\n      \"description\": \"The order was delivered as requested.\",\n      \"facts\": {\n        \"deliveredAt\": \"2026-06-19T06:46:00Z\",\n        \"proofRef\": \"pod_ZaxG1cxeNw5Ybk\",\n        \"deliveredItem\": \"Monthly grocery bundle\"\n      }\n    }\n  ]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1074,
+          "outputTokens": 566
+        },
+        "attempts": 2,
+        "latencyMs": 11676
+      },
+      "recordedAt": "2026-09-30T15:46:48.076Z"
+    },
+    {
+      "key": "a587da05507709c700f887c4dcff1f009a3aeffbe9ccc5ec97777dfaf89014c9",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer requested a flight booking for two on June 10, 2026, at 13:04:00. The agent confirmed the booking and processed the payment. The customer engaged with the agent four times during the process. The payment amount is within the authorized limit and validity window. The customer's consent was recorded before the payment was initiated. However, there is no delivery proof provided, such as a signature, OTP, or carrier proof reference. The dispute is related to the delivery proof, so please provide the missing evidence to resolve the dispute.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1036,
+          "outputTokens": 133
+        },
+        "attempts": 2,
+        "latencyMs": 11157
+      },
+      "recordedAt": "2026-09-30T15:50:45.897Z"
+    },
+    {
+      "key": "a6abdd0d32e614eedb39ce2a3126ba5e5d49c74541e6c2faf5804de8dd055785",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The dispute is related to a refund of ₹12,032 for an order placed on 2026-06-07T16:44:00.000Z and refunded on 2026-06-08T10:44:00.000Z. The refund was initiated by the merchant. The customer did not provide any communication with the merchant during checkout. The merchant's refund policy is not available in the transaction data. The dispute is about a refund, not a transaction dispute.\",\n  \"reason\": \"upi 1061\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 891,
+          "outputTokens": 152
+        },
+        "attempts": 3,
+        "latencyMs": 10760
+      },
+      "recordedAt": "2026-09-30T15:48:54.523Z"
+    },
+    {
+      "key": "a8d0e8e14f89a5e5ebdee622198ceb3eb6db7699be3deb9c8ad38fb76bb27bbe",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer requests flight booking and payment using saved UPI mandate.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"customer confirms purchase\", \"saved UPI mandate\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 761,
+          "outputTokens": 56
+        },
+        "attempts": 2,
+        "latencyMs": 8298
+      },
+      "recordedAt": "2026-09-30T15:49:43.556Z"
+    },
+    {
+      "key": "acd23c77f7ec59ed434d31e06e547edd26328cb0b2463e9a3772e89b54979d11",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer made a valid payment for a cotton kurta set on 2026-06-13 at 14:54:00.000Z. The merchant's invoice shows the transaction was authorized and captured on 2026-06-14 at 04:23:00.000Z. The customer agreed to the order and amount during the conversation, and the payment was within the merchant's payment cap and validity window. The merchant has provided delivery proof (proofRef: 'pod_9YvADKxoNqN2Nc') confirming the delivery of the ordered product. The dispute is invalid and should be closed.\"}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1088,
+          "outputTokens": 165
+        },
+        "attempts": 2,
+        "latencyMs": 9410
+      },
+      "recordedAt": "2026-09-30T15:43:38.684Z"
+    },
+    {
+      "key": "b0b5885e9a1e36af4a6d4ea79a7bb6ad62b8c98c42f705a8bab67e14136ff691",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The dispute is based on the provided evidence, which shows the transaction details and the refund. The customer is disputing a refund of INR 1,873 for a single item purchased on 2026-06-25T07:49:00.000Z. The refund was initiated on the same day and settled on the same day. The refund was processed as per the order status 'refunded'. The customer has no communication with the merchant during the checkout process. The merchant refund policy is not available in the transaction data, as it is not included in the capture envelope. The refund policy is typically attached during merchant onboarding but is not part of the transaction data at the time of capture. This dispute is resolved in favor of the merchant.\",\n  \"reason\": \"No evidence of fraud or unauthorized transaction\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 888,
+          "outputTokens": 192
+        },
+        "attempts": 3,
+        "latencyMs": 13917
+      },
+      "recordedAt": "2026-09-30T15:42:07.266Z"
+    },
+    {
+      "key": "b8a22ee5e6c5bccea97d836bf1526cd6a47a08af025ee7383032e0c7f31edbfd",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer requested an annual gym membership and authorized the payment to an agent. The payment was captured within the mandate validity window and consent was recorded before the payment. The merchant delivered the product as evidenced by the delivery proof. The dispute is invalid based on the evidence provided.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1080,
+          "outputTokens": 66
+        },
+        "attempts": 2,
+        "latencyMs": 13766
+      },
+      "recordedAt": "2026-09-30T15:49:35.256Z"
+    },
+    {
+      "key": "ba16f0dcf13a5ef83d20a805f82720521ce7658130441eeee9f3f14106a6c9af",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer is disputing a payment made on 2026-06-13T09:20:00.000Z for goods delivered on 2026-06-13T09:20:00.000Z according to the delivery proof (proofRef: 'pod_OteBUBsPUJ49M5'). The shipment was marked as 'delivered' in the shipment_record (status: 'delivered', carrier: 'Delhivery', trackingId: 'trk_w74ZW9wvwdSjCx', shippedAt: '2026-06-13T06:03:00.000Z'). The customer has not provided any communication with the merchant (customer_communication). The merchant's terms and conditions (merchant_terms_conditions) are not relevant to this dispute as they are a merchant-level artifact and not transaction-time relevant. The dispute is resolved in favor of the merchant.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 853,
+          "outputTokens": 246
+        },
+        "attempts": 1,
+        "latencyMs": 380
+      },
+      "recordedAt": "2026-09-30T15:40:28.977Z"
+    },
+    {
+      "key": "bc294ce2d596c456fdb0f1ad2b4f3ceae5a2adfe56eed46d24f7f8e72b74c4a7",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer placed an order for wireless earbuds on 2026-06-15 at 21:05:00, and the payment was captured on 2026-06-19 at 12:06:00. The customer initiated the payment process and provided consent before payment. The transaction amount (₹5,232) falls within the authorized limit (₹7,255) and the validity window. The merchant's system recorded the customer's consent before the payment was captured.\",\n  \"evidence\": {\n    \"authorisation_evidence\": {\n      \"agentId\": \"agt_pantry_0062\",\n      \"agentPlatform\": \"PantryBot\",\n      \"consentAt\": \"2026-06-15T21:05:00\",\n      \"mandateId\": \"mandate_123456789\",\n      \"mandateName\": \"John Doe\",\n      \"mandateStatus\": \"active\",\n      \"mandateType\": \"upi\"\n    },\n    \"invoice_evidence\": {\n      \"amount\": 5232,\n      \"currency\": \"INR\",\n      \"date\": \"2026-06-15T21:05:00\",\n      \"product\": \"wireless_earbuds\",\n      \"transactionId\": \"txn_123456789\",\n      \"transactionAmount\": 5232\n    },\n    \"delivery_proof\": {\n      \"proofRef\": \"pod_nIHqRCZWl09e1y\",\n      \"deliveredAt\": \"2026-06-19T12:06:00\",\n      \"deliveredItem\": \"wireless_earbuds\"\n    }\n  }\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1078,
+          "outputTokens": 532
+        },
+        "attempts": 2,
+        "latencyMs": 8181
+      },
+      "recordedAt": "2026-09-30T15:44:37.674Z"
+    },
+    {
+      "key": "bd47724f9eebf723c60184ad07d9cf613cea16ea943e7e3191ad35eca388c335",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"disputeSummary\": \"Customer requested a monthly grocery bundle reorder, agent confirmed and processed payment.\",\n  \"disputeEvidence\": [\n    {\n      \"type\": \"authorisation\",\n      \"description\": \"Authorisation details\",\n      \"data\": {\n        \"agentId\": \"agt_pantry_0065\",\n        \"agentPlatform\": \"PantryBot\",\n        \"consentAt\": \"2026-06-07T06:41:00.000Z\",\n        \"mandate\": {\n          \"amount\": 2705,\n          \"cap\": 5173.62,\n          \"validityStart\": \"2026-06-07T06:41:00.000Z\",\n          \"valid\": true\n        },\n        \"protocol\": \"upi-reserve-pay\",\n        \"protocolVersion\": \"1.0\",\n        \"roles\": [\"customer\", \"agent\", \"customer\", \"agent\", \"system\"]\n      }\n    },\n    {\n      \"type\": \"invoice\",\n      \"description\": \"Invoice breakdown\",\n      \"data\": {\n        \"lineItems\": [\n          {\n            \"name\": \"Monthly grocery bundle\",\n            \"quantity\": 2,\n            \"price\": 2705,\n            \"currency\": \"INR\",\n            \"timestamp\": \"2026-06-07T06:41:00.000Z\"\n          },\n          {\n            \"name\": \"Delivery confirmation\",\n            \"quantity\": null,\n            \"price\": null,\n            \"currency\": null,\n            \"timestamp\": null\n          }\n        ]\n      }}]}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1040,
+          "outputTokens": 800
+        },
+        "attempts": 2,
+        "latencyMs": 11545
+      },
+      "recordedAt": "2026-09-30T15:45:41.295Z"
+    },
+    {
+      "key": "bdab74412a9df57a6f4eb6050dc75baa40d3bdf1fea899518a9e03d406fac49a",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer initiated a payment for a cotton kurta set on 2026-06-11 at 10:18:00.000Z. The merchant confirms the order was fulfilled on 2026-06-13 at 21:13:00.000Z with a proof of delivery (POD) provided. The disputed amount is ₹1,718, which is within the authorized amount of ₹3,065.78. The merchant's system confirms the payment was authorized before the payment was processed. The customer agreed to the cost of Rs 1,718 when asked if they wanted the item.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1094,
+          "outputTokens": 168
+        },
+        "attempts": 2,
+        "latencyMs": 11780
+      },
+      "recordedAt": "2026-09-30T15:44:18.481Z"
+    },
+    {
+      "key": "c375c06ef69d4b5074526909e84b289a7de82592f24b8c03b92438d81fa50ed9",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer is disputing a delivery confirmation and shipment status, but the provided evidence meets the requirements for this dispute reason. The items were delivered according to the delivery proof and shipment record.\",\n  \"reason\": \"The evidence provided supports the delivery and shipment status of the purchased items.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 851,
+          "outputTokens": 72
+        },
+        "attempts": 1,
+        "latencyMs": 250
+      },
+      "recordedAt": "2026-09-30T15:40:29.230Z"
+    },
+    {
+      "key": "c5af3803031bfd5ad404477acb8d7af33221f718318ab5eec12c3d5a3c9521ca",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer is disputing a refund for a transaction that took place on 2026-06-05T16:53:00.000Z, with a refunded amount of INR 6,986. The refund was initiated and settled on the same day. The refund was processed according to our records. The dispute is not supported by the evidence provided.\",\n  \"reason\": \"The dispute is not supported by the evidence provided.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 888,
+          "outputTokens": 113
+        },
+        "attempts": 2,
+        "latencyMs": 7918
+      },
+      "recordedAt": "2026-09-30T15:49:02.442Z"
+    },
+    {
+      "key": "d3cb803e7abe0c85364760ab7be9306af7cd5c3dbbcdc38516c1bbd36206a7a4",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"disputeSummary\": \"Customer initiates UPI payment for prescription refill, agent confirms order and payment is captured.\",\n  \"disputeReason\": \"upi128\",\n  \"disputeEvidence\": [\n    {\n      \"evidence\": \"authorisation_evidence\",\n      \"description\": \"Payment authorisation details\",\n      \"details\": {\n        \"agentId\": \"agt_pantry_0056\",\n        \"agentPlatform\": \"PantryBot\",\n        \"consentAt\": \"2026-06-13T05:24:00.000Z\",\n        \"mandateId\": \"mandate_pantry_0056\",\n        \"mandateName\": \"Pantry Bot\",\n        \"mandateReference\": \"mandate_pantry_0056\",\n        \"mandateStatus\": \"active\",\n        \"mandateType\": \"mandate_upi\",\n        \"paymentId\": \"pay_pantry_0056_20260615T081200.000Z\",\n        \"paymentStatus\": \"captured\",\n        \"paymentType\": \"upi\",\n        \"transactionAmount\": 332,\n        \"transactionCurrency\": \"INR\",\n        \"transactionDate\": \"2026-06-15T08:12:00.000Z\",\n        \"transactionReference\": \"trans_pantry_0056_20260615T081200.000Z\",\n        \"transactionTotal\": 1797.27,\n        \"transactionType\": \"upi\"\n    }}\n  ],\n  \"disputeReason\": \"The transaction was authorized and captured as per mandate and was for the correct product.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1070,
+          "outputTokens": 563
+        },
+        "attempts": 3,
+        "latencyMs": 10073
+      },
+      "recordedAt": "2026-09-30T15:42:37.773Z"
+    },
+    {
+      "key": "d5ae70b65f86d30973d6b4a2f93e34790106de1637f75f8ee98febc2b46be589",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer is disputing a refund for an order placed on 2026-06-22T15:34:00.000Z, amount ₹1,010, and status 'refunded'. The refund was settled on 2026-06-22T15:34:00.000Z. The refund was processed via Razorpay's refund record and settlement proof.\",\n  \"reason\": \"The dispute is based on the customer's claim of unauthorized transaction. The evidence provided shows the transaction was initiated by the customer and settled by Razorpay, confirming the transaction was legitimate.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 889,
+          "outputTokens": 161
+        },
+        "attempts": 2,
+        "latencyMs": 10832
+      },
+      "recordedAt": "2026-09-30T15:42:18.102Z"
+    },
+    {
+      "key": "d5eaf4d5f4f9fbe269ce445494e3f5c1203ec1263031d2cf0489e609a4f669c4",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"The customer requested to reorder a cotton kurta set and agreed to the cost of Rs 1,947 when asked.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"customer confirms order\", \"using saved mandate\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 713,
+          "outputTokens": 68
+        },
+        "attempts": 3,
+        "latencyMs": 11299
+      },
+      "recordedAt": "2026-09-30T15:43:29.272Z"
+    },
+    {
+      "key": "d7151d8866596e05b358ab3735c30475f265d9188ca255d7a01bdfdda703cb3b",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer inquires about reordering monthly grocery bundle, agent confirms and proceeds with payment.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"customer confirms order\", \"agent confirms using saved mandate\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 707,
+          "outputTokens": 62
+        },
+        "attempts": 2,
+        "latencyMs": 8894
+      },
+      "recordedAt": "2026-09-30T15:45:29.747Z"
+    },
+    {
+      "key": "d79926c8f6394fd83aaecceaf4c169f994b9d76df497e6b64190bd3021d7e626",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer initiated a payment for a cotton kurta set on 2026-06-13 at 06:13:00. The payment was authorized by the customer and the merchant. The merchant confirms the order was delivered on 2026-06-15 at 17:29:00. The customer's payment was within the authorized amount of INR 2,139.69 and within the validity window. The merchant's consent for the payment was recorded before the payment was processed. The dispute is not supported by the evidence provided.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1072,
+          "outputTokens": 141
+        },
+        "attempts": 2,
+        "latencyMs": 11485
+      },
+      "recordedAt": "2026-09-30T15:47:48.362Z"
+    },
+    {
+      "key": "e1ede6691612d9a2b4ae8bfbbe53667f481bb719c0fee826b416e44b5555bb0f",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer requests a flight booking to Delhi at 2 PM, agent confirms and proceeds to book.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"Customer confirms the flight booking and payment method\", \"No explicit rejection of the purchase\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 698,
+          "outputTokens": 70
+        },
+        "attempts": 3,
+        "latencyMs": 14071
+      },
+      "recordedAt": "2026-09-30T15:50:34.739Z"
+    },
+    {
+      "key": "e9cc546b0bb014b67841ab858a43683c1fb508aa7dd1b41c1c9aab25979f9b96",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer asks about reordering a dinner order, agrees to the cost.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"Customer confirms the order and payment method\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 705,
+          "outputTokens": 55
+        },
+        "attempts": 2,
+        "latencyMs": 7878
+      },
+      "recordedAt": "2026-09-30T15:45:09.630Z"
+    },
+    {
+      "key": "ed61242821ab7849d83c49ac33851bb07ed3659759ffcc10632155d2942f3e91",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer initiated a payment for a monthly grocery bundle on 2026-06-16T01:42:00.000Z. The payment was processed successfully and the amount charged matches the order total of INR 2,410. The customer's consent was recorded before the payment and the payment amount is within the authorized limit and validity window. The delivery proof shows the product was delivered on 2026-06-17T20:20:00.000Z. There is no evidence of fraud or unauthorized transaction. The merchant has fulfilled all requirements. The dispute should be closed in favor of the merchant.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1072,
+          "outputTokens": 157
+        },
+        "attempts": 2,
+        "latencyMs": 8748
+      },
+      "recordedAt": "2026-09-30T15:46:25.249Z"
+    },
+    {
+      "key": "f1fe49fa010979c8bf9da94f1dd87691edd6934576d39f7f4392fdea32384f2a",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer placed an order for a cotton kurta set on 2026-06-13T10:53:00.000Z. The payment was captured on 2026-06-14T20:01:00.000Z. The customer's consent was recorded before the payment, and the transaction amount (₹1,336) falls within the authorized amount (₹3,148.92 cap) and validity window. The delivery proof shows the product was delivered on 2026-06-14T20:01:00.000Z. The merchant's mandate was valid at the time of payment. There is no evidence of fraud or unauthorized transaction. The dispute is invalid and should be closed.\"}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1082,
+          "outputTokens": 195
+        },
+        "attempts": 2,
+        "latencyMs": 10293
+      },
+      "recordedAt": "2026-09-30T15:42:57.677Z"
+    },
+    {
+      "key": "f83abb093988abb1b655a78b57893c82d5839cce9a39bf72a96d2f45d4d91b32",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "trace-summary",
+      "promptVersion": 1,
+      "response": {
+        "text": "{\n  \"summary\": \"Customer requests deep cleaning visit cost information, confirms purchase of Rs 1,958, and requests to schedule the service.\",\n  \"confirmation\": \"explicit\",\n  \"ambiguityFlags\": [\"bilkul\", \"service schedule kar dein\"]\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 757,
+          "outputTokens": 69
+        },
+        "attempts": 3,
+        "latencyMs": 15721
+      },
+      "recordedAt": "2026-09-30T15:50:08.651Z"
+    },
+    {
+      "key": "fd9698d4b377a8e230b8e9005f97be3592792e840a91f5bd74de847522089c76",
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "promptId": "letter-draft",
+      "promptVersion": 2,
+      "response": {
+        "text": "{\n  \"letter\": \"The customer placed an order for wireless earbuds on 2026-06-18 at 11:52:00. The payment was authorized and captured on 2026-06-20 at 09:44:00. The customer's payment was within the authorized amount and timeframe. The merchant confirms the order and payment details in the conversation logs. The merchant has provided all required evidence, including delivery proof. The dispute is invalid and should be closed.\"\n}",
+        "providerRefused": false,
+        "usage": {
+          "inputTokens": 1079,
+          "outputTokens": 121
+        },
+        "attempts": 2,
+        "latencyMs": 9056
+      },
+      "recordedAt": "2026-09-30T15:48:31.628Z"
+    }
+  ]
+}

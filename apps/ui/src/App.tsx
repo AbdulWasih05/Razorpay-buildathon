@@ -3,9 +3,13 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   approve,
   daysUntil,
+  demoLogin,
   fetchDispute,
   fetchHealth,
+  fetchMe,
   fetchQueue,
+  login,
+  logout,
   releaseDispute,
   resetDemo,
   type DisputeDetail,
@@ -39,7 +43,8 @@ import { Mark, readableDate } from './ui.js';
  *     one, which is the cheapest way to keep that true.
  */
 
-const REVIEWERS = ['human:wasih', 'human:usman'];
+/** The audit trail's spelling of a reviewer, so the screen and the log agree. */
+const actorFor = (handle: string): string => `human:${handle}`;
 
 /**
  * The console.
@@ -62,7 +67,10 @@ export function App({
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<DisputeDetail | null>(null);
-  const [reviewer, setReviewer] = useState(REVIEWERS[0] as string);
+  // Null until the server says who is signed in. There is no default reviewer:
+  // the identity behind an approval comes from a session, never from a picker.
+  const [reviewer, setReviewer] = useState<string | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
@@ -91,6 +99,44 @@ export function App({
       .then(setHealth)
       .catch(() => setHealth(null));
   }, []);
+
+  useEffect(() => {
+    // Who the server thinks we are. A 401 is the ordinary signed-out answer,
+    // so it sets null rather than raising an error into the page.
+    fetchMe()
+      .then((me) => setReviewer(me ? actorFor(me.handle) : null))
+      .catch(() => setReviewer(null));
+  }, []);
+
+  async function withAuth(action: () => Promise<void>): Promise<void> {
+    setAuthBusy(true);
+    try {
+      await action();
+      setError(null);
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  const onSignIn = (handle: string, password: string): void =>
+    void withAuth(async () => {
+      const me = await login(handle, password);
+      setReviewer(actorFor(me.handle));
+    });
+
+  const onDemoSignIn = (): void =>
+    void withAuth(async () => {
+      const me = await demoLogin();
+      setReviewer(actorFor(me.handle));
+    });
+
+  const onSignOut = (): void =>
+    void withAuth(async () => {
+      await logout();
+      setReviewer(null);
+    });
 
   useEffect(() => {
     if (!selected) {
@@ -123,7 +169,7 @@ export function App({
     setBusy(true);
     setNotice(null);
     try {
-      const result = await approve(detail.externalId, reviewer);
+      const result = await approve(detail.externalId);
       setError(null);
       await reload();
       setDetail(await fetchDispute(detail.externalId));
@@ -196,7 +242,11 @@ export function App({
         view={view}
         reviewer={reviewer}
         onView={onView}
-        onReviewer={setReviewer}
+        authBusy={authBusy}
+        demoMode={health?.demoMode ?? false}
+        onSignIn={onSignIn}
+        onDemoSignIn={onDemoSignIn}
+        onSignOut={onSignOut}
         assemblyMode={health?.assemblyMode ?? null}
         simulatedNow={health?.simulatedNow ?? null}
       />
@@ -260,24 +310,37 @@ export function App({
 }
 
 /**
- * The top bar: what this is, which page, and who is reviewing.
+ * The top bar: what this is, which page, and who is signed in.
  *
- * The reviewer selector lives here rather than beside the approve button on
- * purpose. Choosing who you are is a session-level act; doing it inches from the
- * control that submits invites choosing it in the same motion as approving.
+ * Signing in lives here rather than beside the approve button on purpose.
+ * Establishing who you are is a session-level act; doing it inches from the
+ * control that submits invites doing both in one motion.
+ *
+ * This used to be a dropdown of reviewer names, which meant the identity on an
+ * approval was chosen by the person approving. It is now whoever the server's
+ * session says it is, and the bar can only show that or offer a way to become
+ * it.
  */
 export function ViewBar({
   view,
   reviewer,
   onView,
-  onReviewer,
+  authBusy,
+  demoMode,
+  onSignIn,
+  onDemoSignIn,
+  onSignOut,
   assemblyMode,
   simulatedNow,
 }: {
   view: 'queue' | 'metrics';
-  reviewer: string;
+  reviewer: string | null;
   onView: (next: 'queue' | 'metrics') => void;
-  onReviewer: (next: string) => void;
+  authBusy: boolean;
+  demoMode: boolean;
+  onSignIn: (handle: string, password: string) => void;
+  onDemoSignIn: () => void;
+  onSignOut: () => void;
   assemblyMode: 'live' | 'replay' | null;
   simulatedNow: string | null;
 }) {
@@ -323,17 +386,95 @@ export function ViewBar({
         </span>
       ) : null}
 
-      <label>
-        reviewer
-        <select value={reviewer} onChange={(event) => onReviewer(event.target.value)}>
-          {REVIEWERS.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <SignIn
+        reviewer={reviewer}
+        busy={authBusy}
+        demoMode={demoMode}
+        onSignIn={onSignIn}
+        onDemoSignIn={onDemoSignIn}
+        onSignOut={onSignOut}
+      />
     </div>
+  );
+}
+
+/**
+ * Sign in, or say who is signed in.
+ *
+ * Deliberately plain: a handle, a password, and on a demo instance a button
+ * that signs in as the seeded demo reviewer. The demo path exists so the public
+ * demo can exercise the approve door without publishing a password that would
+ * also work for a real handle.
+ */
+function SignIn({
+  reviewer,
+  busy,
+  demoMode,
+  onSignIn,
+  onDemoSignIn,
+  onSignOut,
+}: {
+  reviewer: string | null;
+  busy: boolean;
+  demoMode: boolean;
+  onSignIn: (handle: string, password: string) => void;
+  onDemoSignIn: () => void;
+  onSignOut: () => void;
+}) {
+  const [handle, setHandle] = useState('');
+  const [password, setPassword] = useState('');
+
+  if (reviewer) {
+    return (
+      <span className="signin">
+        <span className="label" title="The identity every approval is recorded under.">
+          {reviewer}
+        </span>
+        <button className="chip" disabled={busy} onClick={onSignOut}>
+          sign out
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <form
+      className="signin"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSignIn(handle, password);
+      }}
+    >
+      <input
+        aria-label="reviewer handle"
+        placeholder="reviewer"
+        value={handle}
+        autoComplete="username"
+        onChange={(event) => setHandle(event.target.value)}
+      />
+      <input
+        aria-label="password"
+        placeholder="password"
+        type="password"
+        value={password}
+        autoComplete="current-password"
+        onChange={(event) => setPassword(event.target.value)}
+      />
+      <button className="chip" type="submit" disabled={busy || !handle || !password}>
+        sign in
+      </button>
+      {demoMode ? (
+        <button
+          className="chip"
+          type="button"
+          disabled={busy}
+          onClick={onDemoSignIn}
+          title="Signs in as the seeded demo reviewer. Demo instances only."
+        >
+          demo reviewer
+        </button>
+      ) : null}
+    </form>
   );
 }
 

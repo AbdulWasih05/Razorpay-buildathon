@@ -20,6 +20,11 @@ export interface ModelRequest {
   temperature: number;
 }
 
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export interface ModelResponse {
   text: string;
   /** Transport attempts made. 1 unless a rate limit was waited out. */
@@ -30,6 +35,14 @@ export interface ModelResponse {
    * `refusal` stop reason.
    */
   providerRefused: boolean;
+  /** Tokens the provider reported for this call. Absent when it reported none. */
+  usage?: TokenUsage;
+  /**
+   * Wall-clock milliseconds for the call, rate-limit waits included. Measured
+   * once, when the call is made live, and stored with the recording; replay
+   * reads it back and never measures anything.
+   */
+  latencyMs?: number;
 }
 
 export interface ModelProvider {
@@ -48,6 +61,17 @@ export class ProviderError extends Error {
     super(message);
     this.name = 'ProviderError';
   }
+}
+
+/**
+ * Token counts, when the provider reports both. Each provider names them
+ * differently; this is the one place they become the same shape. Missing counts
+ * stay missing rather than becoming zero, because zero would be a claim.
+ */
+function tokenUsage(input: number | undefined, output: number | undefined): { usage?: TokenUsage } {
+  return typeof input === 'number' && typeof output === 'number'
+    ? { usage: { inputTokens: input, outputTokens: output } }
+    : {};
 }
 
 /**
@@ -149,6 +173,7 @@ export class AnthropicProvider implements ModelProvider {
     const body = (await response.json()) as {
       stop_reason?: string;
       content?: { type: string; text?: string }[];
+      usage?: { input_tokens?: number; output_tokens?: number };
     };
 
     const text = (body.content ?? [])
@@ -156,7 +181,11 @@ export class AnthropicProvider implements ModelProvider {
       .map((block) => block.text ?? '')
       .join('');
 
-    return { text, providerRefused: body.stop_reason === 'refusal' };
+    return {
+      text,
+      providerRefused: body.stop_reason === 'refusal',
+      ...tokenUsage(body.usage?.input_tokens, body.usage?.output_tokens),
+    };
   }
 }
 
@@ -208,6 +237,7 @@ export class OpenAiCompatibleProvider implements ModelProvider {
 
     const body = (await response.json()) as {
       choices?: { message?: { content?: string; refusal?: string | null }; finish_reason?: string }[];
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
     };
     const choice = body.choices?.[0];
 
@@ -218,6 +248,7 @@ export class OpenAiCompatibleProvider implements ModelProvider {
     return {
       text: choice?.message?.content ?? '',
       providerRefused: Boolean(choice?.message?.refusal),
+      ...tokenUsage(body.usage?.prompt_tokens, body.usage?.completion_tokens),
     };
   }
 }

@@ -6,6 +6,7 @@ import type {
   Finding,
   GateRule,
   MandateChecks,
+  ModelCall,
 } from './api.js';
 import { BlockHead, formatRupees, readableDate } from './ui.js';
 
@@ -18,10 +19,10 @@ import { BlockHead, formatRupees, readableDate } from './ui.js';
  * the audit trail recorded. Reading top to bottom is reading the decision being
  * made.
  *
- * Every panel is marked with the side of the LLM boundary it came from. Five of
- * the six are `deterministic`, and that ratio is the point: the model writes one
- * paragraph, and code does the collecting, the arithmetic, the gating, the
- * mapping and the recording.
+ * Every panel is marked with the side of the LLM boundary it came from. Only two
+ * are `llm` -- the drafted letter, and the record of the model calls behind it
+ * -- and that ratio is the point: the model writes one paragraph, and code does
+ * the collecting, the arithmetic, the gating, the mapping and the recording.
  */
 export function Detail({ detail, now }: { detail: DisputeDetail; now: string | null }) {
   const collected = detail.collected;
@@ -32,6 +33,9 @@ export function Detail({ detail, now }: { detail: DisputeDetail; now: string | n
       {collected?.rail === 'agentic' ? <Mandate mandate={collected.mandate} /> : null}
       <RuleTrace detail={detail} />
       {detail.draft ? <Letter summary={detail.draft.summary} /> : null}
+      {detail.modelCalls && detail.modelCalls.length > 0 ? (
+        <Calls calls={detail.modelCalls} />
+      ) : null}
       {detail.draft ? <Mapping assignments={detail.draft.assignments} /> : null}
       <Trail detail={detail} now={now} />
       {detail.submittedRequest ? <Payload request={detail.submittedRequest} /> : null}
@@ -312,6 +316,68 @@ function Letter({ summary }: { summary: string }) {
         <span className="count">{used}/1000 chars</span>
         <span>Razorpay caps `summary` at 1000 characters.</span>
       </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------- model calls -- */
+
+/**
+ * The model calls behind this draft or abstention, and what each one cost.
+ *
+ * Read from the audit trail, where the pipeline recorded them. On a replayed
+ * instance every figure comes from the recording, so a figure the recording
+ * predates says "not recorded" rather than inventing a zero.
+ */
+function notRecorded() {
+  return <span className="muted">not recorded</span>;
+}
+
+function Calls({ calls }: { calls: ModelCall[] }) {
+  return (
+    <section className="block">
+      <BlockHead
+        label="Model calls"
+        provenance="llm"
+        count={`${calls.length} call${calls.length === 1 ? '' : 's'}`}
+      />
+      <p className="hint">
+        Each call the pipeline made for this dispute, with the tokens, latency and attempts recorded
+        when it ran. Replayed calls report those recorded figures; nothing is re-measured.
+      </p>
+      <table className="grid">
+        <thead>
+          <tr>
+            <th>prompt</th>
+            <th>model</th>
+            <th>source</th>
+            <th>tokens in / out</th>
+            <th>latency</th>
+            <th>attempts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {calls.map((call, index) => (
+            <tr key={`${call.promptId}-${index}`}>
+              <td className="artifact">
+                {call.promptId} v{call.promptVersion}
+              </td>
+              <td className="artifact">
+                {call.model} via {call.provider}
+              </td>
+              <td>
+                {call.source}
+                {call.transport === 'completed' ? '' : ` · ${call.transport}`}
+              </td>
+              <td>
+                {call.usage ? `${call.usage.inputTokens} / ${call.usage.outputTokens}` : notRecorded()}
+              </td>
+              <td>{call.latencyMs === null ? notRecorded() : `${call.latencyMs} ms`}</td>
+              <td>{call.attempts === null ? notRecorded() : call.attempts}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </section>
   );
 }

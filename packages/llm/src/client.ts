@@ -3,7 +3,13 @@ import { fileURLToPath } from 'node:url';
 import type { z } from 'zod';
 
 import { ReplayMissError, ResponseCache, requestKey } from './cache.js';
-import { ProviderError, type ModelProvider, type ModelRequest } from './provider.js';
+import {
+  ProviderError,
+  type ModelProvider,
+  type ModelRequest,
+  type ModelResponse,
+  type TokenUsage,
+} from './provider.js';
 import {
   insufficientEvidenceSchema,
   letterDraftSchema,
@@ -38,6 +44,37 @@ export type AssemblyFailureKind = (typeof ASSEMBLY_FAILURE_KINDS)[number];
 
 /** The one abstention reason every assembly failure produces. Verbatim. */
 export const ASSEMBLY_ABSTAIN_REASON = 'assembly failure, manual review required';
+
+/**
+ * What one model call cost and how it went, for the audit trail and the eval.
+ *
+ * On replay every figure is read back from the recording, so a replayed run
+ * reports the same numbers every time and measures nothing. A figure the
+ * provider did not report, or that a recording predates, is `null` -- never
+ * zero, because zero would be a claim.
+ */
+export interface ModelCallTelemetry {
+  promptId: string;
+  promptVersion: number;
+  provider: string;
+  model: string;
+  source: 'live' | 'replay';
+  /** Whether the provider answered at all. Refusal and schema failures are judged after this. */
+  transport: 'completed' | 'error' | 'timeout';
+  attempts: number | null;
+  usage: TokenUsage | null;
+  latencyMs: number | null;
+}
+
+function telemetryOf(
+  response: ModelResponse,
+): Pick<ModelCallTelemetry, 'attempts' | 'usage' | 'latencyMs'> {
+  return {
+    attempts: response.attempts ?? null,
+    usage: response.usage ?? null,
+    latencyMs: response.latencyMs ?? null,
+  };
+}
 
 export class AssemblyFailure extends Error {
   constructor(
@@ -103,8 +140,8 @@ export class AssemblyClient {
    * text, so a second call to re-read it for flags would double the cost, the
    * latency and the number of replay keys to buy nothing. See DECISIONS.md.
    */
-  async summariseTrace(user: string): Promise<TraceSummary> {
-    return this.call(PROMPTS.traceSummary, user, traceSummarySchema, 900);
+  async summariseTrace(user: string, calls?: ModelCallTelemetry[]): Promise<TraceSummary> {
+    return this.call(PROMPTS.traceSummary, user, traceSummarySchema, 900, calls);
   }
 
   /**
@@ -114,8 +151,18 @@ export class AssemblyClient {
    * on the merits, not a failure -- see FAILURES.md F-011 -- so it is returned
    * as a value rather than thrown as an `AssemblyFailure`.
    */
-  async draftLetter(user: string): Promise<LetterDraft | InsufficientEvidence> {
-    return this.call(PROMPTS.letterDraft, user, letterDraftSchema, 800, insufficientEvidenceSchema);
+  async draftLetter(
+    user: string,
+    calls?: ModelCallTelemetry[],
+  ): Promise<LetterDraft | InsufficientEvidence> {
+    return this.call(
+      PROMPTS.letterDraft,
+      user,
+      letterDraftSchema,
+      800,
+      calls,
+      insufficientEvidenceSchema,
+    );
   }
 
   private async call<T, A = never>(
@@ -123,6 +170,12 @@ export class AssemblyClient {
     user: string,
     schema: z.ZodType<T>,
     maxOutputTokens: number,
+    /**
+     * Where this call's telemetry is appended. Passed in by the caller rather
+     * than kept on the client, because one client serves many disputes and
+     * must not carry any of them between calls.
+     */
+    calls: ModelCallTelemetry[] | undefined,
     /** An additional accepted shape, returned as a value rather than thrown. */
     alternate?: z.ZodType<A>,
   ): Promise<T | A> {
@@ -141,19 +194,38 @@ export class AssemblyClient {
 
     const key = requestKey(this.provider.name, this.provider.model, request);
     const recorded = this.cache.lookup(key);
+    const identity = {
+      promptId: prompt.id,
+      promptVersion: prompt.version,
+      provider: this.provider.name,
+      model: this.provider.model,
+    };
 
     let text: string;
     let providerRefused: boolean;
 
     if (recorded) {
       ({ text, providerRefused } = recorded.response);
+      // The figures measured when this was recorded, not a fresh measurement:
+      // a replayed run has to report the same numbers every time.
+      calls?.push({
+        ...identity,
+        source: 'replay',
+        transport: 'completed',
+        ...telemetryOf(recorded.response),
+      });
     } else if (this.mode === 'replay') {
       throw new ReplayMissError(key, prompt.id);
     } else {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      const started = performance.now();
+      const elapsed = () => Math.round(performance.now() - started);
       try {
-        const response = await this.provider.complete(request, controller.signal);
+        const completed = await this.provider.complete(request, controller.signal);
+        // Latency is measured here, once, and stored with the recording, so
+        // replay can report it later without measuring anything.
+        const response = { ...completed, latencyMs: elapsed() };
         ({ text, providerRefused } = response);
         this.cache.record({
           key,
@@ -164,13 +236,23 @@ export class AssemblyClient {
           response,
           recordedAt: new Date().toISOString(),
         });
+        calls?.push({ ...identity, source: 'live', transport: 'completed', ...telemetryOf(response) });
       } catch (error) {
+        const failed = {
+          ...identity,
+          source: 'live' as const,
+          attempts: null,
+          usage: null,
+          latencyMs: elapsed(),
+        };
         // PATH 2: timeout. Checked before the general error path, because an
         // abort surfaces as a generic error and would otherwise be miscounted.
         if (controller.signal.aborted) {
+          calls?.push({ ...failed, transport: 'timeout' });
           throw new AssemblyFailure('timeout', `exceeded ${this.timeoutMs}ms`, prompt.id);
         }
         // PATH 1: error.
+        calls?.push({ ...failed, transport: 'error' });
         const detail =
           error instanceof ProviderError ? error.message : (error as Error).message;
         throw new AssemblyFailure('error', detail, prompt.id);

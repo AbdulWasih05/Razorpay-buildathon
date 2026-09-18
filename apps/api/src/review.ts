@@ -13,7 +13,7 @@ import {
   type ScenarioClass,
 } from '@praman/core';
 import { ApprovalToken, type DisputeAdapter } from '@praman/adapter';
-import { processDispute, type AssemblyClient } from '@praman/llm';
+import { processDispute, type AssemblyClient, type ModelCallTelemetry } from '@praman/llm';
 
 /**
  * The review pipeline, persisted (TASKS.md P3.2, P3.3).
@@ -65,7 +65,13 @@ function trailFromRows(
 export async function runPipeline(
   deps: PipelineDeps,
   disputeExternalId: string,
-): Promise<{ disputeId: string; state: DisputeState }> {
+): Promise<{
+  disputeId: string;
+  state: DisputeState;
+  gateDecision: 'contest' | 'abstain';
+  abstentionClass: string | null;
+  modelCalls: number;
+}> {
   const dispute = await deps.prisma.dispute.findUnique({
     where: { externalId: disputeExternalId },
     include: {
@@ -170,7 +176,13 @@ export async function runPipeline(
     },
   });
 
-  return { disputeId: dispute.razorpayDisputeId, state: processed.state };
+  return {
+    disputeId: dispute.razorpayDisputeId,
+    state: processed.state,
+    gateDecision: processed.gate.decision,
+    abstentionClass: processed.assembled.abstentionClass ?? null,
+    modelCalls: processed.assembled.modelCalls.length,
+  };
 }
 
 /**
@@ -237,6 +249,34 @@ export async function approveAndSubmit(
   // call, means a reserved actor causes zero side effects rather than "zero
   // side effects except the ones that already happened."
   const approval = ApprovalToken.approve(draft.disputeId, actor, approvedAt);
+
+  // The claim, and why it is here rather than in the state check above.
+  //
+  // That check is a READ. Two approvals racing -- a double click, a retried
+  // request, two reviewers on the same case -- both read `drafted`, both pass,
+  // and both go on to upload documents and submit. Nothing between the read
+  // and the write at the end of this function stops the second one.
+  //
+  // This is a conditional WRITE: `state: 'drafted'` sits in the WHERE clause,
+  // so Postgres serialises the two callers and exactly one sees `count: 1`.
+  // The loser is refused here, before it can reach the adapter.
+  //
+  // It claims straight to `approved` rather than to a holding state because
+  // that is what has just happened: a named human approved this draft. If the
+  // submission then fails, the dispute stays `approved` with the trail saying
+  // so -- an honest record, and a legal state to retry from.
+  //
+  // It sits after the identity check and the token mint on purpose (F-013): a
+  // caller who cannot produce a real reviewer identity still causes no writes.
+  const claimed = await deps.prisma.dispute.updateMany({
+    where: { externalId: disputeExternalId, state: 'drafted' },
+    data: { state: 'approved', approvedBy: actor, approvedAt },
+  });
+  if (claimed.count !== 1) {
+    throw new Error(
+      `dispute ${disputeExternalId} was approved by another request first: nothing was submitted here`,
+    );
+  }
 
   // Throws for any non-human actor, and for any state that cannot reach
   // `approved`. Redundant with the check above by design (D-029: this table's
@@ -372,7 +412,30 @@ export async function readDispute(prisma: PrismaClient, externalId: string) {
       reason: row.reason,
       occurredAt: row.occurredAt.toISOString(),
     })),
+    modelCalls: currentModelCalls(dispute.auditLogs),
   };
+}
+
+/**
+ * The model calls behind the dispute's current state.
+ *
+ * Read from the audit row that recorded them, and only within the latest
+ * pipeline cycle. A re-run starts a new cycle at `received`, and calls from an
+ * earlier cycle explain a decision that no longer stands. Telemetry only:
+ * nothing here feeds a decision.
+ */
+function currentModelCalls(
+  rows: readonly { toState: string; detail: Prisma.JsonValue | null }[],
+): ModelCallTelemetry[] {
+  const cycleStart = rows.map((row) => row.toState).lastIndexOf('received');
+  for (const row of rows.slice(Math.max(cycleStart, 0))) {
+    const detail = row.detail;
+    if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+      const calls = detail['modelCalls'];
+      if (Array.isArray(calls)) return calls as unknown as ModelCallTelemetry[];
+    }
+  }
+  return [];
 }
 
 /**

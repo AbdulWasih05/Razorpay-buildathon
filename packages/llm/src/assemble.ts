@@ -8,7 +8,12 @@ import {
   type GateResult,
 } from '@praman/core';
 
-import { ASSEMBLY_ABSTAIN_REASON, AssemblyFailure, type AssemblyClient } from './client.js';
+import {
+  ASSEMBLY_ABSTAIN_REASON,
+  AssemblyFailure,
+  type AssemblyClient,
+  type ModelCallTelemetry,
+} from './client.js';
 import type { ConfirmationSignal } from './schemas.js';
 
 /**
@@ -77,6 +82,11 @@ export interface AssembledDispute {
   ambiguityFlags: string[];
   draft?: ContestDraft;
   audit: AuditEntry[];
+  /**
+   * Every model call made for this dispute, in order, with what it cost. Empty
+   * when the gate declined, because then no model was called at all (D-025).
+   */
+  modelCalls: ModelCallTelemetry[];
 }
 
 /**
@@ -161,6 +171,7 @@ function abstain(
   audit: AuditEntry[],
   ambiguityFlags: string[],
   failure: AssemblyFailure,
+  modelCalls: ModelCallTelemetry[],
 ): AssembledDispute {
   audit.push({
     step: 'assembly_failed',
@@ -177,6 +188,7 @@ function abstain(
     gate,
     ambiguityFlags,
     audit,
+    modelCalls,
   };
 }
 
@@ -217,15 +229,17 @@ export async function assembleDispute(options: AssembleOptions): Promise<Assembl
       gate,
       ambiguityFlags: [],
       audit,
+      modelCalls: [],
     };
   }
+  const modelCalls: ModelCallTelemetry[] = [];
   let ambiguityFlags: string[] = [];
   let traceSummary: string | undefined;
   let confirmation: ConfirmationSignal | undefined;
 
   if (trace && trace.turns.length > 0) {
     try {
-      const summarised = await client.summariseTrace(buildSummaryPrompt(collected, trace));
+      const summarised = await client.summariseTrace(buildSummaryPrompt(collected, trace), modelCalls);
       traceSummary = summarised.summary;
       confirmation = summarised.confirmation;
       ambiguityFlags = summarised.ambiguityFlags;
@@ -235,7 +249,7 @@ export async function assembleDispute(options: AssembleOptions): Promise<Assembl
       });
     } catch (error) {
       if (error instanceof AssemblyFailure) {
-        return abstain(collected, gate, audit, ambiguityFlags, error);
+        return abstain(collected, gate, audit, ambiguityFlags, error, modelCalls);
       }
       throw error;
     }
@@ -245,7 +259,7 @@ export async function assembleDispute(options: AssembleOptions): Promise<Assembl
 
   let draft: ContestDraft;
   try {
-    const drafted = await client.draftLetter(buildLetterPrompt(collected, traceSummary));
+    const drafted = await client.draftLetter(buildLetterPrompt(collected, traceSummary), modelCalls);
 
     if ('insufficientEvidence' in drafted) {
       // The gate cleared this and the drafter, reading the same evidence, says
@@ -266,6 +280,7 @@ export async function assembleDispute(options: AssembleOptions): Promise<Assembl
         ...(confirmation ? { confirmation } : {}),
         ambiguityFlags,
         audit,
+        modelCalls,
       };
     }
 
@@ -276,7 +291,7 @@ export async function assembleDispute(options: AssembleOptions): Promise<Assembl
     });
   } catch (error) {
     if (error instanceof AssemblyFailure) {
-      return abstain(collected, gate, audit, ambiguityFlags, error);
+      return abstain(collected, gate, audit, ambiguityFlags, error, modelCalls);
     }
     throw error;
   }
@@ -291,5 +306,6 @@ export async function assembleDispute(options: AssembleOptions): Promise<Assembl
     ambiguityFlags,
     draft,
     audit,
+    modelCalls,
   };
 }

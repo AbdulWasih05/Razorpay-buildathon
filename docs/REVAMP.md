@@ -9,10 +9,10 @@
 
 | | |
 |---|---|
-| **Current phase** | Phase 1 done except the repo rename (user action). Next is Phase 2 |
-| **Last completed** | Phase 1 trimmed de-brand: 290 tests pass (7 skipped, DB), lint and typecheck clean, UI builds (2026-09-15) |
-| **Open blocker** | Stripe test-mode account not created yet; it gates how much of Phase 6 is live. The repo rename is the user's to run |
-| **Next action** | Push the CI fix plus F-031 and confirm the first green CI run and keep-warm run. The user renames the repo. Start Phase 2: Docker + LLM telemetry |
+| **Current phase** | Phase 3 done (eval gate + model-family matrix). Phase 4 done (atomic approve + reviewer auth). Phase 5 next: provider abstraction |
+| **Last completed** | Reviewer sessions, atomic approve claim, eval gate, model matrix. 355 tests pass, lint and typecheck clean (2026-09-30) |
+| **Open blocker** | The Render deploy is suspended (503, 2026-09-30, F-032): the user needs to check the dashboard for whether free instance hours or the 30-day Postgres expiry caused it. Stripe test-mode account still gates Phase 6. The repo rename is the user's to run |
+| **Next action** | Phase 5: provider abstraction (neutral dispute + evidence model, adapter registry, Prisma renames), keeping results.md byte-identical. Commits still unmade pending a date decision |
 
 ## Context
 
@@ -80,7 +80,7 @@ Praman was built for the Razorpay AI Buildathon (Sep 2026) and wasn't shortliste
 - [x] **Node 22 everywhere:** `.node-version`, `engines`, Render `NODE_VERSION`, README and CLAUDE.md (CI already on 22), later Docker. *(Plan said 20; corrected — three tests import `globSync` from `node:fs`, which is Node 22+, and Node 20 reached end-of-life in April 2026.)*
   - *What to understand here:* CI already ran 22, but Render and `engines` said 20. The tests only pass on 22, so production ran a Node version CI never tested. Render picks up `NODE_VERSION` 22 on the next deploy, and that deploy has not been verified yet.
 - [x] **Make CI actually run** *(not in the plan; found after the first push)*. All 8 CI runs since 2026-09-03 failed at `pnpm/action-setup`, because the workflow's `version: 10` conflicts with `packageManager` in package.json. Lint and tests had never run on GitHub. Keep-warm failed all 75 runs on its placeholder guard. The version input is now removed, and the incident is logged as F-031.
-  - *What to understand here:* a pipeline nobody looks at gives no signal. Local `pnpm test` passing said nothing about CI. The fix is only verified once a push shows green on `gh run list`.
+  - *What to understand here:* a pipeline nobody looks at gives no signal. Local `pnpm test` passing said nothing about CI. Verified: the push after the fix produced the first green CI run ever (34955525087, verify 33s, integration 42s).
 - [ ] **Confirm Stripe test-mode access (user action).** Check each of these and record the results here:
   - An account can be created from India.
   - Test mode works.
@@ -156,48 +156,75 @@ Praman was built for the Razorpay AI Buildathon (Sep 2026) and wasn't shortliste
 
 ## Phase 2 — Docker + LLM telemetry (~3 days)
 
-- [ ] **Check the replay hash on a single fixture first.**
+- [x] **Check the replay hash on a single fixture first.**
   1. Add `usage/latencyMs/attempts` to one entry in a copy of the fixture.
   2. Confirm the loader accepts entries both with and without those fields.
   3. Confirm the keys are unchanged, and that `results.md` and the `assembly-replay.test.ts` snapshot stay byte-identical.
 
   Only then change all entries.
-- [ ] **Docker**
+  - *Result (2026-09-15):* safe, and tested on all 174 entries rather than one. After adding `usage`, `latencyMs` and `attempts` to every recorded response, the keys stayed identical, and the byte-identical report test, the replay snapshot and all llm tests passed (34/34). `results.md` was untouched, and the fixture was restored byte-for-byte afterwards.
+  - *What to understand here:* the replay key hashes only the request (`cache.ts:45-61`). Anything stored beside the response cannot change which recording is served, so telemetry can live in the fixture without breaking replay.
+- [x] **Docker**
   - A multi-stage `Dockerfile` on `node:22-slim`: pnpm install, prisma generate, vite build, run.
   - `docker-compose.yml` runs app and postgres with `SEED_ON_BOOT`, replay mode and no keys.
   - A plain `docker compose up` gives a working console at `localhost:3000`.
   - Optionally, switch Render to the Docker runtime.
-- [ ] **Structured logs:** Fastify `genReqId`, a request id on every log line, and one pino line per pipeline stage.
-- [ ] **Telemetry on `ModelResponse`:** `usage {inputTokens, outputTokens}`, `latencyMs` and `attempts`.
+  - *Result (2026-09-15), verified end to end:*
+    - `Dockerfile`: node:22-slim, openssl, corepack pnpm, and a manifest-first install layer.
+    - `.dockerignore`, plus an `app` service in `docker-compose.yml` that waits for a healthy `db`.
+    - `docker compose up --build` builds and boots. `/health` reports replay mode with 174 recordings, the page title is right, and `x-request-id` appears on responses with the matching `reqId` in the JSON logs.
+    - **Fresh-volume boot**, run under a separate compose project so the local dev volume was not touched: an empty store was seeded with 100 disputes through the capture API in about 4 s. The test volume was then removed.
+  - *What to understand here:* dev dependencies stay in the image on purpose. The packages export raw TypeScript run by `tsx`, and `pnpm start` needs the `prisma` CLI for migrations. Pruning them would need a compile step this repo does not have.
+- [x] **Structured logs:** Fastify `genReqId`, a request id on every log line, and one pino line per pipeline stage.
+  - *Result:*
+    - A caller-supplied `x-request-id` is kept; otherwise a UUID is minted and echoed on every response.
+    - `/review/run` logs one line per dispute (gate, state, abstention class, model-call count) under the request id.
+    - Tested in `apps/api/src/request-id.test.ts`.
+  - *Deviation:* the log is one line per dispute, not one per stage. The stages run inside `processDispute` in `packages/llm`, which has no logger, and every stage is already in the audit trail.
+  - *What to understand here:* the request id is the thread that ties a response a user saw to the log lines that produced it.
+- [x] **Telemetry on `ModelResponse`:** `usage {inputTokens, outputTokens}`, `latencyMs` and `attempts`.
   - Stored in the fixture at record time and read back on replay; never measured during replay.
   - Existing qwen entries have `usage: null`, shown as "not recorded".
-- [ ] **Fix dropped `attempts`:** `packages/llm/src/client.ts:157` drops it, which contradicts `provider.ts:64`.
-- [ ] **LLM audit rows** record provider, model, promptId, promptVersion, attempts, usage and latencyMs.
+  - *Result:*
+    - Providers read usage in their own vocabulary (OpenAI `prompt_tokens`/`completion_tokens`, Anthropic `input_tokens`/`output_tokens`).
+    - The client times live calls once and stores the timing in the recording.
+    - Each call appends a `ModelCallTelemetry` row (source, transport, attempts, usage, latencyMs) to a list owned by `assembleDispute`, so the shared client holds no per-dispute state.
+    - Tested in `packages/llm/src/telemetry.test.ts`: replay is identical twice, pre-telemetry recordings give null rather than 0, and a timeout still records its latency.
+  - *What to understand here:* telemetry is measured only on a live call and read back on replay, which is why replayed eval numbers stay byte-identical.
+- [x] **Fix dropped `attempts`:** `packages/llm/src/client.ts:157` drops it, which contradicts `provider.ts:64`.
+- [x] **LLM audit rows** record provider, model, promptId, promptVersion, attempts, usage and latencyMs.
 - [ ] **Cost:** commit `packages/llm/src/pricing.ts` with its source URL and date. Cost is computed in `eval/score.ts`.
-- [ ] **Console:** a per-dispute telemetry panel tagged `llm`.
+  - *Status:*
+    - `pricing.ts` is written and tested. It holds `qwen/qwen3.8-27b` at $0.80 in / $4.00 out per 1M tokens, from https://console.groq.com/docs/models, retrieved 2026-09-15.
+    - Cost is null when usage or price is unknown.
+    - Groq lists the Llama models as "Contact sales", so they get no entry.
+  - *Deferred to Phase 3:* wiring cost into `score.ts`. Every committed qwen recording predates telemetry, so a report section today would say "not recorded" for all 41 calls. The Phase 3 per-model recordings carry real usage.
+- [x] **Console:** a per-dispute telemetry panel tagged `llm`. *(`GET /review/disputes/:id` returns `modelCalls` from the latest pipeline cycle only. The "Model calls" panel shows "not recorded" rather than 0, per `apps/ui/src/model-calls.test.ts`.)*
 
 ## Phase 3 — CI eval gate + multi-model matrix (~5 days)
 
-- [ ] **`eval/results.json`** next to the canonical `results.md`: `SetMetrics` for dev and holdout, the model, prompt versions and usage totals.
-- [ ] **`eval/baseline.json`** stores counts, not ratios:
+- [x] **`eval/results.json`** next to the canonical `results.md`: `SetMetrics` for dev and holdout, the model, prompt versions and usage totals. *(Carried over from Phase 2: cost from `pricing.ts` via `callCostUsd`; the `EvalCase` record needs `modelCalls`.)*
+- [x] **`eval/baseline.json`** stores counts, not ratios:
   - tp/fp/fn/tn and ambiguous-contested for each set
   - FP cost in subunits
   - assembly failures
   - each prompt's `{version, sha256}`
-- [ ] **`eval/gate.test.ts`** runs in the CI `verify` job.
+- [x] **`eval/gate.test.ts`** runs in the CI `verify` job, and `pnpm eval:gate` runs it standalone with a `$GITHUB_STEP_SUMMARY` line and a non-zero exit.
   - Fails if FP or FP cost rises, TP drops, assembly failures rise, or a prompt's hash changes without a version bump.
   - `pnpm eval --write-baseline` updates the baseline deliberately.
   - The result goes to `$GITHUB_STEP_SUMMARY`.
-- [ ] **Negative tests:** a tampered baseline fails, and a prompt edit without a version bump fails.
-- [ ] **Pin the models in `eval/matrix.config.json`.**
+- [x] **Negative tests:** a tampered baseline fails, and a prompt edit without a version bump fails. *(Six of them: false positive appears, recall drops, assembly failure appears, an improvement is accepted without a baseline rewrite, a prompt body changes with no bump, a prompt version moves.)*
+- [x] **Pin the models in `eval/matrix.config.json`.** *(Deviation: two families, not 3-4. The account serves 11 models; after audio, classifiers and the barred gpt-oss family there are exactly two chat models, and both are in. The config records every exclusion and why.)*
   - 3–4 model families, chosen once from Groq's catalog; record the date and ids.
   - No `gpt-oss`, because it wrote the holdout.
   - Nothing reads `/models` at runtime.
   - Document that replay survives Groq retiring a model; only live re-recording would fail.
-- [ ] **Per-model fixtures** at `packages/llm/fixtures/assembly/<provider>__<slug>.json`. `buildClient` (`eval/harness.ts:314`) takes `{provider, model}`.
-- [ ] **Decouple the holdout language replay from `GROQ_MODEL`** (`eval/harness.ts:139`) by reading the model from `holdout.json`.
-- [ ] **Harden `assertNotHoldoutFamily`:** match the family as a substring and run it on every provider branch.
-- [ ] **`pnpm eval --matrix`** writes `eval/matrix/<slug>.{json,md}` and `eval/matrix.md`.
+- [x] **Per-model fixtures** at `packages/llm/fixtures/assembly/<provider>__<slug>.json`. `buildClient` (`eval/harness.ts:314`) takes `{provider, model}`.
+- [x] **Decouple the holdout language replay from `GROQ_MODEL`** by reading the model from `holdout.json`. *(This was load-bearing for the matrix: pointing `GROQ_MODEL` at another model would have missed every cached held-out turn.)*
+- [x] **Harden `assertNotHoldoutFamily`:** match the family as a substring and run it on every provider branch. *(The prefix check missed `gpt-oss-safeguard` and any re-host under another prefix; the Anthropic branch skipped the guard entirely.)*
+- [x] **`pnpm eval:matrix`** writes `eval/matrix/<slug>.{json,md}` and `eval/matrix.md`.
+  - *Result (2026-09-30):* qwen re-sample 29/38 dev recall against the frozen 31/38, held-out 7/9 both; allam-2-7b 14/38 and 3/9 with 23 assembly failures, and **zero false positives on either model**. p50 latency 5.4 s vs 10.3 s; qwen $0.0731 for 63 calls, allam no published price.
+  - *What to understand here:* the two headline findings are that the headline itself carries about two dev cases of sampling noise (D-047), and that a much weaker drafter loses recall without ever producing a false contest -- the veto-toward-safety asymmetry (D-025) measured rather than argued.
   - One row per **model family (Groq-hosted)**: precision, recall, abstention, FP cost, drafter vetoes, tokens, p50/p95 latency (recorded), cost.
   - The qwen re-sample is reported as run-to-run variance; the model of record stays the headline (D-023).
   - Every report carries the FP=0 caveat.
@@ -205,19 +232,23 @@ Praman was built for the Razorpay AI Buildathon (Sep 2026) and wasn't shortliste
 
 ## Phase 4 — Safe approve + reviewer auth (~2–3 days)
 
-- [ ] **Atomic approve claim.**
+- [x] **Atomic approve claim.**
+  - *Result:* `updateMany` with `state: 'drafted'` in the WHERE, placed after the identity check and token mint so a spoofed actor still causes zero writes. `approve-race.test.ts` drives two concurrent approvals through a store whose conditional update behaves like Postgres's: exactly one proceeds, and the loser reaches neither upload nor submit.
+  - *What to understand here:* the old check was a READ (load, see `drafted`, continue), and every await between it and the final write was a window. The fix is that the state test lives inside the write.
   - `prisma.dispute.updateMany({where:{id, state:'drafted'}, …})` inside a transaction; a count other than 1 returns 409.
   - Test with concurrent `app.inject` calls: exactly one 200, one 409, and one adapter call.
   - Write it up as an incident in the case study.
-- [ ] **Auth**
+- [x] **Auth**
+  - *Deviation:* no `@fastify/cookie`. A random 256-bit token in an HttpOnly cookie, with only its SHA-256 stored, is about 40 lines of `node:crypto` and one fewer dependency to explain. A database dump grants nobody a session.
+  - *Demo path:* `POST /auth/demo-login` exists only when `DEMO_MODE=true` and signs in as a seeded `demo` reviewer whose password is random and discarded. Publishing a password would hand out a credential that also works against a real handle.
   - Prisma models `Reviewer {handle, passwordHash}` and `Session {id, reviewerId, expiresAt}`.
   - scrypt via `node:crypto`; httpOnly signed cookie via `@fastify/cookie`.
   - Routes: `POST /auth/login|logout` and `GET /auth/me`.
-- [ ] **Approve takes `approvedBy` from the session** (`human:<handle>`).
+- [x] **Approve takes `approvedBy` from the session** (`human:<handle>`). The reviewer dropdown is gone; the top bar signs in, or says who is signed in.
   - `ApprovalToken` remains the only way to mint an approval.
   - Remove `REVIEWERS` (`apps/ui/src/App.tsx:42`) and add a login form.
   - Seed a demo reviewer whose credentials appear on the landing page; rate-limit login.
-- [ ] **Tests:** no session gets 401, an expired session gets 401, and the audit actor equals the session reviewer.
+- [x] **Tests:** `auth.test.ts` (18 unit tests on hashing, tokens and cookies) and `auth-flow.test.ts` (database-gated: no session 401, wrong password and unknown handle answer identically, only the token hash is stored, an expired session is refused and deleted, logout deletes the row, approve without a session is 401 before the dispute is looked at, and the demo route 404s off a demo instance).
 
 ## Phase 5 — Provider abstraction, Razorpay only, no behaviour change (~5 days)
 
@@ -327,3 +358,8 @@ Praman was built for the Razorpay AI Buildathon (Sep 2026) and wasn't shortliste
 - 2026-09-15: Phase 0 hygiene done except the Stripe check (user action). Uncommitted `assembly.json` fixture is not needed. Node aligned to 22, not 20: `globSync` needs 22, and 20 is end-of-life. Committed locally, not pushed.
 - 2026-09-15: Phase 1 done except the repo rename (user action). The case study keeps all 30 cited ids. `results.md` changed by 2 text lines and no metric. 290 tests pass. Committed as two commits (5/day cap) and pushed.
 - 2026-09-15: after pushing, found that CI had never passed: pnpm version pinned twice (F-031). Fixed in `ci.yml`. Render redeploy verified: restarted 09:53Z in replay mode, and the served bundle has no event text.
+- 2026-09-15: Phase 2 telemetry done: usage, latency and attempts are recorded live, replayed verbatim, persisted in audit rows and shown in the console. The Docker files are written but not yet run. Request-id logs and pricing are still to do. CI and keep-warm are both verified green.
+- 2026-09-15: request-id logging and `pricing.ts` done. Groq lists qwen at $0.80/$4.00 per 1M tokens; Llama models have no public price. Cost wiring moved to Phase 3. Waiting on Docker Desktop to verify compose.
+- 2026-09-15: Docker verified. The first run reused the seeded local volume and skipped the boot seed, so a second run under a separate compose project with an empty volume seeded 100 disputes on boot, and was then torn down. Phase 2 is complete apart from cost wiring (moved to Phase 3) and is uncommitted, waiting for tomorrow.
+- 2026-09-30: the deploy is suspended by Render (503) and keep-warm had been failing for days on it. Disabled the workflow, corrected the README claims, logged F-032. The likely cause is the ping keeping a free instance awake for ~744 h against a 750 h allowance. Starting Phases 3-5.
+- 2026-09-30: Phase 3 and Phase 4 complete. Eval gate with counts-based baseline and prompt fingerprints; model-family matrix recorded live for both models the account serves. Reviewer sessions replace the reviewer dropdown, and approve now claims the dispute with a conditional write. 355 tests pass.

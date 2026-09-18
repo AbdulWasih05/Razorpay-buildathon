@@ -1,0 +1,143 @@
+{
+  "provider": "groq",
+  "model": "qwen/qwen3.8-27b",
+  "family": "qwen",
+  "note": "The model of record, re-sampled into its own fixture file. Its own committed recordings are never touched, so the difference between this row and the headline numbers measures run-to-run variance rather than a change of model.",
+  "sets": {
+    "dev": {
+      "set": "dev",
+      "size": 100,
+      "contested": 29,
+      "gateContested": 33,
+      "abstained": 71,
+      "abstentionRate": 0.71,
+      "byGroundTruth": {
+        "winnable": 38,
+        "unwinnable": 52,
+        "ambiguous": 10
+      },
+      "confusion": {
+        "truePositives": 29,
+        "falsePositives": 0,
+        "falseNegatives": 9,
+        "trueNegatives": 52,
+        "ambiguousContested": 0,
+        "ambiguousAbstained": 10
+      },
+      "precision": 1,
+      "precisionStrict": 1,
+      "recall": 0.7631578947368421,
+      "falsePositiveCostSubunits": 0,
+      "amountOnFalsePositives": 0,
+      "atStakeInDraftedContests": 6274300,
+      "inCorrectlyAbstainedDisputes": 11956600,
+      "byClass": {
+        "gate": 67,
+        "drafter_disagreement": 4,
+        "assembly_failure": 0,
+        "unclassified": 0
+      },
+      "byCause": {
+        "correct_unwinnable": 52,
+        "conservative_ambiguous": 10,
+        "capture_gap": 6,
+        "evidence_absent": 1,
+        "false_negative": 0,
+        "drafter_veto": 2
+      },
+      "failureKinds": {
+        "error": 0,
+        "timeout": 0,
+        "refusal": 0,
+        "schema": 0
+      },
+      "gapArtifacts": {
+        "holds 2 of 3 required artifacts; missing duplicate_payment_analysis; required evidence Praman cannot produce for any dispute: duplicate_payment_analysis": 5,
+        "holds 0 of 2 required artifacts; missing delivery_proof, item_selection_confirmation; required evidence Praman cannot produce for any dispute: item_selection_confirmation": 1,
+        "holds 1 of 2 required artifacts; missing item_selection_confirmation; required evidence Praman cannot produce for any dispute: item_selection_confirmation": 1
+      },
+      "modelCalls": 33,
+      "meanEvidenceFields": 2.689655172413793,
+      "fullCoverageDrafts": 29,
+      "meanDraftChars": 559.9655172413793,
+      "overLengthDrafts": 0,
+      "usage": {
+        "calls": 51,
+        "callsWithUsage": 51,
+        "inputTokens": 40590,
+        "outputTokens": 6529,
+        "costUsd": 0.058588000000000015
+      }
+    },
+    "holdout": {
+      "set": "holdout",
+      "size": 30,
+      "contested": 8,
+      "gateContested": 8,
+      "abstained": 22,
+      "abstentionRate": 0.7333333333333333,
+      "byGroundTruth": {
+        "winnable": 9,
+        "unwinnable": 20,
+        "ambiguous": 1
+      },
+      "confusion": {
+        "truePositives": 7,
+        "falsePositives": 0,
+        "falseNegatives": 2,
+        "trueNegatives": 20,
+        "ambiguousContested": 1,
+        "ambiguousAbstained": 0
+      },
+      "precision": 1,
+      "precisionStrict": 0.875,
+      "recall": 0.7777777777777778,
+      "falsePositiveCostSubunits": 0,
+      "amountOnFalsePositives": 0,
+      "atStakeInDraftedContests": 9067900,
+      "inCorrectlyAbstainedDisputes": 18440500,
+      "byClass": {
+        "gate": 22,
+        "drafter_disagreement": 0,
+        "assembly_failure": 0,
+        "unclassified": 0
+      },
+      "byCause": {
+        "correct_unwinnable": 20,
+        "conservative_ambiguous": 0,
+        "capture_gap": 1,
+        "evidence_absent": 1,
+        "false_negative": 0,
+        "drafter_veto": 0
+      },
+      "failureKinds": {
+        "error": 0,
+        "timeout": 0,
+        "refusal": 0,
+        "schema": 0
+      },
+      "gapArtifacts": {
+        "holds 2 of 3 required artifacts; missing duplicate_payment_analysis; required evidence Praman cannot produce for any dispute: duplicate_payment_analysis": 1,
+        "holds 0 of 2 required artifacts; missing delivery_proof, item_selection_confirmation; required evidence Praman cannot produce for any dispute: item_selection_confirmation": 1
+      },
+      "modelCalls": 8,
+      "meanEvidenceFields": 2.75,
+      "fullCoverageDrafts": 8,
+      "meanDraftChars": 585.625,
+      "overLengthDrafts": 0,
+      "usage": {
+        "calls": 12,
+        "callsWithUsage": 12,
+        "inputTokens": 9742,
+        "outputTokens": 1670,
+        "costUsd": 0.0144736
+      }
+    }
+  },
+  "latency": {
+    "measured": 63,
+    "p50": 5414,
+    "p95": 13107
+  },
+  "costUsd": 0.07306160000000002
+}

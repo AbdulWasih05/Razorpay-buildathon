@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "provider": "groq",
+  "model": "qwen/qwen3.8-27b",
+  "prompts": {
+    "trace-summary": {
+      "version": 1,
+      "sha256": "4a8a60e283fac804248dabeb2b1527c04c0d3f1a716db0ebe60e8dc82ef1794a"
+    },
+    "letter-draft": {
+      "version": 2,
+      "sha256": "be7166cf7232e9bbf212c8f715b682a796ac78938ca762621b77b1b63d3e716e"
+    }
+  },
+  "sets": {
+    "dev": {
+      "size": 100,
+      "truePositives": 31,
+      "falsePositives": 0,
+      "falseNegatives": 7,
+      "trueNegatives": 52,
+      "ambiguousContested": 0,
+      "abstained": 69,
+      "assemblyFailures": 0,
+      "falsePositiveCostSubunits": 0
+    },
+    "holdout": {
+      "size": 30,
+      "truePositives": 7,
+      "falsePositives": 0,
+      "falseNegatives": 2,
+      "trueNegatives": 20,
+      "ambiguousContested": 1,
+      "abstained": 22,
+      "assemblyFailures": 0,
+      "falsePositiveCostSubunits": 0
+    }
+  }
+}

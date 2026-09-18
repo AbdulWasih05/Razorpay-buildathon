@@ -1,3 +1,5 @@
+import { callCostUsd } from '@praman/llm';
+
 import { ABSTENTION_CAUSES, type AbstentionCause } from './abstentions.js';
 import { COST_MODEL, FALSE_POSITIVE_UNIT_COST, type EvalCase } from './harness.js';
 
@@ -31,6 +33,38 @@ export interface Confusion {
   /** Ground truth `ambiguous`, reported separately -- see D-031. */
   ambiguousContested: number;
   ambiguousAbstained: number;
+}
+
+/**
+ * Tokens and cost across this set's model calls.
+ *
+ * `callsWithUsage` is reported next to `calls` because a recording made before
+ * telemetry existed carries no token counts. Totals are then honestly partial
+ * rather than a complete-looking figure built from whatever happened to be
+ * there, and `costUsd` is null when nothing priceable was recorded.
+ */
+export interface UsageTotals {
+  calls: number;
+  callsWithUsage: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number | null;
+}
+
+function usageTotals(cases: EvalCase[]): UsageTotals {
+  const calls = cases.flatMap((c) => c.modelCalls);
+  const withUsage = calls.filter((call) => call.usage !== null);
+  const priced = calls
+    .map((call) => callCostUsd(call))
+    .filter((cost): cost is number => cost !== null);
+
+  return {
+    calls: calls.length,
+    callsWithUsage: withUsage.length,
+    inputTokens: withUsage.reduce((sum, call) => sum + (call.usage?.inputTokens ?? 0), 0),
+    outputTokens: withUsage.reduce((sum, call) => sum + (call.usage?.outputTokens ?? 0), 0),
+    costUsd: priced.length === 0 ? null : priced.reduce((sum, cost) => sum + cost, 0),
+  };
 }
 
 export interface SetMetrics {
@@ -69,6 +103,8 @@ export interface SetMetrics {
   meanDraftChars: number;
   /** Drafts rejected for exceeding the documented 1000-character `summary` cap. */
   overLengthDrafts: number;
+  /** Tokens and cost across this set's model calls, from their recordings. */
+  usage: UsageTotals;
 }
 
 function count<T extends string>(values: readonly T[], keys: readonly T[]): Record<T, number> {
@@ -163,6 +199,7 @@ export function score(set: string, cases: EvalCase[]): SetMetrics {
     overLengthDrafts: cases.filter(
       (c) => c.failureKind === 'schema' && /1000|too_big|at most/i.test(c.failureDetail ?? ''),
     ).length,
+    usage: usageTotals(cases),
   };
 }
 

@@ -1,0 +1,14 @@
+# Installed and generated inside the image, never copied from the host.
+node_modules
+**/node_modules
+apps/ui/dist
+.og-tmp
+coverage
+
+# Secrets. The container reads its configuration from the environment.
+.env
+.env.*
+!.env.example
+
+.git
+*.log

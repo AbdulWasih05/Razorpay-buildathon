@@ -37,6 +37,12 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # The eval gate, separately from the suite, so a regression is named in
+      # the job summary rather than buried in a test failure. Replay only: no
+      # key, no network, no database.
+      - name: Eval gate
+        run: pnpm eval:gate
+
   # The persistence path, which the default job cannot see.
   #
   # F-014: cleanRow let a null relation through into a .strict() schema and 85

@@ -24,6 +24,8 @@
     "assemble": "tsx scripts/assemble.ts",
     "abstentions": "tsx scripts/abstentions.ts",
     "eval": "tsx eval/run.ts",
+    "eval:gate": "tsx eval/gate.ts",
+    "eval:matrix": "tsx eval/matrix.ts",
     "record:demo": "tsx scripts/record-demo.ts",
     "start": "prisma migrate deploy --schema prisma/schema.prisma && tsx apps/api/src/index.ts",
     "ui:dev": "pnpm --filter @praman/ui dev",

@@ -87,6 +87,19 @@ export interface FieldAssignment {
   othersType?: string;
 }
 
+/** One model call behind the current draft or abstention. `null` means not recorded. */
+export interface ModelCall {
+  promptId: string;
+  promptVersion: number;
+  provider: string;
+  model: string;
+  source: 'live' | 'replay';
+  transport: 'completed' | 'error' | 'timeout';
+  attempts: number | null;
+  usage: { inputTokens: number; outputTokens: number } | null;
+  latencyMs: number | null;
+}
+
 export interface AuditEntry {
   seq: number;
   fromState: string | null;
@@ -118,6 +131,8 @@ export interface DisputeDetail {
   approvedBy: string | null;
   timeline: string[];
   auditLogs?: AuditEntry[];
+  /** Model calls behind the current decision. Empty when the gate declined. */
+  modelCalls?: ModelCall[];
   /**
    * The gate's rule-by-rule trace, replayed from stored evidence by the API.
    *
@@ -150,16 +165,47 @@ export async function fetchDispute(externalId: string): Promise<DisputeDetail> {
   return json<DisputeDetail>(await fetch(`/api/review/disputes/${externalId}`));
 }
 
+/**
+ * The one door.
+ *
+ * It takes no reviewer. The server reads that from the session cookie, so the
+ * UI cannot name the human who approved a contest even if it wanted to — which
+ * is the point, and the fix for the shape of bug F-013 was.
+ */
 export async function approve(
   externalId: string,
-  approvedBy: string,
 ): Promise<{ state: string; simulated: boolean; documentCount: number; adapter: string }> {
   const response = await fetch(`/api/review/disputes/${externalId}/approve`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ approvedBy }),
   });
   return json(response);
+}
+
+/** The signed-in reviewer, or null. A 401 is the normal signed-out answer, not an error. */
+export async function fetchMe(): Promise<{ handle: string } | null> {
+  const response = await fetch('/api/auth/me');
+  if (response.status === 401) return null;
+  return json<{ handle: string }>(response);
+}
+
+export async function login(handle: string, password: string): Promise<{ handle: string }> {
+  return json<{ handle: string }>(
+    await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ handle, password }),
+    }),
+  );
+}
+
+/** Demo instances only: signs in as the seeded demo reviewer, with no password to publish. */
+export async function demoLogin(): Promise<{ handle: string }> {
+  return json<{ handle: string }>(await fetch('/api/auth/demo-login', { method: 'POST' }));
+}
+
+export async function logout(): Promise<void> {
+  await fetch('/api/auth/logout', { method: 'POST' });
 }
 
 export interface Health {

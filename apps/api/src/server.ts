@@ -1,3 +1,4 @@
+import { randomBytes, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +20,18 @@ import { z } from 'zod';
 import { adapterFromEnv } from '@praman/adapter';
 import { AssemblyClient, ResponseCache, providerFromEnv } from '@praman/llm';
 
+import {
+  DEMO_REVIEWER_HANDLE,
+  SESSION_TTL_MS,
+  clearedSessionCookie,
+  hashPassword,
+  hashToken,
+  newSessionToken,
+  readSessionCookie,
+  reviewerActor,
+  sessionCookie,
+  verifyPassword,
+} from './auth.js';
 import { captureEvidencePack, readEvidencePack } from './capture.js';
 import { DEMO_RELEASE_CAP, RateLimiter, releaseNextDispute, resetDemo } from './demo.js';
 import { approveAndSubmit, listQueue, readDispute, runPipeline } from './review.js';
@@ -80,6 +93,15 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   const app = Fastify({
     logger: options.logger ?? false,
     /**
+     * Every request carries an id, and every log line for it carries the same
+     * id. A caller that already has one (a proxy, a webhook sender, a test)
+     * passes it as `x-request-id` and it is kept, so one id follows a request
+     * across systems; otherwise a UUID is minted here. The id is echoed on the
+     * response so a report of "that request failed" can be matched to its logs.
+     */
+    requestIdHeader: 'x-request-id',
+    genReqId: () => randomUUID(),
+    /**
      * The UI calls `/api/...` in development, where Vite proxies that prefix
      * to this server. In production the same bundle is served from this same
      * origin, so the prefix has to mean something here too. Stripping it at
@@ -97,6 +119,10 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   });
 
   app.decorate('prisma', prisma);
+
+  app.addHook('onSend', async (request, reply) => {
+    reply.header('x-request-id', request.id);
+  });
 
   /**
    * Whether this server may call a model, decided once and surfaced.
@@ -131,6 +157,136 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
    */
   const releaseLimiter = new RateLimiter(20, 5 * 60_000);
   const resetLimiter = new RateLimiter(6, 60_000);
+  const loginLimiter = new RateLimiter(10, 5 * 60_000);
+
+  /**
+   * A hash of nothing, verified against when a handle does not exist.
+   *
+   * Without it, an unknown handle returns immediately and a known handle with
+   * a wrong password spends scrypt's time. That difference tells an attacker
+   * which handles are real. Minted per process from random bytes, so it is
+   * also not a password anyone could supply.
+   */
+  const ABSENT_REVIEWER_HASH = hashPassword(randomBytes(32).toString('hex'));
+
+  /** Cookies are marked Secure whenever the request reached us over TLS. */
+  const overTls = (request: { protocol?: string; headers: Record<string, unknown> }): boolean =>
+    request.protocol === 'https' || request.headers['x-forwarded-proto'] === 'https';
+
+  /**
+   * Who is making this request, from the session cookie.
+   *
+   * Real wall-clock time, deliberately, unlike everything about the corpus
+   * (D-043): a session expires in the reviewer's world, not in the simulated
+   * one. Reading `CORPUS_NOW` here would make every session immortal.
+   */
+  async function currentReviewer(request: {
+    headers: Record<string, unknown>;
+  }): Promise<{ id: string; handle: string } | null> {
+    const token = readSessionCookie(request.headers['cookie'] as string | undefined);
+    if (!token) return null;
+
+    const session = await prisma.session.findUnique({
+      where: { id: hashToken(token) },
+      include: { reviewer: true },
+    });
+    if (!session) return null;
+
+    if (session.expiresAt.getTime() <= Date.now()) {
+      // An expired session is deleted on sight rather than swept later: the
+      // row is worthless and leaving it makes "is this session valid" depend
+      // on a job nobody runs.
+      await prisma.session.delete({ where: { id: session.id } }).catch(() => undefined);
+      return null;
+    }
+
+    return { id: session.reviewer.id, handle: session.reviewer.handle };
+  }
+
+  async function startSession(reviewerId: string): Promise<string> {
+    const { token, tokenHash } = newSessionToken();
+    await prisma.session.create({
+      data: { id: tokenHash, reviewerId, expiresAt: new Date(Date.now() + SESSION_TTL_MS) },
+    });
+    return token;
+  }
+
+  // --- Reviewer sessions ----------------------------------------------------
+  //
+  // The console's one privileged action is approving a contest, which is the
+  // single door to submission (hard rule #2). Before this, the reviewer's name
+  // came from the request body and the audit trail recorded whatever a caller
+  // claimed. Identity for a money action cannot come from the same place as
+  // the request for it.
+
+  app.get('/auth/me', async (request, reply) => {
+    const reviewer = await currentReviewer(request);
+    if (!reviewer) return reply.code(401).send({ error: 'not_signed_in' });
+    return reply.send({ handle: reviewer.handle });
+  });
+
+  app.post('/auth/login', async (request, reply) => {
+    const body = z
+      .object({ handle: z.string().min(1).max(64), password: z.string().min(1).max(200) })
+      .strict()
+      .safeParse(request.body ?? {});
+    if (!body.success) return reply.code(400).send({ error: 'invalid_login' });
+
+    const budget = loginLimiter.take(request.ip);
+    if (!budget.allowed) {
+      return reply
+        .code(429)
+        .header('retry-after', String(budget.retryAfterSeconds))
+        .send({ error: 'too_many_attempts', retryAfterSeconds: budget.retryAfterSeconds });
+    }
+
+    const reviewer = await prisma.reviewer.findUnique({ where: { handle: body.data.handle } });
+    const matches = verifyPassword(body.data.password, reviewer?.passwordHash ?? ABSENT_REVIEWER_HASH);
+    // One message for both failures. "No such reviewer" is an answer to a
+    // question nobody outside should be able to ask.
+    if (!reviewer || !matches) return reply.code(401).send({ error: 'invalid_credentials' });
+
+    const token = await startSession(reviewer.id);
+    return reply
+      .header('set-cookie', sessionCookie(token, { secure: overTls(request) }))
+      .send({ handle: reviewer.handle });
+  });
+
+  app.post('/auth/logout', async (request, reply) => {
+    const token = readSessionCookie(request.headers['cookie']);
+    if (token) await prisma.session.deleteMany({ where: { id: hashToken(token) } });
+    return reply
+      .header('set-cookie', clearedSessionCookie({ secure: overTls(request) }))
+      .send({ signedOut: true });
+  });
+
+  /**
+   * One-click sign-in as the seeded demo reviewer. Demo instances only.
+   *
+   * The public demo needs a visitor to be able to approve something, and the
+   * alternative -- printing a password on the page -- publishes a credential
+   * that also works anywhere else the handle exists. This route needs no
+   * password, exists only when `DEMO_MODE=true`, and is rate limited.
+   */
+  app.post('/auth/demo-login', async (request, reply) => {
+    if (!demoMode) return reply.code(404).send({ error: 'not_found' });
+
+    const budget = loginLimiter.take(request.ip);
+    if (!budget.allowed) {
+      return reply
+        .code(429)
+        .header('retry-after', String(budget.retryAfterSeconds))
+        .send({ error: 'too_many_attempts', retryAfterSeconds: budget.retryAfterSeconds });
+    }
+
+    const reviewer = await prisma.reviewer.findUnique({ where: { handle: DEMO_REVIEWER_HANDLE } });
+    if (!reviewer) return reply.code(503).send({ error: 'demo_reviewer_not_seeded' });
+
+    const token = await startSession(reviewer.id);
+    return reply
+      .header('set-cookie', sessionCookie(token, { secure: overTls(request) }))
+      .send({ handle: reviewer.handle, demo: true });
+  });
 
   app.get('/health', async () => ({
     status: 'ok',
@@ -589,6 +745,19 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
       try {
         const result = await runPipeline({ prisma, client: assemblyClient }, dispute.externalId);
         results.push({ externalId: dispute.externalId, state: result.state });
+        // One structured line per dispute, under this request's id: what the
+        // gate decided, how the dispute ended, and how many model calls that
+        // took. Enough to answer "what did this run do" from the logs alone.
+        request.log.info(
+          {
+            dispute: dispute.externalId,
+            gate: result.gateDecision,
+            state: result.state,
+            abstentionClass: result.abstentionClass,
+            modelCalls: result.modelCalls,
+          },
+          'pipeline: dispute processed',
+        );
       } catch (error) {
         // A replay miss or a broken pack must not abort the batch: the other
         // disputes are still processable and the failure is reported per case.
@@ -597,6 +766,10 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
           state: 'error',
           error: (error as Error).message,
         });
+        request.log.warn(
+          { dispute: dispute.externalId, error: (error as Error).message },
+          'pipeline: dispute failed',
+        );
       }
     }
 
@@ -653,19 +826,15 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
    */
   app.post('/review/disputes/:externalId/approve', async (request, reply) => {
     const params = z.object({ externalId: z.string().min(1) }).parse(request.params);
-    const body = z
-      .object({
-        approvedBy: z
-          .string()
-          .min(1, 'an approval needs a named reviewer')
-          .startsWith('human:', 'approvedBy must look like "human:<name>"'),
-      })
-      .strict()
-      .safeParse(request.body ?? {});
-    if (!body.success) {
-      return reply.status(400).send({
-        error: 'invalid_approval',
-        detail: body.error.issues.map((issue) => issue.message).join('; '),
+
+    // The reviewer comes from the session, never from the body. A caller can
+    // no longer name the human who approved a contest; it can only be the one
+    // who signed in (F-013, and the reason `/auth` exists at all).
+    const reviewer = await currentReviewer(request);
+    if (!reviewer) {
+      return reply.status(401).send({
+        error: 'not_signed_in',
+        detail: 'approving is the single door to submission; it needs a signed-in reviewer',
       });
     }
 
@@ -673,7 +842,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
       const result = await approveAndSubmit(
         { prisma, client: assemblyClient, adapter, now: () => new Date() },
         params.externalId,
-        body.data.approvedBy,
+        reviewerActor(reviewer.handle),
       );
       return reply.send({ ...result, adapter: adapter.name });
     } catch (error) {

@@ -1,0 +1,59 @@
+{
+  "note": "The models the matrix compares. Pinned deliberately: nothing reads a provider's catalog at run time, because a comparison whose membership changes under it is not a comparison. Adding or removing a model is an edit to this file, in a commit, next to the recordings it produces.",
+  "chosenOn": "2026-09-30",
+  "source": "GET https://api.groq.com/openai/v1/models, queried with this project's own key",
+  "catalogueNote": "The account served 11 models that day. Removing audio (whisper, orpheus), classifiers (llama-prompt-guard) and the barred gpt-oss family leaves exactly two usable chat models, and both are here. The matrix is two families because the account has two, not because two were picked.",
+  "excluded": [
+    {
+      "model": "openai/gpt-oss-120b",
+      "why": "wrote the held-out corpus's conversation language; running the assembler on it would destroy the OOD delta (D-021). assertNotHoldoutFamily refuses it."
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "why": "same family as the holdout's writer."
+    },
+    {
+      "model": "openai/gpt-oss-safeguard-20b",
+      "why": "same family as the holdout's writer."
+    },
+    {
+      "model": "meta-llama/llama-prompt-guard-2-22m",
+      "why": "a safety classifier, not a chat model."
+    },
+    {
+      "model": "meta-llama/llama-prompt-guard-2-86m",
+      "why": "a safety classifier, not a chat model."
+    },
+    {
+      "model": "whisper-large-v3",
+      "why": "speech to text."
+    },
+    {
+      "model": "whisper-large-v3-turbo",
+      "why": "speech to text."
+    },
+    {
+      "model": "canopylabs/orpheus-v1-english",
+      "why": "text to speech."
+    },
+    {
+      "model": "canopylabs/orpheus-arabic-saudi",
+      "why": "text to speech."
+    }
+  ],
+  "staleness": "If Groq retires a model listed here, replay still works from the committed recordings; only a fresh --live run would fail, and it would fail loudly on a 404 rather than silently substituting another model.",
+  "models": [
+    {
+      "provider": "groq",
+      "model": "qwen/qwen3.8-27b",
+      "family": "qwen",
+      "note": "The model of record, re-sampled into its own fixture file. Its own committed recordings are never touched, so the difference between this row and the headline numbers measures run-to-run variance rather than a change of model."
+    },
+    {
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "family": "allam",
+      "note": "The only other chat model this account serves. A much smaller model, included because the interesting question is whether the structured-output contract and the gate's veto behaviour hold when the drafter is weaker."
+    }
+  ]
+}

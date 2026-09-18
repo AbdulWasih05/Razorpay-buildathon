@@ -121,6 +121,23 @@ The approve action is the only path to submission. The eval harness cannot impor
   - The docs say the amount is deducted if the dispute is lost, which happens whether or not we contested. Charging it to the decision would attribute a loss the decision did not cause.
   - What is counted is an assumed representment fee (₹1,000) plus reviewer handling (₹500) per false positive. Both are stated beside the number they produce.
 
+### Comparison and regression
+
+- **D-045: the eval gate compares counts, and a prompt is part of what it compares.**
+  - `eval/baseline.json` holds integers the report also shows. A floor copied from a rounded figure fails against the run that produced it: 31/38 prints as 81.6%, and "recall ≥ 81.6%" is false for that very run.
+  - It is one-directional. Fewer false positives or more true positives need no baseline rewrite; the gate exists to catch a silent slide, not to freeze the numbers.
+  - Each prompt body is fingerprinted with sha256. A changed body under an unchanged version is a regression, because the recordings and the baseline then describe a prompt that is no longer in the tree.
+  - Updating it is deliberate (`pnpm eval -- --write-baseline`), so the diff shows which number moved, in a review.
+- **D-046: the model matrix is pinned, and it compares model families, not providers.**
+  - Membership lives in `eval/matrix.config.json`, with the date and the source of the catalogue query. A comparison whose membership follows a provider's catalogue is not a comparison.
+  - Every model is Groq-hosted, so the rows are families. Saying "providers" would claim breadth the setup does not have.
+  - The account served 11 models. Removing audio, classifiers and the barred `gpt-oss` family left exactly two chat models, and both are in. The file records the exclusions and why.
+  - Each model records into its own fixture file. The frozen model-of-record recordings behind `eval/results.md` are never touched (D-023).
+- **D-047: run-to-run variance is reported, not smoothed.**
+  - Re-sampling the *same* model of record gave dev recall 29/38, against the frozen 31/38 behind the headline. Held-out stayed 7/9.
+  - The headline is therefore one sample of a stochastic drafter, and the honest size of that noise is about two dev cases.
+  - The fix is not to re-run until it matches. The frozen recordings stay the headline, and the variance is stated wherever the headline is.
+
 ### Product
 
 - **D-043: the demo clock is part of the simulation.**
@@ -186,7 +203,15 @@ Each incident records what broke, how it was found, and what changed.
   - Local `pnpm test` passed the whole time, so nothing in the build loop showed red.
   - I found it during the revamp by reading `gh run list` after a push, not from any notification.
   - The fix leaves `packageManager` as the only pnpm pin and gives keep-warm the real URL.
+  - The next push produced the first green CI run in the repository's history (run 34955525087, 2026-09-15), with both the `verify` and `integration` jobs passing.
   - The same false-confidence pattern as D-029, from a different angle: the integration job's own guard, which asserts that at least five tests ran, was sound, but the job never got far enough to run it. A check that never runs gives no signal, green or red.
+- **F-032: the keep-warm ping most likely caused the outage it existed to prevent.**
+  - On 2026-09-30 the deploy returned HTTP 503, "This service has been suspended", on every path, and every keep-warm run had been failing for days with `curl: (22) ... 503`.
+  - The ping had been fixed and verified green on 2026-09-15 (F-031). Pinging every five minutes keeps a free instance awake continuously, which is about 744 hours a month against a 750-hour free allowance.
+  - The workflow's own comment had the arithmetic and the caveat: it only fits "because this workspace runs exactly one service". It treated that as a standing fact rather than something to check, and the margin was six hours.
+  - The other candidate is the 30-day expiry on the free Postgres, which needs the Render dashboard to tell apart. Both are stated until it is confirmed.
+  - The workflow is disabled. The README no longer claims a live demo or a ping that keeps one awake.
+  - **The lesson is about the shape of the mechanism, not the arithmetic.** A keep-alive that consumes a capped monthly allowance to avoid a per-request cold start trades a one-minute delay for the risk of total suspension. The cold start was the honest cost, and the README said so plainly before the ping existed.
 
 ## What is not claimed
 

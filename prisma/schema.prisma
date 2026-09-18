@@ -412,3 +412,35 @@ model AuditLog {
   @@unique([disputeId, seq])
   @@index([disputeId])
 }
+
+/// A person who may approve a contest.
+///
+/// Seeded, never self-service. This is an internal risk console and the one
+/// action it gates is a money action, so an open signup route would be a way in
+/// rather than a feature.
+model Reviewer {
+  id           String    @id @default(cuid())
+  handle       String    @unique
+  /// scrypt$<salt hex>$<key hex>. See apps/api/src/auth.ts.
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  sessions     Session[]
+
+  @@map("reviewers")
+}
+
+/// A logged-in reviewer's session.
+///
+/// `id` is the SHA-256 of the token in the cookie, never the token itself: the
+/// browser holds the only copy of the secret, so this table grants nobody a
+/// session if it is ever dumped.
+model Session {
+  id         String   @id
+  reviewer   Reviewer @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewerId String
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  @@index([reviewerId])
+  @@map("sessions")
+}

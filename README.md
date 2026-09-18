@@ -1,8 +1,8 @@
 # Praman | Agentic Dispute Defense
 
-**Live demo: https://praman-zif9.onrender.com/** · [Case study](docs/CASE_STUDY.md) · [EVAL](EVAL.md) · [eval/results.md](eval/results.md)
+**Live demo: https://praman-zif9.onrender.com/** — *suspended by Render as of 2026-09-30; see F-032 in the case study. Run it locally with `docker compose up`.* · [Case study](docs/CASE_STUDY.md) · [EVAL](EVAL.md) · [eval/results.md](eval/results.md)
 
-The demo is hosted on a free tier, so it sleeps after 15 minutes idle. A scheduled ping keeps it awake; if a ping was missed, the first request takes about a minute.
+The demo is hosted on a free tier. It sleeps after 15 minutes idle, and the first request after that takes about a minute. It is currently suspended, so the link returns 503 until the free-tier limit resets or the service is restored.
 
 Praman is a **defense-only** dispute evidence responder for agent-initiated payments. For each dispute it:
 

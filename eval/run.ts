@@ -3,7 +3,22 @@ import process from 'node:process';
 
 import { loadRootEnv } from '../apps/api/src/env.js';
 
-import { EVAL_SETS, buildClient, runSet, type EvalCase, type EvalSetName } from './harness.js';
+import {
+  buildBaseline,
+  formatRegressions,
+  promptFingerprints,
+  readBaseline,
+  regressions,
+  writeBaseline,
+} from './baseline.js';
+import {
+  COST_MODEL,
+  EVAL_SETS,
+  buildClient,
+  runSet,
+  type EvalCase,
+  type EvalSetName,
+} from './harness.js';
 import { renderReport, score } from './score.js';
 
 /**
@@ -13,6 +28,10 @@ import { renderReport, score } from './score.js';
  *   pnpm eval -- --live       call the model and record. Deliberate, and rare.
  *   pnpm eval -- --set dev    score one set only (recordings still write through).
  *   pnpm eval -- --no-write   print the report without touching eval/results.md
+ *   pnpm eval -- --write-baseline
+ *                             rewrite eval/baseline.json from this run. Deliberate:
+ *                             the gate compares against it, so the diff is the record
+ *                             of which number moved and why.
  *
  * Replay is the default and the point. A replay miss throws instead of falling
  * back to a live call, so the failure mode of a stale fixture is a stopped run
@@ -30,7 +49,16 @@ const setArg = args[args.indexOf('--set') + 1];
 const sets: EvalSetName[] =
   args.includes('--set') && (setArg === 'dev' || setArg === 'holdout') ? [setArg] : ['dev', 'holdout'];
 
+const rewriteBaseline = args.includes('--write-baseline');
+
 const RESULTS_PATH = new URL('./results.md', import.meta.url);
+/**
+ * The same numbers as the report, in a shape a machine reads: the gate, the
+ * matrix and any later tooling take this rather than parsing markdown. It
+ * carries no timestamp, for the same reason the report does not -- two replay
+ * runs must produce identical bytes.
+ */
+const RESULTS_JSON_PATH = new URL('./results.json', import.meta.url);
 
 loadRootEnv();
 
@@ -83,20 +111,48 @@ async function main(): Promise<void> {
 
   const devCases = collected.get('dev') as EvalCase[];
   const holdoutCases = collected.get('holdout') as EvalCase[];
+  const dev = score('dev', devCases);
+  const holdout = score('holdout', holdoutCases);
   const report = renderReport({
-    dev: score('dev', devCases),
-    holdout: score('holdout', holdoutCases),
+    dev,
+    holdout,
     devCases,
     holdoutCases,
     provider: provider.name,
     model: provider.model,
   });
 
+  const summary = {
+    schema: 1,
+    provider: provider.name,
+    model: provider.model,
+    prompts: promptFingerprints(),
+    costModel: COST_MODEL,
+    sets: { dev, holdout },
+  };
+
   if (write) {
     writeFileSync(RESULTS_PATH, report);
+    writeFileSync(RESULTS_JSON_PATH, `${JSON.stringify(summary, null, 2)}\n`);
     console.log(`wrote ${RESULTS_PATH.pathname}`);
+    console.log(`wrote ${RESULTS_JSON_PATH.pathname}`);
   } else {
     console.log(report);
+  }
+
+  if (rewriteBaseline) {
+    writeBaseline(buildBaseline({ provider: provider.name, model: provider.model, dev, holdout }));
+    console.log('\nwrote eval/baseline.json — the gate now compares against this run.');
+    return;
+  }
+
+  // Say what CI will say, from the same numbers, so a regression is visible
+  // here rather than first on a pull request.
+  console.log('');
+  try {
+    console.log(formatRegressions(regressions(readBaseline(), { dev, holdout })));
+  } catch {
+    console.log('eval gate: no eval/baseline.json yet. Write one with `pnpm eval -- --write-baseline`.');
   }
 }
 

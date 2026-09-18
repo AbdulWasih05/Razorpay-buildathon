@@ -1,0 +1,143 @@
+{
+  "provider": "groq",
+  "model": "allam-2-7b",
+  "family": "allam",
+  "note": "The only other chat model this account serves. A much smaller model, included because the interesting question is whether the structured-output contract and the gate's veto behaviour hold when the drafter is weaker.",
+  "sets": {
+    "dev": {
+      "set": "dev",
+      "size": 100,
+      "contested": 14,
+      "gateContested": 33,
+      "abstained": 86,
+      "abstentionRate": 0.86,
+      "byGroundTruth": {
+        "winnable": 38,
+        "unwinnable": 52,
+        "ambiguous": 10
+      },
+      "confusion": {
+        "truePositives": 14,
+        "falsePositives": 0,
+        "falseNegatives": 24,
+        "trueNegatives": 52,
+        "ambiguousContested": 0,
+        "ambiguousAbstained": 10
+      },
+      "precision": 1,
+      "precisionStrict": 1,
+      "recall": 0.3684210526315789,
+      "falsePositiveCostSubunits": 0,
+      "amountOnFalsePositives": 0,
+      "atStakeInDraftedContests": 3339600,
+      "inCorrectlyAbstainedDisputes": 11956600,
+      "byClass": {
+        "gate": 67,
+        "drafter_disagreement": 0,
+        "assembly_failure": 19,
+        "unclassified": 0
+      },
+      "byCause": {
+        "correct_unwinnable": 52,
+        "conservative_ambiguous": 10,
+        "capture_gap": 6,
+        "evidence_absent": 1,
+        "false_negative": 17,
+        "drafter_veto": 0
+      },
+      "failureKinds": {
+        "error": 0,
+        "timeout": 0,
+        "refusal": 0,
+        "schema": 19
+      },
+      "gapArtifacts": {
+        "holds 2 of 3 required artifacts; missing duplicate_payment_analysis; required evidence Praman cannot produce for any dispute: duplicate_payment_analysis": 5,
+        "holds 0 of 2 required artifacts; missing delivery_proof, item_selection_confirmation; required evidence Praman cannot produce for any dispute: item_selection_confirmation": 1,
+        "holds 1 of 2 required artifacts; missing item_selection_confirmation; required evidence Praman cannot produce for any dispute: item_selection_confirmation": 1
+      },
+      "modelCalls": 33,
+      "meanEvidenceFields": 3.2142857142857144,
+      "fullCoverageDrafts": 14,
+      "meanDraftChars": 534.9285714285714,
+      "overLengthDrafts": 1,
+      "usage": {
+        "calls": 51,
+        "callsWithUsage": 51,
+        "inputTokens": 44870,
+        "outputTokens": 9262,
+        "costUsd": null
+      }
+    },
+    "holdout": {
+      "set": "holdout",
+      "size": 30,
+      "contested": 4,
+      "gateContested": 8,
+      "abstained": 26,
+      "abstentionRate": 0.8666666666666667,
+      "byGroundTruth": {
+        "winnable": 9,
+        "unwinnable": 20,
+        "ambiguous": 1
+      },
+      "confusion": {
+        "truePositives": 3,
+        "falsePositives": 0,
+        "falseNegatives": 6,
+        "trueNegatives": 20,
+        "ambiguousContested": 1,
+        "ambiguousAbstained": 0
+      },
+      "precision": 1,
+      "precisionStrict": 0.75,
+      "recall": 0.3333333333333333,
+      "falsePositiveCostSubunits": 0,
+      "amountOnFalsePositives": 0,
+      "atStakeInDraftedContests": 4031300,
+      "inCorrectlyAbstainedDisputes": 18440500,
+      "byClass": {
+        "gate": 22,
+        "drafter_disagreement": 0,
+        "assembly_failure": 4,
+        "unclassified": 0
+      },
+      "byCause": {
+        "correct_unwinnable": 20,
+        "conservative_ambiguous": 0,
+        "capture_gap": 1,
+        "evidence_absent": 1,
+        "false_negative": 4,
+        "drafter_veto": 0
+      },
+      "failureKinds": {
+        "error": 0,
+        "timeout": 0,
+        "refusal": 0,
+        "schema": 4
+      },
+      "gapArtifacts": {
+        "holds 2 of 3 required artifacts; missing duplicate_payment_analysis; required evidence Praman cannot produce for any dispute: duplicate_payment_analysis": 1,
+        "holds 0 of 2 required artifacts; missing delivery_proof, item_selection_confirmation; required evidence Praman cannot produce for any dispute: item_selection_confirmation": 1
+      },
+      "modelCalls": 8,
+      "meanEvidenceFields": 3,
+      "fullCoverageDrafts": 4,
+      "meanDraftChars": 490.5,
+      "overLengthDrafts": 0,
+      "usage": {
+        "calls": 12,
+        "callsWithUsage": 12,
+        "inputTokens": 10757,
+        "outputTokens": 1992,
+        "costUsd": null
+      }
+    }
+  },
+  "latency": {
+    "measured": 63,
+    "p50": 10293,
+    "p95": 15561
+  },
+  "costUsd": null
+}
