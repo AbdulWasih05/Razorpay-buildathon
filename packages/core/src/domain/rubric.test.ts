@@ -1,3 +1,4 @@
+import { RAZORPAY_FIELD_MAP } from '../providers/razorpay/fields.js';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -128,15 +129,14 @@ describe('artifacts map onto the real Razorpay contest fields', () => {
     const fields = new Set<string>(CONTEST_EVIDENCE_DOCUMENT_FIELDS);
     fields.add('others');
     for (const artifact of EVIDENCE_ARTIFACTS) {
-      expect(fields.has(ARTIFACTS[artifact].contestField), artifact).toBe(true);
+      expect(fields.has(RAZORPAY_FIELD_MAP[artifact].field), artifact).toBe(true);
     }
   });
 
   it('gives every `others` artifact the type label Razorpay requires', () => {
     for (const artifact of EVIDENCE_ARTIFACTS) {
-      const definition = ARTIFACTS[artifact];
-      if (definition.contestField !== 'others') continue;
-      expect(definition.othersType, artifact).toBeTruthy();
+      if (RAZORPAY_FIELD_MAP[artifact].field !== 'others') continue;
+      expect(RAZORPAY_FIELD_MAP[artifact].othersType, artifact).toBeTruthy();
     }
   });
 
@@ -190,7 +190,7 @@ describe('the rubric covers the corpus', () => {
     const entry = requirementsFor('upi', '128');
     const artifacts = entry?.requires.map((r) => r.artifact) ?? [];
     expect(artifacts).toContain('authorisation_evidence');
-    expect(ARTIFACTS.authorisation_evidence.contestField).toBe('access_activity_log');
+    expect(RAZORPAY_FIELD_MAP.authorisation_evidence.field).toBe('access_activity_log');
 
     const sharingCode128 = SCENARIO_CLASSES.filter(
       (c) => SCENARIOS[c].network === 'upi' && SCENARIOS[c].reasonCode === '128',

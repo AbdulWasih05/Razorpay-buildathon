@@ -44,6 +44,7 @@ function fakePrisma(row: FakeState, draft: unknown) {
         externalId: 'dsp_race',
         razorpayDisputeId: 'disp_SIMrace00000000',
         state: row.state,
+        provider: 'razorpay' as const,
         contestDraftJson: draft,
         auditLogs: [
           {
@@ -109,7 +110,7 @@ describe('two approvals racing on one dispute', () => {
     const deps = {
       prisma: fakePrisma(row, draft),
       client: {} as never,
-      adapter,
+      adapters: { razorpay: adapter },
       now: () => new Date('2026-07-21T00:00:00.000Z'),
     };
 
@@ -145,7 +146,7 @@ describe('two approvals racing on one dispute', () => {
         {
           prisma: fakePrisma(row, draft),
           client: {} as never,
-          adapter,
+          adapters: { razorpay: adapter },
           now: () => new Date('2026-07-21T00:00:00.000Z'),
         },
         'dsp_race',

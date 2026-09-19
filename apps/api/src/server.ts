@@ -9,7 +9,9 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import {
   GROUND_TRUTH_LABELS,
   RAILS,
+  SCENARIOS,
   SCENARIO_CLASSES,
+  normaliseRazorpayDispute,
   disputeWebhookEventSchema,
   evidencePackIngestSchema,
   toPromptInput,
@@ -17,7 +19,7 @@ import {
 import { CORPUS_NOW, DEV_CONFIG, generateTransaction } from '@praman/simulator';
 import { z } from 'zod';
 
-import { adapterFromEnv } from '@praman/adapter';
+import { adapterRegistryFromEnv, type AdapterRegistry } from '@praman/adapter';
 import { AssemblyClient, ResponseCache, providerFromEnv } from '@praman/llm';
 
 import {
@@ -86,6 +88,11 @@ const disputeSeedSchema = z
 export interface BuildServerOptions {
   prisma?: PrismaClient;
   logger?: boolean;
+  /**
+   * One adapter per provider. Injectable so a test can watch what the one
+   * door actually sends, instead of reaching for the environment.
+   */
+  adapters?: AdapterRegistry;
 }
 
 export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
@@ -402,7 +409,8 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
         items: pack.order.itemsJson,
       },
       payment: pack.order.payment && {
-        razorpayPaymentId: pack.order.payment.razorpayPaymentId,
+        // The API keeps the envelope's field name; the column beneath it is neutral.
+        razorpayPaymentId: pack.order.payment.providerPaymentId,
         amount: pack.order.payment.amount,
         method: pack.order.payment.method,
         status: pack.order.payment.status,
@@ -508,7 +516,9 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
     const entity = event.payload.dispute.entity;
 
     const payment = await prisma.payment.findUnique({
-      where: { razorpayPaymentId: entity.payment_id },
+      where: {
+        provider_providerPaymentId: { provider: 'razorpay', providerPaymentId: entity.payment_id },
+      },
       select: { id: true },
     });
     if (!payment) {
@@ -521,18 +531,24 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
       });
     }
 
+    // One conversion of Razorpay's wire format, shared with everything else
+    // that ingests one. Doing it inline here is how a second dialect starts.
+    const normalised = normaliseRazorpayDispute(event, SCENARIOS[meta.scenarioClass].network);
+
     const data = {
-      razorpayPaymentId: entity.payment_id,
+      provider: normalised.provider,
+      providerPaymentId: normalised.providerPaymentId,
       paymentId: payment.id,
-      amount: entity.amount,
-      currency: entity.currency,
+      amount: normalised.amountMinor,
+      currency: normalised.currency,
       amountDeducted: entity.amount_deducted,
-      reasonCode: entity.reason_code,
+      reasonCode: normalised.reasonCode,
       reasonDescription: entity.reason_description ?? null,
-      respondBy: new Date(entity.respond_by * 1000),
-      status: entity.status,
-      phase: entity.phase,
-      raisedAt: new Date(entity.created_at * 1000),
+      respondBy: normalised.respondBy,
+      status: normalised.status,
+      phase: normalised.phase ?? 'chargeback',
+      network: normalised.network,
+      raisedAt: normalised.raisedAt,
       evidenceJson: asJsonValue(entity.evidence),
       rail: meta.rail,
       scenarioClass: meta.scenarioClass,
@@ -540,12 +556,12 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
       seed: meta.seed,
       groundTruth: meta.groundTruth,
       groundTruthRationale: meta.groundTruthRationale,
-      occurredAt: new Date(entity.created_at * 1000),
+      occurredAt: normalised.raisedAt,
     };
 
     const dispute = await prisma.dispute.upsert({
       where: { externalId: meta.externalId },
-      create: { externalId: meta.externalId, razorpayDisputeId: entity.id, ...data },
+      create: { externalId: meta.externalId, providerDisputeId: normalised.providerDisputeId, ...data },
       update: data,
       select: { id: true },
     });
@@ -708,7 +724,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
       : 'assembly mode: replay -- no model call will be made',
   );
 
-  const adapter = adapterFromEnv(process.env, () => new Date());
+  const adapters = options.adapters ?? adapterRegistryFromEnv(process.env, () => new Date());
 
   /** Run the pipeline over disputes that have not been processed yet. */
   app.post('/review/run', async (request, reply) => {
@@ -840,11 +856,11 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
 
     try {
       const result = await approveAndSubmit(
-        { prisma, client: assemblyClient, adapter, now: () => new Date() },
+        { prisma, client: assemblyClient, adapters, now: () => new Date() },
         params.externalId,
         reviewerActor(reviewer.handle),
       );
-      return reply.send({ ...result, adapter: adapter.name });
+      return reply.send(result);
     } catch (error) {
       return reply.status(409).send({ error: 'approval_refused', detail: (error as Error).message });
     }

@@ -106,7 +106,7 @@ export class RateLimiter {
 
 export interface ReleasedDispute {
   externalId: string;
-  razorpayDisputeId: string;
+  providerDisputeId: string;
   scenarioClass: string;
   rail: string;
   reasonCode: string;
@@ -147,7 +147,9 @@ export async function releaseNextDispute(
   const entity = dispute.event.payload.dispute.entity;
 
   const payment = await prisma.payment.findUniqueOrThrow({
-    where: { razorpayPaymentId: entity.payment_id },
+    where: {
+      provider_providerPaymentId: { provider: 'razorpay', providerPaymentId: entity.payment_id },
+    },
     select: { id: true },
   });
 
@@ -157,8 +159,9 @@ export async function releaseNextDispute(
     update: {},
     create: {
       externalId,
-      razorpayDisputeId: entity.id,
-      razorpayPaymentId: entity.payment_id,
+      provider: 'razorpay',
+      providerDisputeId: entity.id,
+      providerPaymentId: entity.payment_id,
       paymentId: payment.id,
       amount: entity.amount,
       currency: entity.currency,
@@ -181,7 +184,7 @@ export async function releaseNextDispute(
 
   return {
     externalId,
-    razorpayDisputeId: entity.id,
+    providerDisputeId: entity.id,
     scenarioClass: dispute.scenarioClass,
     rail: dispute.rail,
     reasonCode: entity.reason_code,

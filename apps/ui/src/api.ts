@@ -10,7 +10,7 @@
 
 export interface QueueItem {
   externalId: string;
-  razorpayDisputeId: string;
+  providerDisputeId: string;
   amount: number;
   currency: string;
   reasonCode: string;
@@ -238,7 +238,7 @@ export async function fetchHealth(): Promise<Health> {
 
 export interface ReleasedDispute {
   externalId: string;
-  razorpayDisputeId: string;
+  providerDisputeId: string;
   scenarioClass: string;
   reasonCode: string;
   released: number;

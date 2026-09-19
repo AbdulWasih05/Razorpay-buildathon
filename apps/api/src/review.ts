@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import {
   AuditTrail,
+  NETWORKS,
   SCENARIOS,
   evaluateGate,
   evidencePackIngestSchema,
@@ -10,9 +11,10 @@ import {
   type DisputeState,
   type ContestDraft,
   type GateRule,
+  type Network,
   type ScenarioClass,
 } from '@praman/core';
-import { ApprovalToken, type DisputeAdapter } from '@praman/adapter';
+import { ApprovalToken, adapterFor, type AdapterRegistry } from '@praman/adapter';
 import { processDispute, type AssemblyClient, type ModelCallTelemetry } from '@praman/llm';
 
 /**
@@ -36,9 +38,38 @@ export interface PipelineDeps {
   client: AssemblyClient;
 }
 
+/**
+ * Which network's rubric applies to a dispute.
+ *
+ * The dispute carries it when it is known. Seeded corpus rows predate the
+ * column, so they fall back to their scenario class -- and that fallback works
+ * only for generated disputes, which is exactly the point: a dispute arriving
+ * from a provider has no scenario, and must say what it is on its own.
+ */
+function networkOf(dispute: { network: string | null; scenarioClass: string | null }): Network {
+  if (dispute.network) {
+    // Validated, not cast. The column is free text at the database level, and
+    // a value the rubric has never heard of must fail here rather than three
+    // layers down as a missing lookup.
+    if (!(NETWORKS as readonly string[]).includes(dispute.network)) {
+      throw new Error(`dispute names network "${dispute.network}", which no rubric covers`);
+    }
+    return dispute.network as Network;
+  }
+  const scenario = dispute.scenarioClass
+    ? SCENARIOS[dispute.scenarioClass as ScenarioClass]
+    : undefined;
+  if (!scenario) {
+    throw new Error(
+      'dispute has neither a network nor a known scenario class: nothing says which rubric applies',
+    );
+  }
+  return scenario.network;
+}
+
 /** Rebuild an `AuditTrail` from the rows Prisma hands back. Shared with `approveAndSubmit`. */
 function trailFromRows(
-  razorpayDisputeId: string,
+  providerDisputeId: string,
   rows: readonly {
     seq: number;
     fromState: string | null;
@@ -49,7 +80,7 @@ function trailFromRows(
   }[],
 ): AuditTrail {
   return AuditTrail.from(
-    razorpayDisputeId,
+    providerDisputeId,
     rows.map((row) => ({
       seq: row.seq,
       fromState: row.fromState as DisputeState | null,
@@ -101,9 +132,9 @@ export async function runPipeline(
     client: deps.client,
     pack,
     dispute: {
-      disputeId: dispute.razorpayDisputeId,
+      disputeId: dispute.providerDisputeId,
       reasonCode: dispute.reasonCode,
-      network: SCENARIOS[dispute.scenarioClass as ScenarioClass].network,
+      network: networkOf(dispute),
       amount: dispute.amount,
     },
     raisedAt: dispute.raisedAt,
@@ -141,7 +172,7 @@ export async function runPipeline(
   // from the fresh trail (skipping its own redundant first `received` entry)
   // is then re-applied on top, seq numbers continuing from wherever the
   // persisted trail actually left off -- never restarting at 0.
-  const trail = trailFromRows(dispute.razorpayDisputeId, dispute.auditLogs);
+  const trail = trailFromRows(dispute.providerDisputeId, dispute.auditLogs);
   if (trail.length > 0 && trail.state !== 'received') {
     // Domain time, not `deps.now()`: this reuses the fresh cycle's own step-0
     // timestamp (D-007 -- no wall clock inside a pipeline run) rather than
@@ -177,7 +208,7 @@ export async function runPipeline(
   });
 
   return {
-    disputeId: dispute.razorpayDisputeId,
+    disputeId: dispute.providerDisputeId,
     state: processed.state,
     gateDecision: processed.gate.decision,
     abstentionClass: processed.assembled.abstentionClass ?? null,
@@ -197,10 +228,16 @@ export async function runPipeline(
  *   - the approval token is minted for THIS dispute id only.
  */
 export async function approveAndSubmit(
-  deps: PipelineDeps & { adapter: DisputeAdapter; now: () => Date },
+  deps: PipelineDeps & { adapters: AdapterRegistry; now: () => Date },
   disputeExternalId: string,
   approvedBy: string,
-): Promise<{ state: DisputeState; simulated: boolean; documentCount: number }> {
+): Promise<{
+  state: DisputeState;
+  simulated: boolean;
+  documentCount: number;
+  /** Which adapter actually sent it, named for the caller and the trail. */
+  adapter: string;
+}> {
   const dispute = await deps.prisma.dispute.findUnique({
     where: { externalId: disputeExternalId },
     include: { auditLogs: { orderBy: { seq: 'asc' } } },
@@ -214,7 +251,7 @@ export async function approveAndSubmit(
   const draft = dispute.contestDraftJson as unknown as ContestDraft | null;
   if (!draft) throw new Error(`dispute ${disputeExternalId} has no draft to approve`);
 
-  const trail = trailFromRows(dispute.razorpayDisputeId, dispute.auditLogs);
+  const trail = trailFromRows(dispute.providerDisputeId, dispute.auditLogs);
 
   // NOT prefixed for the caller. F-013: this function used to turn whatever it
   // was handed into `human:<that>`, so `approvedBy: "system"` became
@@ -249,6 +286,11 @@ export async function approveAndSubmit(
   // call, means a reserved actor causes zero side effects rather than "zero
   // side effects except the ones that already happened."
   const approval = ApprovalToken.approve(draft.disputeId, actor, approvedAt);
+
+  // The adapter comes from the dispute, not from the process. A server
+  // holding one global adapter would submit a dispute to whichever provider
+  // it happened to be configured for, which is fine until there are two.
+  const adapter = adapterFor(deps.adapters, dispute.provider);
 
   // The claim, and why it is here rather than in the state check above.
   //
@@ -291,16 +333,16 @@ export async function approveAndSubmit(
   const documents = [];
   for (const reference of draft.references) {
     documents.push(
-      await deps.adapter.uploadDocument(reference, `${reference}.txt`, `evidence:${reference}`),
+      await adapter.uploadDocument(reference, `${reference}.txt`, `evidence:${reference}`),
     );
   }
 
-  const result = await deps.adapter.submit(draft, documents, approval);
+  const result = await adapter.submit(draft, documents, approval);
 
   trail.append({
     toState: 'submitted',
     actor: 'adapter',
-    reason: `${deps.adapter.name}: ${documents.length} documents, action ${result.request.action}`,
+    reason: `${adapter.name}: ${documents.length} documents, action ${result.action}`,
     occurredAt: deps.now(),
   });
 
@@ -315,7 +357,12 @@ export async function approveAndSubmit(
     },
   });
 
-  return { state: 'submitted', simulated: result.simulated, documentCount: documents.length };
+  return {
+    state: 'submitted',
+    simulated: result.simulated,
+    documentCount: documents.length,
+    adapter: adapter.name,
+  };
 }
 
 /** Append-only: existing rows are never rewritten, only missing ones added. */
@@ -347,7 +394,7 @@ export async function listQueue(prisma: PrismaClient) {
     orderBy: [{ respondBy: 'asc' }],
     select: {
       externalId: true,
-      razorpayDisputeId: true,
+      providerDisputeId: true,
       amount: true,
       currency: true,
       reasonCode: true,
@@ -378,11 +425,11 @@ export async function readDispute(prisma: PrismaClient, externalId: string) {
   });
   if (!dispute) return null;
 
-  const trail = trailFromRows(dispute.razorpayDisputeId, dispute.auditLogs);
+  const trail = trailFromRows(dispute.providerDisputeId, dispute.auditLogs);
 
   return {
     externalId: dispute.externalId,
-    disputeId: dispute.razorpayDisputeId,
+    disputeId: dispute.providerDisputeId,
     amount: dispute.amount,
     currency: dispute.currency,
     reasonCode: dispute.reasonCode,
@@ -516,7 +563,7 @@ export async function readPackAsIngest(
       items: pack.order.itemsJson,
       placedAt: pack.order.placedAt.toISOString(),
     },
-    payment: cleanRow(strip(pack.order.payment!)),
+    payment: paymentEnvelope(pack.order.payment!),
     mandate: pack.mandate ? cleanRow(strip(pack.mandate)) : null,
     fulfillment: pack.order.fulfillment ? cleanRow(strip(pack.order.fulfillment)) : null,
     refund: pack.order.refund ? cleanRow(strip(pack.order.refund)) : null,
@@ -608,6 +655,44 @@ export function cleanRow(
     out[key] = value;
   }
   return out;
+}
+
+/**
+ * The payment, in the shape the capture envelope has always had.
+ *
+ * Built field by field rather than from the row, because the row no longer
+ * matches it: the column is `providerPaymentId` now, with a `provider` column
+ * beside it. Letting the row through would rename one key in the envelope and
+ * add another.
+ *
+ * That is not a cosmetic difference. Every prompt is built from this envelope,
+ * and every replay fixture is keyed by a hash of the prompt (D-007), so a
+ * renamed key here misses all 174 recordings at once and turns a replayed eval
+ * into a live one. The envelope is also the merchant-facing capture contract,
+ * which an internal refactor does not get to rewrite.
+ */
+function paymentEnvelope(payment: {
+  externalId: string;
+  providerPaymentId: string;
+  amount: number;
+  currency: string;
+  method: string;
+  status: string;
+  vpa: string | null;
+  capturedAt: Date | null;
+  occurredAt: Date;
+}): Record<string, unknown> {
+  return {
+    externalId: payment.externalId,
+    razorpayPaymentId: payment.providerPaymentId,
+    amount: payment.amount,
+    currency: payment.currency,
+    method: payment.method,
+    status: payment.status,
+    vpa: payment.vpa,
+    capturedAt: payment.capturedAt ? payment.capturedAt.toISOString() : null,
+    occurredAt: payment.occurredAt.toISOString(),
+  };
 }
 
 /** Relations Prisma can attach to an order row, none of which belong in it. */

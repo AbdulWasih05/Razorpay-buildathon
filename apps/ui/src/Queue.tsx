@@ -145,8 +145,8 @@ export function Queue({
                 </span>
               ) : null}
               <span className="qrow-top">
-                <span className="qrow-id" title={item.razorpayDisputeId}>
-                  {truncateId(item.razorpayDisputeId)}
+                <span className="qrow-id" title={item.providerDisputeId}>
+                  {truncateId(item.providerDisputeId)}
                 </span>
                 <span className="qrow-amount">{formatRupees(item.amount)}</span>
               </span>

@@ -5,6 +5,11 @@ export * from './schema/contest.js';
 export * from './schema/payment.js';
 export * from './schema/webhook.js';
 
+// Providers: what each dispute provider calls things, kept out of the domain
+export * from './providers/types.js';
+export * from './providers/razorpay/fields.js';
+export * from './providers/razorpay/normalise.js';
+
 // Capture layer
 export * from './capture/ingest.js';
 export * from './capture/canonical.js';

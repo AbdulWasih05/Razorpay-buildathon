@@ -41,6 +41,61 @@ export function formatRupees(subunits: number): string {
 }
 
 /**
+ * Currencies whose amounts are already whole, with no minor unit.
+ *
+ * The subset this project handles, not a complete list. Anything absent is
+ * treated as two decimals, which is right for every currency Razorpay settles
+ * in and is checked against a provider's own documentation before that
+ * provider is wired up.
+ */
+export const ZERO_DECIMAL_CURRENCIES: readonly string[] = [
+  'JPY',
+  'KRW',
+  'VND',
+  'CLP',
+  'ISK',
+  'BIF',
+  'DJF',
+  'GNF',
+  'KMF',
+  'PYG',
+  'RWF',
+  'UGX',
+  'VUV',
+  'XAF',
+  'XOF',
+  'XPF',
+];
+
+/**
+ * An amount in minor units, rendered for a person or a model, in any currency.
+ *
+ * INR goes through `formatRupees` unchanged, and that is load-bearing rather
+ * than tidy: that string reaches prompts, prompts are hashed, and the hash is
+ * the replay key (D-007). A different spelling of the same rupee amount would
+ * miss every committed recording at once.
+ *
+ * Everything else gets the ISO code and three-digit grouping. Still no `Intl`:
+ * its output depends on the ICU data a runtime was built with, so the same
+ * amount could format differently on a deploy than on the machine that
+ * recorded the fixtures.
+ */
+export function formatMoney(minorUnits: number, currency: string): string {
+  const code = currency.toUpperCase();
+  if (code === 'INR') return formatRupees(minorUnits);
+
+  const zeroDecimal = ZERO_DECIMAL_CURRENCIES.includes(code);
+  const negative = minorUnits < 0;
+  const absolute = Math.abs(Math.round(minorUnits));
+  const major = zeroDecimal ? absolute : Math.floor(absolute / 100);
+  const minor = zeroDecimal ? 0 : absolute % 100;
+
+  const grouped = String(major).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const fraction = minor === 0 ? '' : `.${String(minor).padStart(2, '0')}`;
+  return `${negative ? '-' : ''}${code} ${grouped}${fraction}`;
+}
+
+/**
  * Field names that carry an amount in subunits, anywhere in a captured evidence
  * detail blob.
  *

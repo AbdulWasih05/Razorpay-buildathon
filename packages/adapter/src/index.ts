@@ -3,7 +3,7 @@ import {
   materialiseContest,
   type ContestDraft,
   type ContestRequestInput,
-  type DisputeEntity,
+  type ProviderId,
 } from '@praman/core';
 
 /**
@@ -32,12 +32,20 @@ export interface UploadedDocument {
 }
 
 export interface SubmissionResult {
+  /** Which provider this went to. */
+  provider: ProviderId;
   disputeId: string;
   /** The payload as sent. Recorded verbatim in the audit trail. */
-  request: ContestRequestInput;
-  /** Razorpay's dispute entity after the contest. */
-  dispute: DisputeEntity;
-  /** True when this came from the simulator rather than Razorpay. */
+  request: Record<string, unknown>;
+  /** `draft` or `submit`: whether the provider was asked to stage or to file. */
+  action: string;
+  /**
+   * The dispute's status at the provider after the call, when it reports
+   * one. Deliberately a string and not an entity: every provider returns a
+   * different object, and the pipeline only ever reads this.
+   */
+  providerStatus: string | null;
+  /** True when this came from the simulator rather than a provider. */
   simulated: boolean;
 }
 
@@ -184,42 +192,15 @@ export class SimulatorClient implements DisputeAdapter {
     approval: ApprovalToken,
   ): Promise<SubmissionResult> {
     const request = prepare(draft, documents, approval);
-    const now = this.options.now();
     const result: SubmissionResult = {
+      provider: 'razorpay',
       disputeId: draft.disputeId,
       request,
+      action: String(request.action),
+      // A contested dispute is under review. Not won, not lost: those are
+      // outcomes this project does not have and will not invent (hard rule #6).
+      providerStatus: 'under_review',
       simulated: true,
-      dispute: {
-        id: draft.disputeId,
-        entity: 'dispute',
-        payment_id: 'pay_simulated00000',
-        amount: draft.amount,
-        currency: 'INR',
-        amount_deducted: 0,
-        reason_code: 'contested',
-        respond_by: Math.floor(now.getTime() / 1000),
-        // A contested dispute moves to under_review. Not won, not lost --
-        // those are outcomes we do not have and will not invent here.
-        status: 'under_review',
-        phase: 'chargeback',
-        created_at: Math.floor(now.getTime() / 1000),
-        evidence: {
-          amount: draft.amount,
-          summary: draft.summary,
-          shipping_proof: null,
-          billing_proof: null,
-          cancellation_proof: null,
-          customer_communication: null,
-          proof_of_service: null,
-          explanation_letter: null,
-          refund_confirmation: null,
-          access_activity_log: null,
-          refund_cancellation_policy: null,
-          term_and_conditions: null,
-          others: null,
-          submitted_at: Math.floor(now.getTime() / 1000),
-        },
-      },
     };
     this.submissions.push(result);
     return result;
@@ -302,13 +283,48 @@ export class RazorpayClient implements DisputeAdapter {
     if (!response.ok) {
       throw new Error(`razorpay contest ${response.status}: ${await response.text()}`);
     }
+    const contested = (await response.json()) as { status?: string };
     return {
+      provider: 'razorpay',
       disputeId: draft.disputeId,
       request,
+      action: String(request.action),
+      providerStatus: contested.status ?? null,
       simulated: false,
-      dispute: (await response.json()) as DisputeEntity,
     };
   }
+}
+
+/**
+ * One adapter per provider.
+ *
+ * `approveAndSubmit` resolves the client from the dispute it is approving,
+ * rather than the process holding a single global adapter. With one provider
+ * those are the same thing; with two, a global adapter is a dispute submitted
+ * to whichever provider the server happened to be configured for.
+ */
+export type AdapterRegistry = Readonly<Partial<Record<ProviderId, DisputeAdapter>>>;
+
+export function adapterFor(registry: AdapterRegistry, provider: ProviderId): DisputeAdapter {
+  const adapter = registry[provider];
+  if (!adapter) {
+    throw new Error(
+      `no adapter configured for provider "${provider}": refusing to submit through another provider`,
+    );
+  }
+  return adapter;
+}
+
+/** The registry the environment asks for. Razorpay today; Stripe joins it here. */
+export function adapterRegistryFromEnv(
+  env: {
+    ADAPTER?: string | undefined;
+    RAZORPAY_KEY_ID?: string | undefined;
+    RAZORPAY_KEY_SECRET?: string | undefined;
+  },
+  now: () => Date,
+): AdapterRegistry {
+  return { razorpay: adapterFromEnv(env, now) };
 }
 
 /** Build the adapter the environment asks for. */

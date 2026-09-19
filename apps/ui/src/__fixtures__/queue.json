@@ -1,7 +1,7 @@
 [
   {
     "externalId": "dsp_dev-v1_a1_21",
-    "razorpayDisputeId": "disp_I7iDOXkDIzA3uT",
+    "providerDisputeId": "disp_I7iDOXkDIzA3uT",
     "amount": 735500,
     "currency": "INR",
     "reasonCode": "1064",
@@ -18,7 +18,7 @@
   },
   {
     "externalId": "dsp_dev-v1_a2_24",
-    "razorpayDisputeId": "disp_edC3oB4ZSpsrCX",
+    "providerDisputeId": "disp_edC3oB4ZSpsrCX",
     "amount": 56100,
     "currency": "INR",
     "reasonCode": "128",
@@ -35,7 +35,7 @@
   },
   {
     "externalId": "dsp_dev-v1_b1_64",
-    "razorpayDisputeId": "disp_KJih2TGDmDS3IL",
+    "providerDisputeId": "disp_KJih2TGDmDS3IL",
     "amount": 165400,
     "currency": "INR",
     "reasonCode": "128",

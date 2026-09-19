@@ -1,6 +1,8 @@
-import { contestRequestSchema, type ContestEvidenceField, type ContestRequestInput } from '../schema/contest.js';
+import { contestRequestSchema, type ContestRequestInput } from '../schema/contest.js';
+import { RAZORPAY_FIELDS } from '../providers/razorpay/fields.js';
+import type { ProviderFieldMap } from '../providers/types.js';
 import type { CollectedEvidence } from './collector.js';
-import { ARTIFACTS, type EvidenceArtifact } from './rubric.js';
+import type { EvidenceArtifact } from './rubric.js';
 
 /**
  * Deterministic evidence -> Razorpay field mapping (TASKS.md P2.3).
@@ -17,8 +19,9 @@ import { ARTIFACTS, type EvidenceArtifact } from './rubric.js';
  */
 
 export interface EvidenceFieldAssignment {
-  field: ContestEvidenceField;
-  /** Razorpay requires a `type` label on every `others` entry. */
+  /** The provider's own field name, from its field map. */
+  field: string;
+  /** A label the provider requires alongside a catch-all field, if any. */
   othersType?: string;
   artifacts: EvidenceArtifact[];
   /** Capture-store ids backing this field, for the audit trail. */
@@ -32,18 +35,23 @@ export interface EvidenceFieldAssignment {
  */
 export function mapEvidenceToContestFields(
   collected: CollectedEvidence,
+  /**
+   * Which provider's fields to map into. Defaults to Razorpay, which is the
+   * only provider wired up today; passing a different map is how a second one
+   * arrives, rather than editing this function.
+   */
+  fields: ProviderFieldMap = RAZORPAY_FIELDS,
 ): EvidenceFieldAssignment[] {
   const byField = new Map<string, EvidenceFieldAssignment>();
 
   for (const finding of collected.findings) {
     if (finding.state !== 'present') continue;
-    const definition = ARTIFACTS[finding.artifact];
-    // `others` entries are separated by their type label: Razorpay treats each
-    // as its own labelled item, not one bucket.
-    const key =
-      definition.contestField === 'others'
-        ? `others:${definition.othersType}`
-        : definition.contestField;
+    const placement = fields[finding.artifact];
+    // A catch-all field's entries are separated by their label: Razorpay treats
+    // each `others` entry as its own labelled item, not one bucket.
+    const key = placement.othersType
+      ? `${placement.field}:${placement.othersType}`
+      : placement.field;
 
     const existing = byField.get(key);
     if (existing) {
@@ -52,8 +60,8 @@ export function mapEvidenceToContestFields(
       continue;
     }
     byField.set(key, {
-      field: definition.contestField,
-      ...(definition.othersType ? { othersType: definition.othersType } : {}),
+      field: placement.field,
+      ...(placement.othersType ? { othersType: placement.othersType } : {}),
       artifacts: [finding.artifact],
       references: [...finding.references],
     });
@@ -154,8 +162,10 @@ export function buildContestDraft(
   disputedAmount: number,
   /** Defaults to contesting the full disputed amount. */
   contestAmount: number = disputedAmount,
+  /** Which provider's evidence fields this draft is mapped into. */
+  fields: ProviderFieldMap = RAZORPAY_FIELDS,
 ): ContestDraft {
-  const assignments = mapEvidenceToContestFields(collected);
+  const assignments = mapEvidenceToContestFields(collected, fields);
   return {
     disputeId: collected.disputeId,
     amount: contestAmount,

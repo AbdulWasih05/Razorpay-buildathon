@@ -9,10 +9,10 @@
 
 | | |
 |---|---|
-| **Current phase** | Phase 3 done (eval gate + model-family matrix). Phase 4 done (atomic approve + reviewer auth). Phase 5 next: provider abstraction |
-| **Last completed** | Reviewer sessions, atomic approve claim, eval gate, model matrix. 355 tests pass, lint and typecheck clean (2026-09-30) |
+| **Current phase** | Phases 3, 4 and 5 done. Phase 6 next: real webhooks and Stripe |
+| **Last completed** | Phase 5 provider abstraction: neutral columns, provider field map and normaliser, adapter registry. 364 tests pass; results.md, matrix.md, fixtures and snapshot all untouched (2026-09-30) |
 | **Open blocker** | The Render deploy is suspended (503, 2026-09-30, F-032): the user needs to check the dashboard for whether free instance hours or the 30-day Postgres expiry caused it. Stripe test-mode account still gates Phase 6. The repo rename is the user's to run |
-| **Next action** | Phase 5: provider abstraction (neutral dispute + evidence model, adapter registry, Prisma renames), keeping results.md byte-identical. Commits still unmade pending a date decision |
+| **Next action** | Phase 6 (webhooks + Stripe) needs the Stripe test account; without it, that phase is fixtures and contract tests only. Everything is staged for the user to commit |
 
 ## Context
 
@@ -252,7 +252,8 @@ Praman was built for the Razorpay AI Buildathon (Sep 2026) and wasn't shortliste
 
 ## Phase 5 — Provider abstraction, Razorpay only, no behaviour change (~5 days)
 
-- [ ] **Prisma migration (renames only)**
+- [x] **Prisma migration (renames only)**
+  - *Result:* written by hand as `ALTER ... RENAME`. Prisma generates a rename as a drop plus an add, which would discard every id it is renaming. Applied with `migrate deploy`, and `migrate diff` reports no drift between schema and database.
   - Dispute:
     - add `provider`
     - rename `razorpayDisputeId` → `providerDisputeId` and `razorpayPaymentId` → `providerPaymentId`
@@ -260,19 +261,19 @@ Praman was built for the Razorpay AI Buildathon (Sep 2026) and wasn't shortliste
     - drop the `currency` default
     - make the corpus columns nullable
   - Payment: the same renames, plus `provider`.
-- [ ] **Move Razorpay code into `packages/core/src/providers/razorpay/`:** `schema/*`, `reason-codes.ts` and the `ARTIFACTS` field map. Add `providers/types.ts` with `NormalizedDispute`, `ProviderFieldMap` and `materialise`.
-- [ ] **`mapper.ts`:** group assignments by neutral `EvidenceArtifact`. Each provider materialises its own payload, and Razorpay's output stays identical.
-- [ ] **Network and reason come from the dispute.**
+- [x] **Move Razorpay code into `packages/core/src/providers/razorpay/`:** `schema/*`, `reason-codes.ts` and the `ARTIFACTS` field map. Add `providers/types.ts` with `NormalizedDispute`, `ProviderFieldMap` and `materialise`.
+- [x] **`mapper.ts`:** group assignments by neutral `EvidenceArtifact`. Each provider materialises its own payload, and Razorpay's output stays identical.
+- [x] **Network and reason come from the dispute.**
   - `apps/api/src/review.ts:100` reads `dispute.reasonKey/network`.
   - `packages/core/src/capture/ingest.ts:120` validates ids per provider.
-- [ ] **Rubric keys** become provider+reason (`upi:1064`).
-- [ ] **`formatMoney(amountMinor, currency)`:** its INR path stays byte-identical to `formatRupees`, pinned by a test.
-- [ ] **Adapter**
+- [ ] **Rubric keys** become provider+reason (`upi:1064`). *(Deferred to Phase 6 on purpose: Stripe has no card network and needs its own table keyed by reason alone, so prefixing 30 existing keys now would be churn with no behaviour change. The lookup already takes the network from the dispute.)*
+- [x] **`formatMoney(amountMinor, currency)`:** its INR path stays byte-identical to `formatRupees`, pinned by a test.
+- [x] **Adapter**
   - `prepare()` keeps only the token and dispute-id checks.
   - Each client builds its own payload.
   - `SubmissionResult` becomes neutral.
   - An `AdapterRegistry` keyed by `dispute.provider` is injected via `BuildServerOptions`.
-- [ ] **Callers**
+- [x] **Callers**
   - `/seed/dispute` goes through the Razorpay normaliser.
   - `CaptureClient`, `demo.ts` and the simulator use the renamed fields.
   - Envelopes are unchanged.
@@ -363,3 +364,4 @@ Praman was built for the Razorpay AI Buildathon (Sep 2026) and wasn't shortliste
 - 2026-09-15: Docker verified. The first run reused the seeded local volume and skipped the boot seed, so a second run under a separate compose project with an empty volume seeded 100 disputes on boot, and was then torn down. Phase 2 is complete apart from cost wiring (moved to Phase 3) and is uncommitted, waiting for tomorrow.
 - 2026-09-30: the deploy is suspended by Render (503) and keep-warm had been failing for days on it. Disabled the workflow, corrected the README claims, logged F-032. The likely cause is the ping keeping a free instance awake for ~744 h against a 750 h allowance. Starting Phases 3-5.
 - 2026-09-30: Phase 3 and Phase 4 complete. Eval gate with counts-based baseline and prompt fingerprints; model-family matrix recorded live for both models the account serves. Reviewer sessions replace the reviewer dropdown, and approve now claims the dispute with a conditional write. 355 tests pass.
+- 2026-09-30: Phase 5 complete. Database columns and domain types are provider-neutral; the capture envelope deliberately is not, because its field names reach prompts whose hashes are the replay keys. The adapter is now resolved per dispute from a registry. Nothing committed by me: the working tree is staged.

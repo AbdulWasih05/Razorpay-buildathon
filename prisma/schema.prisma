@@ -139,7 +139,9 @@ model Order {
 model Payment {
   id                String    @id @default(cuid())
   externalId        String    @unique
-  razorpayPaymentId String    @unique
+  provider          Provider  @default(razorpay)
+  /// The provider's own payment id. Razorpay: pay_...
+  providerPaymentId String
   orderId           String    @unique
   amount            Int
   currency          String    @default("INR")
@@ -152,6 +154,8 @@ model Payment {
 
   order    Order     @relation(fields: [orderId], references: [id])
   disputes Dispute[]
+
+  @@unique([provider, providerPaymentId])
 }
 
 enum FulfillmentStatus {
@@ -320,6 +324,11 @@ model OrchestrationLog {
 /// Which corpus a generated dispute belongs to. The held-out set is
 /// out-of-distribution by construction (different model, different personas)
 /// and the dev pipeline is forbidden from reading it (guard test, P1.3).
+enum Provider {
+  razorpay
+  stripe
+}
+
 enum Corpus {
   dev
   ood_holdout
@@ -336,11 +345,17 @@ enum GroundTruth {
 model Dispute {
   id String @id @default(cuid())
 
-  // --- Razorpay dispute entity (https://razorpay.com/docs/api/disputes/) ---
-  razorpayDisputeId String   @unique // disp_...
-  razorpayPaymentId String // pay_...
+  // --- The provider's dispute entity (Razorpay: https://razorpay.com/docs/api/disputes/) ---
+  /// Which provider this dispute came from. The column exists so adding a
+  /// second provider is not a migration of every row.
+  provider          Provider @default(razorpay)
+  /// The provider's own dispute id. Razorpay: disp_...
+  providerDisputeId String
+  /// The provider's own payment id. Razorpay: pay_...
+  providerPaymentId String
   amount            Int
-  currency          String   @default("INR")
+  /// No default: a provider that is not Razorpay does not settle in rupees.
+  currency          String
   amountDeducted    Int      @default(0)
   reasonCode        String
   reasonDescription String?
@@ -360,7 +375,7 @@ model Dispute {
   /// Lifecycle state: received | triaged | gated | drafted | approved | submitted | abstained.
   /// The AuditLog table is the authority on how it got here; this is a
   /// denormalised copy so the queue can be listed without replaying trails.
-  state                String      @default("received")
+  state                String       @default("received")
   gateDecision         String?
   gateReason           String?
   /// Why it abstained: gate | drafter_disagreement | assembly_failure.
@@ -372,23 +387,33 @@ model Dispute {
   /// Human identity that approved. Null unless a person approved it.
   approvedBy           String?
   approvedAt           DateTime?
+  // --- Corpus bookkeeping, nullable because a real dispute has none ---
+  ///
+  /// These describe a generated dispute: which scenario produced it and what
+  /// the corpus says the right answer is. A dispute that arrives from a
+  /// provider has no scenario and no ground truth, and a schema that demands
+  /// them cannot store one.
   /// Generator scenario class: a1..a4 (ordinary) or b1..b5 (agentic).
-  scenarioClass        String
-  corpus               Corpus
+  scenarioClass        String?
+  corpus               Corpus?
   /// Seed used to generate this dispute; makes any single case reproducible.
-  seed                 String
-  groundTruth          GroundTruth
-  groundTruthRationale String
+  seed                 String?
+  groundTruth          GroundTruth?
+  groundTruthRationale String?
+  /// Card network or rail the reason code belongs to (upi, visa, ...). Null
+  /// until known; the rubric is keyed on provider plus this plus reasonCode.
+  network              String?
   occurredAt           DateTime
-  createdAt            DateTime    @default(now())
+  createdAt            DateTime     @default(now())
 
   payment   Payment    @relation(fields: [paymentId], references: [id])
   auditLogs AuditLog[]
 
+  @@unique([provider, providerDisputeId])
   @@index([corpus])
   @@index([rail])
   @@index([scenarioClass])
-  @@index([razorpayPaymentId])
+  @@index([providerPaymentId])
 }
 
 /// Append-only trail of every state transition, with actor and timestamp.

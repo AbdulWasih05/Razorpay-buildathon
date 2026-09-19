@@ -134,7 +134,10 @@ export async function captureEvidencePack(
       where: { externalId: input.payment.externalId },
       create: {
         externalId: input.payment.externalId,
-        razorpayPaymentId: input.payment.razorpayPaymentId,
+        // The column is provider-neutral; the capture envelope's field name is
+        // not, and deliberately stays the merchant-facing contract.
+        provider: 'razorpay',
+        providerPaymentId: input.payment.razorpayPaymentId,
         orderId: order.id,
         amount: input.payment.amount,
         currency: input.payment.currency,
@@ -145,7 +148,7 @@ export async function captureEvidencePack(
         occurredAt: input.payment.occurredAt,
       },
       update: {
-        razorpayPaymentId: input.payment.razorpayPaymentId,
+        providerPaymentId: input.payment.razorpayPaymentId,
         amount: input.payment.amount,
         currency: input.payment.currency,
         method: input.payment.method,

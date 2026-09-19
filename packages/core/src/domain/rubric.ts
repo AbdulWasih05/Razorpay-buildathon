@@ -1,4 +1,3 @@
-import type { ContestEvidenceField } from '../schema/contest.js';
 import { ALL_REASON_CODES, type DisputeCategory, type Network } from './reason-codes.js';
 import { SCENARIOS, type ScenarioClass } from './scenarios.js';
 
@@ -63,13 +62,6 @@ export interface ArtifactDefinition {
   artifact: EvidenceArtifact;
   /** What this artifact is, in one line. */
   description: string;
-  /** The Razorpay contest field this artifact lands in. */
-  contestField: ContestEvidenceField;
-  /**
-   * When `contestField` is `others`, Razorpay requires a `type` label. Set here
-   * so the mapper never invents one at the call site.
-   */
-  othersType?: string;
   /** Whether Praman's capture layer can produce this at all. */
   sourceable: boolean;
   /** Required when `sourceable` is false. Stated, not hidden. */
@@ -80,39 +72,32 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
   order_record: {
     artifact: 'order_record',
     description: 'The order: items, quantities, amounts, status and placement time.',
-    contestField: 'billing_proof',
     sourceable: true,
   },
   payment_record: {
     artifact: 'payment_record',
     description: 'The payment: amount, method, status, capture time, payer VPA.',
-    contestField: 'billing_proof',
     sourceable: true,
   },
   shipment_record: {
     artifact: 'shipment_record',
     description: 'Carrier and tracking id showing the goods were dispatched.',
-    contestField: 'shipping_proof',
     sourceable: true,
   },
   delivery_proof: {
     artifact: 'delivery_proof',
     description: 'Delivery confirmation: signature, OTP or carrier proof reference.',
-    contestField: 'shipping_proof',
     sourceable: true,
   },
   product_description: {
     artifact: 'product_description',
     description: 'What was actually sold: SKU, name and per-item amount as ordered.',
-    contestField: 'others',
-    othersType: 'product_description',
     sourceable: true,
   },
   customer_communication: {
     artifact: 'customer_communication',
     description:
       'The conversation with the customer -- on the agentic rail, the captured agent trace.',
-    contestField: 'customer_communication',
     sourceable: true,
   },
   authorisation_evidence: {
@@ -121,35 +106,28 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
       'Internal logs showing authorisation was obtained. On the agentic rail: the mandate consent record, the in-limit in-window amount check, and the orchestration log of the payment call.',
     // The orchestration log IS an access/activity log; the capture schema says
     // so in its own words ("it is the access_activity_log source").
-    contestField: 'access_activity_log',
     sourceable: true,
   },
   invoice_breakdown: {
     artifact: 'invoice_breakdown',
     description: 'Invoice with a detailed price breakdown across line items.',
-    contestField: 'others',
-    othersType: 'invoice_with_price_breakdown',
     sourceable: true,
   },
   duplicate_payment_analysis: {
     artifact: 'duplicate_payment_analysis',
     description:
       'Whether a second payment exists against the same order, or the two payments are for distinct orders.',
-    contestField: 'others',
-    othersType: 'duplicate_payment_analysis',
     sourceable: true,
   },
   refund_record: {
     artifact: 'refund_record',
     description: 'Evidence that a refund was generated against this order.',
-    contestField: 'refund_confirmation',
     sourceable: true,
   },
   item_selection_confirmation: {
     artifact: 'item_selection_confirmation',
     description:
       'A structured record that the customer approved the specific item that was ordered -- the requested SKU alongside the selected SKU, not a sentence about it.',
-    contestField: 'customer_communication',
     sourceable: false,
     notSourceableReason:
       'The capture layer records what the agent selected (the orchestration log entry item_selected) but never what the customer requested, so agreement between the two cannot be established from records. The fact exists only as natural language in the conversation trace, and reading it is a model judgement -- which hard rule #4 forbids on the money path. Repairable: capture the requested SKU at selection time. See D-026 in docs/CASE_STUDY.md.',
@@ -158,7 +136,6 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
     artifact: 'refund_settlement_proof',
     description:
       'Evidence that the refund actually settled -- its bank settlement reference (UTR/ARN) and the date the money reached the customer, not merely that a refund was raised.',
-    contestField: 'refund_confirmation',
     // Was `sourceable: false` until P4.0. The capture envelope had no refund
     // object at all, so no merchant using Praman could have supplied this and
     // every UPI 1061 dispute reported it structurally unmet -- correctly, but
@@ -177,7 +154,6 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
   merchant_refund_policy: {
     artifact: 'merchant_refund_policy',
     description: "The merchant's written refund/return policy document.",
-    contestField: 'refund_cancellation_policy',
     sourceable: false,
     notSourceableReason:
       "The capture envelope records order and refund facts, never the merchant's policy documents themselves -- nothing at checkout emits a copy of a refund policy PDF. Repairable: a merchant-onboarding step could attach one, but nothing in the transaction-time capture model produces it today.",
@@ -185,7 +161,6 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
   merchant_terms_conditions: {
     artifact: 'merchant_terms_conditions',
     description: "The merchant's written terms and conditions covering refund and fulfilment.",
-    contestField: 'term_and_conditions',
     sourceable: false,
     notSourceableReason:
       'Same gap as merchant_refund_policy: a T&C document is a merchant-level artifact, not a transaction-time capture, and the capture envelope has no slot for it.',
@@ -193,8 +168,6 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
   customer_withdrawal_letter: {
     artifact: 'customer_withdrawal_letter',
     description: 'A letter from the customer withdrawing their complaint.',
-    contestField: 'others',
-    othersType: 'customer_withdrawal_letter',
     sourceable: false,
     notSourceableReason:
       'This document, if it exists at all, is produced after the dispute is raised and held by the bank or the customer, never by the merchant at transaction time. Structurally outside what a capture layer can ever supply.',
@@ -202,8 +175,6 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
   alternate_payment_negative_proof: {
     artifact: 'alternate_payment_negative_proof',
     description: 'Proof the disputed amount was not also paid through a different channel.',
-    contestField: 'others',
-    othersType: 'alternate_payment_negative_proof',
     sourceable: false,
     notSourceableReason:
       'Proving a negative across payment channels Praman does not observe (cash, a different gateway, a different merchant account) is outside what any one capture layer can hold.',
@@ -211,8 +182,6 @@ export const ARTIFACTS: Record<EvidenceArtifact, ArtifactDefinition> = {
   reauth_proof: {
     artifact: 'reauth_proof',
     description: 'Evidence of a re-authorisation attempt for a delayed-settlement claim.',
-    contestField: 'others',
-    othersType: 'reauth_proof',
     sourceable: false,
     notSourceableReason:
       'The capture schema does not model a re-authorisation event distinct from the original payment capture, so there is nothing to report even as absent-but-tracked.',

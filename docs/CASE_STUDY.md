@@ -138,6 +138,26 @@ The approve action is the only path to submission. The eval harness cannot impor
   - The headline is therefore one sample of a stochastic drafter, and the honest size of that noise is about two dev cases.
   - The fix is not to re-run until it matches. The frozen recordings stay the headline, and the variance is stated wherever the headline is.
 
+### The provider seam
+
+- **D-048: a provider is a field map and a normaliser, not a plugin system.**
+  - The domain decides what evidence exists and whether it is enough. A provider decides what that evidence is *called* on the wire and how a contest payload is shaped.
+  - Razorpay's field names used to live on the rubric, as a `contestField` on every artifact, so `packages/core`'s domain spoke one provider's vocabulary and a second had nowhere to go. They now live in `providers/razorpay/fields.ts`.
+  - The neutral map is typed against `string`; Razorpay's own table is typed against the documented field union, so a typo there is a compile error rather than a payload the provider rejects.
+  - `normaliseRazorpayDispute` is the one place that knows Razorpay sends seconds and calls a payment id `payment_id`.
+- **D-049: the database columns went neutral; the capture envelope did not.**
+  - Columns are `providerDisputeId` and `providerPaymentId` now, with a `provider` enum beside them and provider-scoped unique keys.
+  - The evidence-pack envelope still says `razorpayPaymentId`, and `readPackAsIngest` maps the column back to it explicitly.
+  - Two reasons, and the second is load-bearing: the envelope is the merchant-facing capture contract, and every prompt is built from it while every replay fixture is keyed by a hash of the prompt (D-007). Renaming one key would have missed all 174 recordings at once and turned a replayed eval into a live one.
+- **D-050: the adapter is resolved from the dispute, not held by the process.**
+  - `approveAndSubmit` looks up the client by the dispute's `provider` through an `AdapterRegistry`. A single global adapter is a dispute submitted to whichever provider the server happened to be configured for.
+  - `SubmissionResult` no longer carries a Razorpay entity. It reports the provider, the payload as sent, the action, and a status string, because that is all the pipeline ever read.
+  - The simulator stopped fabricating a dispute entity. Every field in it was invented to satisfy a type, which is exactly what hard rule #6 exists to stop.
+- **D-051: the contest draft stays grouped by provider field, with the table injected.**
+  - The tidier refactor would group assignments by artifact and let each provider fold them into fields later.
+  - It was rejected because `evidenceFields` counts a draft's assignments, and regrouping changes that number — moving a published metric for an internal refactor. The seam is the injected map; the shape stays.
+- **The corpus columns are nullable now.** `scenarioClass`, `corpus`, `seed` and the ground-truth columns describe a *generated* dispute. A dispute arriving from a provider has none of them, and a schema that demands them cannot store one.
+
 ### Product
 
 - **D-043: the demo clock is part of the simulation.**

@@ -132,6 +132,7 @@ describe('approveAndSubmit refuses a spoofed actor before any side effect', () =
           externalId: 'dsp_test1',
           razorpayDisputeId: 'disp_test1',
           state: 'drafted',
+          provider: 'razorpay',
           contestDraftJson: fakeDraft(),
           auditLogs: [],
         }),
@@ -167,7 +168,7 @@ describe('approveAndSubmit refuses a spoofed actor before any side effect', () =
       const adapter = fakeAdapter();
 
       await expect(
-        approveAndSubmit({ prisma, adapter, now: () => new Date() } as never, 'dsp_test1', spoofedActor),
+        approveAndSubmit({ prisma, adapters: { razorpay: adapter }, now: () => new Date() } as never, 'dsp_test1', spoofedActor),
       ).rejects.toThrow(/system actor|not a person/);
 
       // The proof F-013's own regression tests could not offer: no upload, no
@@ -190,7 +191,7 @@ describe('approveAndSubmit refuses a spoofed actor before any side effect', () =
     const adapter = fakeAdapter();
 
     const result = await approveAndSubmit(
-      { prisma, adapter, now: () => new Date() } as never,
+      { prisma, adapters: { razorpay: adapter }, now: () => new Date() } as never,
       'dsp_test1',
       'human:systems-team-anita',
     );

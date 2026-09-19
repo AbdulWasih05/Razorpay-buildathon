@@ -170,8 +170,8 @@ describe('the submitted payload is the documented shape', () => {
       documents,
       ApprovalToken.approve(draft.disputeId, 'human:wasih', NOW()),
     );
-    expect(result.dispute.status).toBe('under_review');
-    expect(['won', 'lost']).not.toContain(result.dispute.status);
+    expect(result.providerStatus).toBe('under_review');
+    expect(['won', 'lost']).not.toContain(result.providerStatus);
   });
 });
 
